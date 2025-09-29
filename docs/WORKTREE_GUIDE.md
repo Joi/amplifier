@@ -16,7 +16,7 @@ Git worktrees are a powerful feature that allow you to have multiple branches ch
 
 ```bash
 # Create a new worktree for experimentation
-make worktree my-feature
+amplifier worktree create my-feature
 
 # Navigate to the new worktree
 cd ../amplifier.my-feature
@@ -25,7 +25,7 @@ cd ../amplifier.my-feature
 # ...make changes, test, etc...
 
 # When done, remove it
-make worktree-rm my-feature
+amplifier worktree remove my-feature
 ```
 
 ### Why Use Worktrees?
@@ -41,10 +41,10 @@ make worktree-rm my-feature
 
 ```bash
 # Basic usage
-make worktree feature-name
+amplifier worktree create feature-name
 
 # With namespaced branches (e.g., for teams)
-make worktree username/feature-name
+amplifier worktree create username/feature-name
 ```
 
 **What happens:**
@@ -65,13 +65,13 @@ Amplifier uses a dot (`.`) separator between repo name and feature:
 
 ```bash
 # List all active worktrees
-make worktree-list
+amplifier worktree list
 
 # Remove a worktree and its branch
-make worktree-rm feature-name
+amplifier worktree remove feature-name
 
 # Force remove (even with uncommitted changes)
-make worktree-rm-force feature-name
+amplifier worktree remove --force feature-name
 ```
 
 ## Advanced Features
@@ -82,13 +82,13 @@ Sometimes you want to declutter your workspace without losing work. The stash fe
 
 ```bash
 # Hide a worktree from git (keeps directory intact)
-make worktree-stash feature-name
+amplifier worktree stash feature-name
 
 # List all hidden worktrees
-make worktree-list-stashed
+amplifier worktree list-stashed
 
 # Restore a hidden worktree
-make worktree-unstash feature-name
+amplifier worktree unstash feature-name
 ```
 
 **Use cases:**
@@ -107,10 +107,10 @@ Pull down branches created on other machines or by teammates:
 
 ```bash
 # Create worktree from a remote branch
-make worktree-adopt origin/feature-name
+amplifier worktree adopt origin/feature-name
 
 # Or if someone else created it
-make worktree-adopt teammate/cool-feature
+amplifier worktree adopt teammate/cool-feature
 ```
 
 **What happens:**
@@ -130,25 +130,25 @@ make worktree-adopt teammate/cool-feature
 
 ```bash
 # Feature development
-make worktree feat-authentication
+amplifier worktree create feat-authentication
 
 # Bug fixes
-make worktree fix-login-error
+amplifier worktree create fix-login-error
 
 # Experiments
-make worktree exp-new-algorithm
+amplifier worktree create exp-new-algorithm
 
 # With namespaces
-make worktree myname/feat-caching
+amplifier worktree create myname/feat-caching
 ```
 
 ### 2. Parallel Experimentation Pattern
 
 ```bash
 # Create multiple approaches
-make worktree approach-redis
-make worktree approach-memcached
-make worktree approach-inmemory
+amplifier worktree create approach-redis
+amplifier worktree create approach-memcached
+amplifier worktree create approach-inmemory
 
 # Test each in parallel
 cd ../amplifier.approach-redis && make test
@@ -156,32 +156,32 @@ cd ../amplifier.approach-memcached && make test
 cd ../amplifier.approach-inmemory && make test
 
 # Keep the winner, remove the rest
-make worktree-rm approach-memcached
-make worktree-rm approach-inmemory
+amplifier worktree remove approach-memcached
+amplifier worktree remove approach-inmemory
 ```
 
 ### 3. Stash Inactive Work
 
 ```bash
 # Working on multiple features
-make worktree-list  # Shows 8 worktrees - too many!
+amplifier worktree list  # Shows 8 worktrees - too many!
 
 # Stash the ones not actively being worked on
-make worktree-stash old-feature-1
-make worktree-stash old-feature-2
-make worktree-stash experimental-thing
+amplifier worktree stash old-feature-1
+amplifier worktree stash old-feature-2
+amplifier worktree stash experimental-thing
 
-make worktree-list  # Now shows only 5 active ones
+amplifier worktree list  # Now shows only 5 active ones
 
 # Later, when ready to resume
-make worktree-unstash experimental-thing
+amplifier worktree unstash experimental-thing
 ```
 
 ### 4. Cross-Machine Workflow
 
 **Machine A (office):**
 ```bash
-make worktree my-feature
+amplifier worktree create my-feature
 # ...work on feature...
 cd ../amplifier.my-feature
 git push -u origin my-feature
@@ -189,7 +189,7 @@ git push -u origin my-feature
 
 **Machine B (home):**
 ```bash
-make worktree-adopt my-feature
+amplifier worktree adopt my-feature
 cd ../amplifier.my-feature
 # ...continue work...
 ```
@@ -208,14 +208,14 @@ Each worktree gets its own isolated Python environment automatically. See [WORKT
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `make worktree NAME` | Create new worktree | `make worktree my-feature` |
-| `make worktree-list` | List active worktrees | `make worktree-list` |
-| `make worktree-rm NAME` | Remove worktree and branch | `make worktree-rm my-feature` |
-| `make worktree-rm-force NAME` | Force remove with changes | `make worktree-rm-force my-feature` |
-| `make worktree-stash NAME` | Hide worktree (keep files) | `make worktree-stash old-feature` |
-| `make worktree-unstash NAME` | Restore hidden worktree | `make worktree-unstash old-feature` |
-| `make worktree-list-stashed` | List hidden worktrees | `make worktree-list-stashed` |
-| `make worktree-adopt BRANCH` | Create from remote branch | `make worktree-adopt origin/feature` |
+| `amplifier worktree create NAME` | Create new worktree | `amplifier worktree create my-feature` |
+| `amplifier worktree list` | List active worktrees | `amplifier worktree list` |
+| `amplifier worktree remove NAME` | Remove worktree and branch | `amplifier worktree remove my-feature` |
+| `amplifier worktree remove --force NAME` | Force remove with changes | `amplifier worktree remove --force my-feature` |
+| `amplifier worktree stash NAME` | Hide worktree (keep files) | `amplifier worktree stash old-feature` |
+| `amplifier worktree unstash NAME` | Restore hidden worktree | `amplifier worktree unstash old-feature` |
+| `amplifier worktree list-stashed` | List hidden worktrees | `amplifier worktree list-stashed` |
+| `amplifier worktree adopt BRANCH` | Create from remote branch | `amplifier worktree adopt origin/feature` |
 
 ## Troubleshooting
 
@@ -223,8 +223,8 @@ Each worktree gets its own isolated Python environment automatically. See [WORKT
 
 If you get this error, the branch might already have a worktree:
 ```bash
-make worktree-list  # Check existing worktrees
-make worktree-rm old-one  # Remove if needed
+amplifier worktree list  # Check existing worktrees
+amplifier worktree remove old-one  # Remove if needed
 ```
 
 ### Can't Remove Worktree
@@ -232,7 +232,7 @@ make worktree-rm old-one  # Remove if needed
 If normal remove fails:
 ```bash
 # Force remove (loses uncommitted changes!)
-make worktree-rm-force stubborn-feature
+amplifier worktree remove --force stubborn-feature
 
 # Manual cleanup if completely broken
 rm -rf ../amplifier.stubborn-feature
@@ -277,7 +277,7 @@ Add aliases to your shell:
 ```bash
 # In ~/.bashrc or ~/.zshrc
 alias wt-main='cd ~/repos/amplifier'
-alias wt-list='cd ~/repos/amplifier && make worktree-list'
+alias wt-list='cd ~/repos/amplifier && amplifier worktree list'
 alias wt-cd='cd ~/repos/amplifier..$1'
 ```
 
@@ -299,7 +299,7 @@ Create a template for common worktree setups:
 ```bash
 #!/bin/bash
 # save as make-feature-worktree.sh
-make worktree $1
+amplifier worktree create $1
 cd ../amplifier.$1
 echo "# $1 Feature" > NOTES.md
 mkdir -p tests docs

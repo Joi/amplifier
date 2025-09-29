@@ -1,58 +1,60 @@
 #!/usr/bin/env python3
 """
 Configuration for Memory Extraction system.
-Supports environment variables and .env files with sensible defaults.
+Uses the main configuration system for consistency.
 """
 
 from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
-from pydantic_settings import SettingsConfigDict
 
+class MemoryExtractionConfig:
+    """Configuration for Memory Extraction system using main config"""
 
-class MemoryExtractionConfig(BaseSettings):
-    """Configuration for Memory Extraction system with environment variable support"""
+    def __init__(self):
+        """Initialize configuration from main system"""
+        from amplifier.config.config import config
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
+        self._config = config
 
-    # Feature flag - must be explicitly enabled
-    memory_system_enabled: bool = Field(
-        default=False, description="Enable memory extraction system (must be explicitly set to true)"
-    )
+    @property
+    def memory_system_enabled(self) -> bool:
+        """Enable memory extraction system (must be explicitly set to true)"""
+        return self._config.memory_system.enabled
 
-    # Model configuration
-    memory_extraction_model: str = Field(
-        default="claude-3-5-haiku-20241022",
-        description="Model for memory extraction (fast, efficient, cost-effective)",
-    )
+    @property
+    def memory_extraction_model(self) -> str:
+        """Model for memory extraction (fast, efficient, cost-effective)"""
+        return self._config.memory_system.model
 
-    # Extraction configuration
-    memory_extraction_timeout: int = Field(
-        default=120, description="Timeout in seconds for Claude Code SDK extraction operations"
-    )
+    @property
+    def memory_extraction_timeout(self) -> int:
+        """Timeout in seconds for Claude Code SDK extraction operations"""
+        return self._config.memory_system.timeout
 
-    memory_extraction_max_messages: int = Field(
-        default=20, description="Maximum number of recent messages to process for extraction"
-    )
+    @property
+    def memory_extraction_max_messages(self) -> int:
+        """Maximum number of recent messages to process for extraction"""
+        return self._config.memory_system.max_messages
 
-    memory_extraction_max_content_length: int = Field(
-        default=500, description="Maximum characters per message to process"
-    )
+    @property
+    def memory_extraction_max_content_length(self) -> int:
+        """Maximum characters per message to process"""
+        return self._config.memory_system.max_content_length
 
-    memory_extraction_max_memories: int = Field(
-        default=10, description="Maximum number of memories to extract per session"
-    )
+    @property
+    def memory_extraction_max_memories(self) -> int:
+        """Maximum number of memories to extract per session"""
+        return self._config.memory_system.max_memories
 
-    # Storage configuration (for future use)
-    memory_storage_dir: Path = Field(
-        default=Path(".data/memories"), description="Directory for storing extracted memories"
-    )
+    @property
+    def memory_storage_dir(self) -> Path:
+        """Directory for storing extracted memories"""
+        return Path(self._config.memory_system.storage_dir)
 
-    # API Keys (optional - SDK may provide these)
-    anthropic_api_key: str | None = Field(
-        default=None, description="Anthropic API key (optional, Claude Code SDK may provide)"
-    )
+    @property
+    def anthropic_api_key(self) -> str | None:
+        """Anthropic API key (optional, Claude Code SDK may provide)"""
+        return self._config.optional.anthropic_api_key
 
     def ensure_storage_dir(self) -> Path:
         """Ensure storage directory exists and return it"""

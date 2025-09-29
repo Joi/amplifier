@@ -119,11 +119,11 @@ def example_custom_environment():
     print("-" * 40)
 
     # Save original environment
-    original_data_dir = os.environ.get("AMPLIFIER_DATA_DIR")
+    original_data_dir = os.environ.get("AMPLIFIER__PATHS__DATA_DIR")
 
     try:
         # Set custom data directory
-        os.environ["AMPLIFIER_DATA_DIR"] = "/tmp/custom-amplifier-data"
+        os.environ["AMPLIFIER__PATHS__DATA_DIR"] = "/tmp/custom-amplifier-data"
 
         # Create new config with custom environment
         custom_paths = PathConfig()
@@ -143,9 +143,9 @@ def example_custom_environment():
     finally:
         # Restore original environment
         if original_data_dir is None:
-            os.environ.pop("AMPLIFIER_DATA_DIR", None)
+            os.environ.pop("AMPLIFIER__PATHS__DATA_DIR", None)
         else:
-            os.environ["AMPLIFIER_DATA_DIR"] = original_data_dir
+            os.environ["AMPLIFIER__PATHS__DATA_DIR"] = original_data_dir
 
 
 def main():

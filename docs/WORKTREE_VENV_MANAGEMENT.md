@@ -18,7 +18,7 @@ We've implemented a three-part solution:
 
 ### 1. Automatic venv Setup in New Worktrees
 
-When you create a worktree with `make worktree <branch-name>`, it now:
+When you create a worktree with `amplifier worktree create <branch-name>`, it now:
 - Creates the worktree as before
 - Copies the `.data` directory
 - **Automatically creates a local `.venv` using `uv`**
@@ -44,7 +44,7 @@ The Claude Code hook (`.claude/tools/make-check.sh`) now:
 
 ```bash
 # Create worktree with automatic venv setup
-make worktree my-feature
+amplifier worktree create my-feature
 
 # The output will show:
 # 🐍 Setting up virtual environment for worktree...
@@ -99,7 +99,7 @@ make check
 
 - **No manual venv activation needed** - Each worktree has its own `.venv`
 - **No more VIRTUAL_ENV warnings** - Conflicts are handled automatically
-- **Seamless workflow** - Just `make worktree` and start coding
+- **Seamless workflow** - Just `amplifier worktree create` and start coding
 - **Claude Code hooks work** - No more make check failures
 
 ## Troubleshooting

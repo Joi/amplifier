@@ -71,7 +71,6 @@ For complex tasks, use this three-phase cycle:
 1. **Architecture Phase**: zen-architect or amplifier-cli-architect designs the approach
 2. **Implementation Phase**: modular-builder, api-contract-designer, etc. implement
 3. **Validation Phase**: Return to architectural agents for compliance review
-4. **Testing Phase**: Run it like a user, if any issues discovered then leverage bug-hunter
 
 ### **When to Loop Back for Validation**
 
@@ -149,8 +148,6 @@ Ask these questions to identify amplifier CLI tool needs:
 
 **If 2+ answers are "yes" to questions 1-2, use amplifier-cli-architect first and proactively.**
 
-**ALWAYS include use amplifier-cli-architect if the topic of using ccsdk or ccsdk_toolkit comes up, it is the expert on the subject and can provide all of the context you need**
-
 ### **Tool Lifecycle Management**
 
 Consider whether tools should be:
@@ -164,7 +161,7 @@ Base decision on frequency of use and value to the broader project.
 
 - Ultrathink step-by-step, laying out assumptions and unknowns, use the TodoWrite tool to capture all tasks and subtasks.
   - VERY IMPORTANT: Make sure to use the actual TodoWrite tool for todo lists, don't do your own task tracking, there is code behind use of the TodoWrite tool that is invisible to you that ensures that all tasks are completed fully.
-  - Adhere to the @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md files.
+  - Adhere to the @ai_context/IMPLEMENTATION_PHILOSOPHY.md, @ai_context/MODULAR_DESIGN_PHILOSOPHY.md, and @ai_context/CODE_ITERATION.md files.
 - For each sub-agent, clearly delegate its task, capture its output, and summarise insights.
 - Perform an "ultrathink" reflection phase where you combine all insights to form a cohesive solution.
 - If gaps remain, iterate (spawn sub-agents again) until confident.

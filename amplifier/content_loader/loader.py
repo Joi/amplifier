@@ -3,7 +3,6 @@
 import hashlib
 import json
 import logging
-import os
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -16,8 +15,8 @@ logger = logging.getLogger(__name__)
 class ContentLoader:
     """Loads content from configured directories.
 
-    This class scans directories specified in AMPLIFIER_CONTENT_DIRS
-    environment variable and loads content from supported file formats.
+    This class scans directories specified in configuration and loads content
+    from supported file formats. Use AMPLIFIER__PATHS__CONTENT_DIRS environment variable to override.
 
     Supported formats:
         - .md (Markdown)
@@ -37,11 +36,12 @@ class ContentLoader:
 
         Args:
             content_dirs: Optional list of directories to scan.
-                         If None, uses AMPLIFIER_CONTENT_DIRS env var.
+                         If None, uses configuration system.
         """
         if content_dirs is None:
-            env_dirs = os.environ.get("AMPLIFIER_CONTENT_DIRS", "")
-            content_dirs = [d.strip() for d in env_dirs.split(",") if d.strip()]
+            from amplifier.config.config import config
+
+            content_dirs = config.paths.content_dirs
 
         self.content_dirs = [Path(d).resolve() for d in content_dirs if Path(d).exists()]
 

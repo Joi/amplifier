@@ -12,6 +12,7 @@ This file is reserved for Claude Code-specific instructions.
 - @DISCOVERIES.md
 - @ai_context/IMPLEMENTATION_PHILOSOPHY.md
 - @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+- @ai_context/CODE_ITERATION.md
 
 # Claude's Working Philosophy and Memory System
 
@@ -91,7 +92,7 @@ Single message with multiple Task calls:
 ```
 "Let me read the first file"
 [Read file1.py]
-"Now let me read the second file"  
+"Now let me read the second file"
 [Read file2.py]
 ```
 

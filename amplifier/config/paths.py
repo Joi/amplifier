@@ -12,14 +12,8 @@ This module is a self-contained "brick" that other modules depend on
 for consistent path resolution and directory management.
 """
 
-import os
 from pathlib import Path
 from typing import Union
-
-from dotenv import load_dotenv
-
-# Load environment variables from .env file if it exists
-load_dotenv()
 
 
 class PathConfig:
@@ -31,8 +25,8 @@ class PathConfig:
     required directories.
 
     Environment Variables:
-        AMPLIFIER_DATA_DIR: Data directory path (default: .data)
-        AMPLIFIER_CONTENT_DIRS: Comma-separated content directories (default: .)
+        AMPLIFIER__PATHS__DATA_DIR: Data directory path (default: .data)
+        AMPLIFIER__PATHS__CONTENT_DIRS: Comma-separated content directories (default: .data/content)
 
     Public Interface:
         data_dir: Path to data directory
@@ -58,14 +52,12 @@ class PathConfig:
         self.ensure_data_dirs()
 
     def _load_paths(self) -> None:
-        """Load paths from environment variables with defaults."""
-        # Data directory - defaults to .data
-        data_dir_env = os.getenv("AMPLIFIER_DATA_DIR", ".data")
-        self._data_dir = self.resolve_path(data_dir_env)
+        """Load paths from unified configuration system."""
+        # Use unified configuration which handles defaults, YAML, and environment overrides
+        from amplifier.config.config import config
 
-        # Content directories - defaults to current directory
-        content_dirs_env = os.getenv("AMPLIFIER_CONTENT_DIRS", ".")
-        self._content_dirs = [self.resolve_path(p.strip()) for p in content_dirs_env.split(",")]
+        self._data_dir = self.resolve_path(config.paths.data_dir)
+        self._content_dirs = [self.resolve_path(p.strip()) for p in config.paths.content_dirs]
 
     def resolve_path(self, path_str: Union[str, Path]) -> Path:
         """Resolve a path string to an absolute Path object.

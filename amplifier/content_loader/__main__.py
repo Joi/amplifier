@@ -21,7 +21,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
     if not loader.content_dirs:
         logger.error("No content directories configured.")
-        logger.info("Set AMPLIFIER_CONTENT_DIRS environment variable or use --dirs option")
+        logger.info("Set AMPLIFIER__PATHS__CONTENT_DIRS environment variable or use --dirs option")
         return 1
 
     logger.info(f"Scanning directories: {', '.join(str(d) for d in loader.content_dirs)}")
@@ -47,7 +47,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     if not loader.content_dirs:
         logger.error("No content directories configured.")
-        logger.info("Set AMPLIFIER_CONTENT_DIRS environment variable or use --dirs option")
+        logger.info("Set AMPLIFIER__PATHS__CONTENT_DIRS environment variable or use --dirs option")
         return 1
 
     logger.info("Content Statistics")
@@ -85,7 +85,7 @@ def cmd_search(args: argparse.Namespace) -> int:
 
     if not loader.content_dirs:
         logger.error("No content directories configured.")
-        logger.info("Set AMPLIFIER_CONTENT_DIRS environment variable or use --dirs option")
+        logger.info("Set AMPLIFIER__PATHS__CONTENT_DIRS environment variable or use --dirs option")
         return 1
 
     logger.info(f"Searching for: '{args.query}'")
@@ -128,7 +128,7 @@ def main() -> int:
     parser.add_argument(
         "--dirs",
         nargs="+",
-        help="Content directories to scan (overrides AMPLIFIER_CONTENT_DIRS)",
+        help="Content directories to scan (overrides AMPLIFIER__PATHS__CONTENT_DIRS)",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
