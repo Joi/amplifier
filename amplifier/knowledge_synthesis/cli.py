@@ -108,7 +108,7 @@ async def _sync_content(max_items: int | None, notify: bool = False):
 
     if not content_items:
         logger.info("No content files found in configured directories.")
-        logger.info("Check AMPLIFIER_CONTENT_DIRS environment variable.")
+        logger.info("Check content_dirs configuration in .amplifier/config.yaml.")
         emitter.emit("sync_finished", stage="init", data={"processed": 0, "skipped": 0, "reason": "no_content"})
         return
 
@@ -276,7 +276,7 @@ async def _sync_content_resilient(max_items: int | None, retry_partial: bool = F
 
     if not content_items:
         logger.info("No content files found in configured directories.")
-        logger.info("Check AMPLIFIER_CONTENT_DIRS environment variable.")
+        logger.info("Check content_dirs configuration in .amplifier/config.yaml.")
         emitter.emit("sync_finished", stage="init", data={"processed": 0, "skipped": 0, "reason": "no_content"})
         return
 

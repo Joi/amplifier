@@ -59,24 +59,31 @@ Before starting, you'll need:
    - **Automatic cloud backup** - Never lose your extracted insights
    - **Reusable across projects** - Apply learned patterns to new codebases
 
-   Set up external directories:
+   Configure in `.amplifier/config.yaml`:
 
-   ```bash
-   cp .env.example .env
-   # Edit .env to point to your preferred locations
+   ```yaml
+   # Directory configuration (existing)
+   directory: git+microsoft/amplifier/directory
+
+   # Path configuration
+   paths:
+     # Centralized knowledge base - shared across all worktrees and devices
+     # Using OneDrive/Dropbox/iCloud enables automatic backup!
+     data_dir: ~/OneDrive/amplifier/data
+
+     # Your source materials (documentation, specs, design docs, notes)
+     content_dirs:
+       - .data/content
+       - ~/OneDrive/amplifier/content
+       - ~/Documents/notes
+
+   # Model configuration (optional - uses sensible defaults)
+   models:
+     default: claude-sonnet-4-20250514
+     fast: claude-3-5-haiku-20241022
    ```
 
-   Example configuration using cloud storage:
-
-   ```bash
-   # Centralized knowledge base - shared across all worktrees and devices
-   # Using OneDrive/Dropbox/iCloud enables automatic backup!
-   AMPLIFIER_DATA_DIR=~/OneDrive/amplifier/data
-
-   # Your source materials (documentation, specs, design docs, notes)
-   # Can point to multiple folders where you keep content
-   AMPLIFIER_CONTENT_DIRS=.data/content,~/OneDrive/amplifier/content,~/Documents/notes
-   ```
+   **Legacy Support**: Environment variables (`.env` files) are still supported as fallbacks for backward compatibility.
 
 4. **Activate the environment** (if not already active):
    ```bash
@@ -124,12 +131,12 @@ Want Amplifier's power on your own code? Easy:
 
 ```bash
 # Try different approaches in parallel
-make worktree feature-jwt     # JWT authentication approach
-make worktree feature-oauth   # OAuth approach in parallel
+amplifier worktree create feature-jwt     # JWT authentication approach
+amplifier worktree create feature-oauth   # OAuth approach in parallel
 
 # Compare and choose
-make worktree-list            # See all experiments
-make worktree-rm feature-jwt  # Remove the one you don't want
+amplifier worktree list            # See all experiments
+amplifier worktree remove feature-jwt  # Remove the one you don't want
 ```
 
 Each worktree is completely isolated with its own branch, environment, and context.

@@ -7,20 +7,11 @@ Configuration for isolated test environments.
 import os
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
-from pydantic_settings import SettingsConfigDict
+from pydantic import BaseModel
 
 
-class SmokeTestConfig(BaseSettings):
+class SmokeTestConfig(BaseModel):
     """Configuration for smoke test execution."""
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        env_prefix="SMOKE_TEST_",
-        case_sensitive=False,
-        extra="ignore",
-    )
 
     # Model selection (default to fast for smoke tests)
     model_category: str = "fast"
@@ -36,6 +27,19 @@ class SmokeTestConfig(BaseSettings):
 
     # Maximum output to send to AI
     max_output_chars: int = 5000
+
+    @classmethod
+    def from_unified_config(cls) -> "SmokeTestConfig":
+        """Create SmokeTestConfig from unified configuration."""
+        from amplifier.config.config import config
+
+        return cls(
+            model_category=config.smoke_test.model_category,
+            test_data_dir=Path(config.smoke_test.test_data_dir),
+            skip_on_ai_unavailable=config.smoke_test.skip_on_ai_unavailable,
+            ai_timeout=config.smoke_test.ai_timeout,
+            max_output_chars=config.smoke_test.max_output_chars,
+        )
 
     def setup_test_environment(self) -> None:
         """Setup isolated test environment."""
@@ -177,22 +181,22 @@ if __name__ == "__main__":
     def get_test_env(self) -> dict:
         """Get environment variables for test execution."""
         env = os.environ.copy()
-        # Override data directories to use test data
-        env["AMPLIFIER_DATA_DIR"] = str(self.test_data_dir / "data")
-        env["AMPLIFIER_CONTENT_DIRS"] = str(self.test_data_dir)
+        # Override data directories to use test data (namespaced format)
+        env["AMPLIFIER__PATHS__DATA_DIR"] = str(self.test_data_dir / "data")
+        env["AMPLIFIER__PATHS__CONTENT_DIRS"] = str(self.test_data_dir)
         env["PYTHONPATH"] = str(Path.cwd())
 
-        # Set model to use fast model for testing
-        env["AMPLIFIER_MODEL_CATEGORY"] = "fast"
+        # Set model to use fast model for testing (namespaced format)
+        env["AMPLIFIER__MODELS__DEFAULT"] = "claude-3-5-haiku-20241022"
 
-        # Ensure test data directory is absolute
-        env["SMOKE_TEST_TEST_DATA_DIR"] = str(self.test_data_dir.absolute())
+        # Ensure test data directory is absolute (namespaced format)
+        env["AMPLIFIER__SMOKE_TEST__TEST_DATA_DIR"] = str(self.test_data_dir.absolute())
 
-        # Skip AI evaluation if SDK not available
-        env["SMOKE_TEST_SKIP_ON_AI_UNAVAILABLE"] = "true"
+        # Skip AI evaluation if SDK not available (namespaced format)
+        env["AMPLIFIER__SMOKE_TEST__SKIP_ON_AI_UNAVAILABLE"] = "true"
 
         return env
 
 
 # Global instance
-config = SmokeTestConfig()
+config = SmokeTestConfig.from_unified_config()

@@ -1,0 +1,102 @@
+version: 0.1.0
+agents:
+  - ambiguity-guardian.md
+  - amplifier-cli-architect.md
+  - analysis-engine.md
+  - api-contract-designer.md
+  - bug-hunter.md
+  - concept-extractor.md
+  - content-researcher.md
+  - contract-spec-author.md
+  - database-architect.md
+  - graph-builder.md
+  - insight-synthesizer.md
+  - integration-specialist.md
+  - knowledge-archaeologist.md
+  - modular-builder.md
+  - module-intent-architect.md
+  - pattern-emergence.md
+  - performance-optimizer.md
+  - post-task-cleanup.md
+  - security-guardian.md
+  - subagent-architect.md
+  - test-coverage.md
+  - visualization-architect.md
+  - zen-architect.md
+commands:
+  - commit.md
+  - create-plan.md
+  - execute-plan.md
+  - modular-build.md
+  - prime.md
+  - review-changes.md
+  - review-code-at-path.md
+  - test-webapp-ui.md
+  - transcripts.md
+  - ultrathink-task.md
+contexts:
+  - claude_code/
+  - git_collector/CLAUDE_CODE_SDK_PYTHON_REPO.md
+  - module_generator/
+  - AMPLIFIER_CLAUDE_CODE_LEVERAGE.md
+  - IMPLEMENTATION_PHILOSOPHY.md
+  - MODULAR_DESIGN_PHILOSOPHY.md
+tools:
+  - hook_logger.py
+  - hook_post_tool_use.py
+  - hook_precompact.py
+  - hook_session_start.py
+  - hook_stop.py
+  - memory_cli.py
+  - on_code_change_hook.sh
+  - on_notification_hook.py
+  - statusline-example.sh
+  - subagent-logger.py
+mcp:
+  - browser-use
+  - deepwiki
+hooks:
+  SessionStart:
+    - hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/hook_session_start.py
+          timeout: 10000
+  Stop:
+    - hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/hook_stop.py
+  SubagentStop:
+    - hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/hook_stop.py
+  PreToolUse:
+    - matcher: Task
+      hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/subagent-logger.py
+  PostToolUse:
+    - matcher: Edit|MultiEdit|Write
+      hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/on_code_change_hook.sh
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/hook_post_tool_use.py
+  Notification:
+    - hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/on_notification_hook.py
+  PreCompact:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: $CLAUDE_PROJECT_DIR/.claude/tools/hook_precompact.py
+          timeout: 30000
+allow:
+  - Bash
+  - mcp__browser-use
+  - mcp__deepwiki
+  - WebFetch
+  - TodoWrite
+defaultClaudeMode: bypassPermissions

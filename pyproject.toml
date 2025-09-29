@@ -1,7 +1,7 @@
 [project]
-name = "workspace"
-version = "0.1.0"
-description = "Workspace project"
+name = "amplifier"
+version = "0.2.0"
+description = "AI-powered productivity tools"
 requires-python = ">=3.11"
 dependencies = [
     "claude-code-sdk>=0.0.20",
@@ -18,6 +18,18 @@ dependencies = [
     "tiktoken>=0.11.0",
     "tqdm>=4.67.1",
 ]
+
+[project.scripts]
+amplifier = "amplifier.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["amplifier*"]
+
 
 [tool.uv.workspace]
 # Add all projects in the workspace
@@ -53,7 +65,7 @@ exclude = [
     "build/**",
     "dist/**",
     ".data/**",
-    "ai_working/**"
+    "ai_working/**",
 ]
 typeCheckingMode = "basic"
 reportMissingImports = false
