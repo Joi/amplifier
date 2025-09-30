@@ -13,8 +13,10 @@ from typing import Any
 import click
 import yaml
 
+from amplifier.config.config import config_manager
 from amplifier.directory_fetcher import fetch_directory
 from amplifier.directory_source import parse_source
+from amplifier.overlay import create_overlay_resolver
 
 # Constants for mode management
 COLLECTIONS = ["agents", "commands", "contexts", "tools"]
@@ -190,36 +192,49 @@ def set_mode(mode: str) -> None:
             f"The following directories already exist and may contain user data:\n{dirt_list}\nPlease back up and remove these directories before setting a new mode."
         )
 
+    # Create overlay resolver for custom directory
+    config = config_manager.config
+    custom_dir = None
+    if config.custom_directory.enabled:
+        custom_dir = PROJECT_PATH / config.custom_directory.path
+    resolver = create_overlay_resolver(custom_dir, AMPLIFIER_DIRECTORY_PATH)
+
     for collection in COLLECTIONS:
         source_path = AMPLIFIER_DIRECTORY_PATH / collection
         target_path = _target_path(collection)
         for item in manifest.get(collection, []):
             src = source_path / item
+            # Resolve through custom overlay
+            resolved_src = resolver(src)
             dst = target_path / item
-            if not src.exists():
-                raise Exception(f"Source path `{src}` does not exist.")
+            if not resolved_src.exists():
+                raise Exception(f"Source path `{resolved_src}` does not exist.")
             if dst.exists():
                 click.echo(f"Warning: Target path `{dst}` already exists, skipping...")
                 continue
             dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.symlink_to(src)
+            dst.symlink_to(resolved_src)
 
     overlay_claude_settings(manifest)
     mode_path = MODES_DIR / mode
     claude_file_path = mode_path / "CLAUDE.md"
-    print(claude_file_path)
-    if claude_file_path.exists():
+    # Resolve CLAUDE.md through custom overlay
+    resolved_claude = resolver(claude_file_path)
+    print(resolved_claude)
+    if resolved_claude.exists():
         if CLAUDE_MD_PATH.exists():
             click.echo(f"Warning: CLAUDE.md already exists at `{CLAUDE_MD_PATH}`, skipping...")
         else:
-            CLAUDE_MD_PATH.symlink_to(claude_file_path)
+            CLAUDE_MD_PATH.symlink_to(resolved_claude)
 
     agent_file_path = mode_path / "AGENT.md"
-    if agent_file_path.exists():
+    # Resolve AGENT.md through custom overlay
+    resolved_agent = resolver(agent_file_path)
+    if resolved_agent.exists():
         if AGENT_MD_PATH.exists():
             click.echo(f"Warning: AGENT.md already exists at `{AGENT_MD_PATH}`, skipping...")
         else:
-            AGENT_MD_PATH.symlink_to(agent_file_path)
+            AGENT_MD_PATH.symlink_to(resolved_agent)
 
     state["mode"] = mode
     state_to_file(state)
