@@ -27,20 +27,21 @@ def fetch_directory(source: SourceInfo, target: Path) -> None:
     if source.type == "git":
         if source.repo is None:
             raise ValueError("Git source requires repository information")
-        fetch_git(source.repo, source.path, target)
+        fetch_git(source.repo, source.path, target, branch=source.branch)
     elif source.type == "local":
         fetch_local(Path(source.path), target)
     else:
         raise ValueError(f"Unknown source type: {source.type}")
 
 
-def fetch_git(repo: str, path: str, target: Path) -> None:
+def fetch_git(repo: str, path: str, target: Path, branch: str | None = None) -> None:
     """Fetch a directory from a GitHub repository using sparse checkout.
 
     Args:
         repo: GitHub repository in format 'username/repo'
         path: Path within the repository
         target: Target directory path
+        branch: Optional branch name (defaults to 'main' or 'master')
 
     Raises:
         RuntimeError: If git operations fail
@@ -65,8 +66,14 @@ def fetch_git(repo: str, path: str, target: Path) -> None:
                 ["git", "sparse-checkout", "set", path], cwd=repo_path, check=True, capture_output=True, text=True
             )
 
-            # Add remote
-            remote_url = f"https://github.com/{repo}.git"
+            # Add remote - construct GitHub URL if not already a full URL
+            if "://" in repo:
+                # Full URL provided - ensure .git suffix
+                remote_url = repo if repo.endswith(".git") else f"{repo}.git"
+            else:
+                # Short format: username/repo
+                remote_url = f"https://github.com/{repo}.git"
+
             subprocess.run(
                 ["git", "remote", "add", "origin", remote_url],
                 cwd=repo_path,
@@ -76,28 +83,41 @@ def fetch_git(repo: str, path: str, target: Path) -> None:
             )
 
             # Fetch only the required directory
-            print(f"Fetching {path} from {repo}...")
-            result = subprocess.run(
-                ["git", "fetch", "--depth=1", "origin", "main"], cwd=repo_path, capture_output=True, text=True
-            )
-
-            # If main branch doesn't exist, try master
-            if result.returncode != 0:
-                print("Trying 'master' branch...")
+            if branch:
+                # Use specified branch
+                print(f"Fetching {path} from {repo} (branch: {branch})...")
                 subprocess.run(
-                    ["git", "fetch", "--depth=1", "origin", "master"],
+                    ["git", "fetch", "--depth=1", "origin", branch],
                     cwd=repo_path,
                     check=True,
                     capture_output=True,
                     text=True,
                 )
-                branch = "master"
+                fetch_branch = branch
             else:
-                branch = "main"
+                # Try main, fall back to master
+                print(f"Fetching {path} from {repo}...")
+                result = subprocess.run(
+                    ["git", "fetch", "--depth=1", "origin", "main"], cwd=repo_path, capture_output=True, text=True
+                )
+
+                # If main branch doesn't exist, try master
+                if result.returncode != 0:
+                    print("Trying 'master' branch...")
+                    subprocess.run(
+                        ["git", "fetch", "--depth=1", "origin", "master"],
+                        cwd=repo_path,
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                    fetch_branch = "master"
+                else:
+                    fetch_branch = "main"
 
             # Checkout the fetched content
             subprocess.run(
-                ["git", "checkout", f"origin/{branch}"], cwd=repo_path, check=True, capture_output=True, text=True
+                ["git", "checkout", f"origin/{fetch_branch}"], cwd=repo_path, check=True, capture_output=True, text=True
             )
 
             # Copy the specific directory to target
