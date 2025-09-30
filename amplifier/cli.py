@@ -18,35 +18,30 @@ from amplifier.directory_source import parse_source
 
 # Constants for mode management
 COLLECTIONS = ["agents", "commands", "contexts", "tools"]
-
-
-def get_mode_paths():
-    """Get paths for mode management relative to current working directory."""
-    project_path = Path.cwd()
-    amplifier_path = project_path / ".amplifier"
-    amplifier_directory_path = amplifier_path / "directory"
-    return project_path, amplifier_path, amplifier_directory_path
+PROJECT_PATH = Path.cwd()
+AMPLIFIER_PATH = PROJECT_PATH / ".amplifier"
+AMPLIFIER_DIRECTORY_PATH = AMPLIFIER_PATH / "directory"
+MODES_DIR = AMPLIFIER_DIRECTORY_PATH / "modes"
+CLAUDE_MD_PATH = PROJECT_PATH / "CLAUDE.md"
+AGENT_MD_PATH = PROJECT_PATH / "AGENT.md"
 
 
 def list_modes() -> list[str]:
     """List available modes."""
-    _, _, amplifier_directory_path = get_mode_paths()
-    modes_dir = amplifier_directory_path / "modes"
-    if not modes_dir.exists():
+    if not MODES_DIR.exists():
         return []
-    modes = [d.name for d in modes_dir.iterdir() if d.is_dir()]
-    modes = [m for m in modes if (modes_dir / m / "amplifier.yaml").exists()]
+    modes = [d.name for d in MODES_DIR.iterdir() if d.is_dir()]
+    modes = [m for m in modes if (MODES_DIR / m / "amplifier.yaml").exists()]
     return modes
 
 
 def state_from_file() -> dict[str, Any]:
     """Read state from .amplifier/state.json."""
-    _, amplifier_path, _ = get_mode_paths()
     state: dict[str, Any] = {"mode": None}
 
-    state_file = amplifier_path / "state.json"
+    state_file = AMPLIFIER_PATH / "state.json"
     if not state_file.exists():
-        amplifier_path.mkdir(parents=True, exist_ok=True)
+        AMPLIFIER_PATH.mkdir(parents=True, exist_ok=True)
         with open(state_file, "w") as f:
             json.dump(state, f)
         return state
@@ -62,17 +57,15 @@ def state_from_file() -> dict[str, Any]:
 
 def state_to_file(state: dict[str, Any]) -> None:
     """Write state to .amplifier/state.json."""
-    _, amplifier_path, _ = get_mode_paths()
-    state_file = amplifier_path / "state.json"
-    amplifier_path.mkdir(parents=True, exist_ok=True)
+    state_file = AMPLIFIER_PATH / "state.json"
+    AMPLIFIER_PATH.mkdir(parents=True, exist_ok=True)
     with open(state_file, "w") as f:
         json.dump(state, f)
 
 
 def get_mode_manifest(mode: str) -> dict[str, Any] | None:
     """Get the manifest for a specific mode."""
-    _, _, amplifier_directory_path = get_mode_paths()
-    mode_file = amplifier_directory_path / "modes" / mode / "amplifier.yaml"
+    mode_file = MODES_DIR / mode / "amplifier.yaml"
     if not mode_file.exists():
         return None
 
@@ -90,11 +83,10 @@ def get_mode() -> str | None:
 
 def _target_path(collection: str) -> Path:
     """Get the target path for a collection."""
-    project_path, _, _ = get_mode_paths()
     if collection in ["agents", "commands", "tools"]:
-        return project_path / ".claude" / collection
+        return PROJECT_PATH / ".claude" / collection
     if collection == "contexts":
-        return project_path / "ai_context"
+        return PROJECT_PATH / "ai_context"
     raise ValueError(f"Unknown collection: {collection}")
 
 
@@ -105,14 +97,17 @@ def dirty_files() -> list[Path]:
         target_path = _target_path(collection)
         if target_path.exists():
             dirt.append(target_path)
+    if CLAUDE_MD_PATH.exists():
+        dirt.append(CLAUDE_MD_PATH)
+    if AGENT_MD_PATH.exists():
+        dirt.append(AGENT_MD_PATH)
     return dirt
 
 
 def overlay_claude_settings(manifest: dict[str, Any]) -> None:
     """Apply mode settings to Claude configuration."""
-    project_path, _, _ = get_mode_paths()
     claude_settings = {}
-    claude_settings_file = project_path / ".claude" / "settings.json"
+    claude_settings_file = PROJECT_PATH / ".claude" / "settings.json"
 
     if claude_settings_file.exists():
         claude_settings = json.loads(claude_settings_file.read_text())
@@ -145,8 +140,7 @@ def overlay_claude_settings(manifest: dict[str, Any]) -> None:
 
 def remove_claude_settings(manifest: dict[str, Any]) -> None:
     """Remove mode settings from Claude configuration."""
-    project_path, _, _ = get_mode_paths()
-    claude_settings_file = project_path / ".claude" / "settings.json"
+    claude_settings_file = PROJECT_PATH / ".claude" / "settings.json"
 
     if not claude_settings_file.exists():
         return
@@ -196,9 +190,8 @@ def set_mode(mode: str) -> None:
             f"The following directories already exist and may contain user data:\n{dirt_list}\nPlease back up and remove these directories before setting a new mode."
         )
 
-    _, _, amplifier_directory_path = get_mode_paths()
     for collection in COLLECTIONS:
-        source_path = amplifier_directory_path / collection
+        source_path = AMPLIFIER_DIRECTORY_PATH / collection
         target_path = _target_path(collection)
         for item in manifest.get(collection, []):
             src = source_path / item
@@ -212,6 +205,21 @@ def set_mode(mode: str) -> None:
             dst.symlink_to(src)
 
     overlay_claude_settings(manifest)
+    mode_path = MODES_DIR / mode
+    claude_file_path = mode_path / "CLAUDE.md"
+    print(claude_file_path)
+    if claude_file_path.exists():
+        if CLAUDE_MD_PATH.exists():
+            click.echo(f"Warning: CLAUDE.md already exists at `{CLAUDE_MD_PATH}`, skipping...")
+        else:
+            CLAUDE_MD_PATH.symlink_to(claude_file_path)
+
+    agent_file_path = mode_path / "AGENT.md"
+    if agent_file_path.exists():
+        if AGENT_MD_PATH.exists():
+            click.echo(f"Warning: AGENT.md already exists at `{AGENT_MD_PATH}`, skipping...")
+        else:
+            AGENT_MD_PATH.symlink_to(agent_file_path)
 
     state["mode"] = mode
     state_to_file(state)
@@ -219,8 +227,7 @@ def set_mode(mode: str) -> None:
 
 def unset_mode() -> None:
     """Unset the current mode."""
-    project_path, _, _ = get_mode_paths()
-    tool_cache = project_path / ".claude" / "tools" / "__pycache__"
+    tool_cache = PROJECT_PATH / ".claude" / "tools" / "__pycache__"
     if tool_cache.exists():
         shutil.rmtree(tool_cache)
 
@@ -233,6 +240,12 @@ def unset_mode() -> None:
                 item.unlink()
         if not any(target_path.iterdir()):
             target_path.rmdir()
+
+    if CLAUDE_MD_PATH.exists() and CLAUDE_MD_PATH.is_symlink():
+        CLAUDE_MD_PATH.unlink()
+
+    if AGENT_MD_PATH.exists() and AGENT_MD_PATH.is_symlink():
+        AGENT_MD_PATH.unlink()
 
     state = state_from_file()
     remove_claude_settings(state.get("manifest", {}))
