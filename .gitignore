@@ -60,11 +60,13 @@ ai_working/tmp
 
 # Smoke test runtime logs
 .smoke_test_data/data
+
+# Aplifier state files
 .amplifier/directory
 .amplifier/state.json
 
 # Amplifier-created artifacts.
 .claude
-CLAUDE.md
 AGENT.md
+CLAUDE.md
 ai_context
