@@ -138,7 +138,7 @@ class AmplifierConfig(BaseModel):
     def default_config(cls) -> dict[str, Any]:
         """Generate default configuration dictionary for creating config.yaml files."""
         return {
-            "directory": "git+microsoft/amplifier/directory",
+            "directory": "git+https://github.com/microsoft/amplifier/directory.git@v0.2.0",
             "paths": {"data_dir": ".data", "content_dirs": [".data/content"]},
             "models": {
                 "fast": "claude-3-5-haiku-20241022",
