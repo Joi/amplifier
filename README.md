@@ -134,12 +134,65 @@ models:
 
 The `.amplifier/directory/` contains all Amplifier resources:
 - **agents/** - Specialized AI agents
-- **hooks/** - Automation triggers
 - **commands/** - Custom Claude commands
-- **tools/** - Python utilities
 - **context/** - AI context files
+- **hooks/** - Automation triggers
+- **modes/** - Amplifier mode definitions
+- **tools/** - Python utilities
 
 This modular structure allows easy customization and sharing of configurations.
+
+#### Amplifier Directory Customization
+
+**Customize any Amplifier resource without modifying the official directory:**
+
+Amplifier supports a custom directory overlay at `.amplifier.local/directory/` that allows you to override or extend official resources:
+
+```bash
+# Freeze current official directory as starting point for customization
+amplifier directory freeze
+
+# Now customize files in .amplifier.local/directory/
+# - Edit agents to adjust behavior
+# - Modify commands to suit your workflow
+# - Add custom tools and hooks
+# - Extend context files with project-specific patterns
+
+# Your customizations automatically override official versions
+amplifier mode set python-coder  # Uses your custom files when present
+```
+
+You don't need to freeze the official directory if you just want to override a few files here and there.
+
+**How it works:**
+- Files in `.amplifier.local/directory/` override files in `.amplifier/directory/`
+- Missing custom files fall back to official versions
+- `.amplifier.local/` is git-ignored by default
+- Share customizations by version controlling `.amplifier.local/` separately
+- Configure custom directory path in `.amplifier/config.yaml`:
+  ```yaml
+  custom_directory:
+    enabled: true
+    path: ".amplifier.local/directory"  # or any path you prefer
+  ```
+
+**Common customization scenarios:**
+- **Project-specific agents**: Tailor agent behavior for your team's practices
+- **Custom slash commands**: Add commands for your specific workflows
+- **Modified context**: Include company coding standards or architecture patterns
+- **Personal preferences**: Adjust any resource to match your style
+
+**Managing directory files:**
+```bash
+# Fetch latest official directory
+amplifier directory fetch
+
+# Freeze official directory to custom overlay (skips existing files)
+amplifier directory freeze
+
+# Freeze with verbose output showing skipped files
+amplifier directory freeze --verbose
+```
 
 ## 📖 Key Features
 
@@ -263,15 +316,22 @@ Enable with:
 
 ### Mode Customization
 
-Currently, modes are managed by modifying files in `.amplifier/directory/modes/` directly:
+Create custom modes using the directory overlay system:
 
 ```bash
-# Edit mode configuration
-# Modify files in .amplifier/directory/modes/python-coder/
+# Freeze official directory as starting point
+amplifier directory freeze
 
-# Share with team via git
-git add .amplifier/directory/modes/
-git commit -m "Customize mode configurations"
+# Customize mode files in .amplifier.local/directory/modes/python-coder/
+# - Edit AGENTS.md to adjust agent guidance
+# - Modify CLAUDE.md for project-specific instructions
+# - Update amplifier.yaml to change available agents/commands
+
+# Share custom modes with team
+git add .amplifier.local/
+git commit -m "Add team-specific mode customizations"
+
+# Or keep customizations private (default - .amplifier.local is gitignored)
 ```
 
 ### Multi-Project Setup
@@ -298,8 +358,14 @@ amplifier mode set typescript-dev
 # Reinitialize Amplifier configuration
 amplifier init
 
-# Fetch latest directory updates
+# Fetch latest official directory updates
 amplifier directory fetch
+
+# Freeze official directory to custom overlay for customization
+amplifier directory freeze
+
+# View all directory management commands
+amplifier directory --help
 ```
 
 ## 📦 Migration from v0.1.0
