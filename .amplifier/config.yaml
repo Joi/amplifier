@@ -1,0 +1,58 @@
+# Amplifier Configuration
+# This file replaces the need for .env files by providing a unified configuration system
+
+# Directory configuration (existing)
+directory: git+microsoft/amplifier/directory@v0.2.0
+
+# Path configuration
+paths:
+  data_dir: .data
+  content_dirs:
+    - .data/content
+
+# Model configuration
+models:
+  fast: claude-3-5-haiku-20241022
+  default: claude-sonnet-4-20250514
+  thinking: claude-opus-4-1-20250805
+  # Legacy model configuration (being phased out)
+  knowledge_mining: claude-3-5-haiku-20241022
+  knowledge_extraction: claude-sonnet-4-20250514
+
+# Content processing configuration
+content_processing:
+  max_chars: 50000
+  classification_chars: 1500
+
+# Knowledge mining configuration
+knowledge_mining:
+  storage_dir: .data/knowledge_mining
+  default_doc_type: general
+  max_chars: 50000
+  classification_chars: 1500
+  model: claude-3-5-haiku-20241022
+  extraction_model: claude-sonnet-4-20250514
+
+# Memory system configuration
+memory_system:
+  enabled: false
+  model: claude-3-5-haiku-20241022
+  timeout: 120
+  max_messages: 20
+  max_content_length: 500
+  max_memories: 10
+  storage_dir: .data/memories
+
+# Smoke test configuration
+smoke_test:
+  model_category: fast
+  skip_on_ai_unavailable: true
+  ai_timeout: 30
+  max_output_chars: 5000
+  test_data_dir: .smoke_test_data
+
+# Optional configuration
+optional:
+  debug: false
+  # API keys are optional - Claude Code SDK may provide these
+  # anthropic_api_key: your_api_key_here

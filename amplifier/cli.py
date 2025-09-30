@@ -13,40 +13,37 @@ from typing import Any
 import click
 import yaml
 
+from amplifier.config.config import config_manager
 from amplifier.directory_fetcher import fetch_directory
 from amplifier.directory_source import parse_source
+from amplifier.overlay import create_overlay_resolver
 
 # Constants for mode management
 COLLECTIONS = ["agents", "commands", "contexts", "tools"]
-
-
-def get_mode_paths():
-    """Get paths for mode management relative to current working directory."""
-    project_path = Path.cwd()
-    amplifier_path = project_path / ".amplifier"
-    amplifier_directory_path = amplifier_path / "directory"
-    return project_path, amplifier_path, amplifier_directory_path
+PROJECT_PATH = Path.cwd()
+AMPLIFIER_PATH = PROJECT_PATH / ".amplifier"
+AMPLIFIER_DIRECTORY_PATH = AMPLIFIER_PATH / "directory"
+MODES_DIR = AMPLIFIER_DIRECTORY_PATH / "modes"
+CLAUDE_MD_PATH = PROJECT_PATH / "CLAUDE.md"
+AGENT_MD_PATH = PROJECT_PATH / "AGENT.md"
 
 
 def list_modes() -> list[str]:
     """List available modes."""
-    _, _, amplifier_directory_path = get_mode_paths()
-    modes_dir = amplifier_directory_path / "modes"
-    if not modes_dir.exists():
+    if not MODES_DIR.exists():
         return []
-    modes = [d.name for d in modes_dir.iterdir() if d.is_dir()]
-    modes = [m for m in modes if (modes_dir / m / "amplifier.yaml").exists()]
+    modes = [d.name for d in MODES_DIR.iterdir() if d.is_dir()]
+    modes = [m for m in modes if (MODES_DIR / m / "amplifier.yaml").exists()]
     return modes
 
 
 def state_from_file() -> dict[str, Any]:
     """Read state from .amplifier/state.json."""
-    _, amplifier_path, _ = get_mode_paths()
     state: dict[str, Any] = {"mode": None}
 
-    state_file = amplifier_path / "state.json"
+    state_file = AMPLIFIER_PATH / "state.json"
     if not state_file.exists():
-        amplifier_path.mkdir(parents=True, exist_ok=True)
+        AMPLIFIER_PATH.mkdir(parents=True, exist_ok=True)
         with open(state_file, "w") as f:
             json.dump(state, f)
         return state
@@ -62,17 +59,15 @@ def state_from_file() -> dict[str, Any]:
 
 def state_to_file(state: dict[str, Any]) -> None:
     """Write state to .amplifier/state.json."""
-    _, amplifier_path, _ = get_mode_paths()
-    state_file = amplifier_path / "state.json"
-    amplifier_path.mkdir(parents=True, exist_ok=True)
+    state_file = AMPLIFIER_PATH / "state.json"
+    AMPLIFIER_PATH.mkdir(parents=True, exist_ok=True)
     with open(state_file, "w") as f:
         json.dump(state, f)
 
 
 def get_mode_manifest(mode: str) -> dict[str, Any] | None:
     """Get the manifest for a specific mode."""
-    _, _, amplifier_directory_path = get_mode_paths()
-    mode_file = amplifier_directory_path / "modes" / mode / "amplifier.yaml"
+    mode_file = MODES_DIR / mode / "amplifier.yaml"
     if not mode_file.exists():
         return None
 
@@ -90,11 +85,10 @@ def get_mode() -> str | None:
 
 def _target_path(collection: str) -> Path:
     """Get the target path for a collection."""
-    project_path, _, _ = get_mode_paths()
     if collection in ["agents", "commands", "tools"]:
-        return project_path / ".claude" / collection
+        return PROJECT_PATH / ".claude" / collection
     if collection == "contexts":
-        return project_path / "ai_context"
+        return PROJECT_PATH / "ai_context"
     raise ValueError(f"Unknown collection: {collection}")
 
 
@@ -105,14 +99,17 @@ def dirty_files() -> list[Path]:
         target_path = _target_path(collection)
         if target_path.exists():
             dirt.append(target_path)
+    if CLAUDE_MD_PATH.exists():
+        dirt.append(CLAUDE_MD_PATH)
+    if AGENT_MD_PATH.exists():
+        dirt.append(AGENT_MD_PATH)
     return dirt
 
 
 def overlay_claude_settings(manifest: dict[str, Any]) -> None:
     """Apply mode settings to Claude configuration."""
-    project_path, _, _ = get_mode_paths()
     claude_settings = {}
-    claude_settings_file = project_path / ".claude" / "settings.json"
+    claude_settings_file = PROJECT_PATH / ".claude" / "settings.json"
 
     if claude_settings_file.exists():
         claude_settings = json.loads(claude_settings_file.read_text())
@@ -145,8 +142,7 @@ def overlay_claude_settings(manifest: dict[str, Any]) -> None:
 
 def remove_claude_settings(manifest: dict[str, Any]) -> None:
     """Remove mode settings from Claude configuration."""
-    project_path, _, _ = get_mode_paths()
-    claude_settings_file = project_path / ".claude" / "settings.json"
+    claude_settings_file = PROJECT_PATH / ".claude" / "settings.json"
 
     if not claude_settings_file.exists():
         return
@@ -196,22 +192,49 @@ def set_mode(mode: str) -> None:
             f"The following directories already exist and may contain user data:\n{dirt_list}\nPlease back up and remove these directories before setting a new mode."
         )
 
-    _, _, amplifier_directory_path = get_mode_paths()
+    # Create overlay resolver for custom directory
+    config = config_manager.config
+    custom_dir = None
+    if config.custom_directory.enabled:
+        custom_dir = PROJECT_PATH / config.custom_directory.path
+    resolver = create_overlay_resolver(custom_dir, AMPLIFIER_DIRECTORY_PATH)
+
     for collection in COLLECTIONS:
-        source_path = amplifier_directory_path / collection
+        source_path = AMPLIFIER_DIRECTORY_PATH / collection
         target_path = _target_path(collection)
         for item in manifest.get(collection, []):
             src = source_path / item
+            # Resolve through custom overlay
+            resolved_src = resolver(src)
             dst = target_path / item
-            if not src.exists():
-                raise Exception(f"Source path `{src}` does not exist.")
+            if not resolved_src.exists():
+                raise Exception(f"Source path `{resolved_src}` does not exist.")
             if dst.exists():
                 click.echo(f"Warning: Target path `{dst}` already exists, skipping...")
                 continue
             dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.symlink_to(src)
+            dst.symlink_to(resolved_src)
 
     overlay_claude_settings(manifest)
+    mode_path = MODES_DIR / mode
+    claude_file_path = mode_path / "CLAUDE.md"
+    # Resolve CLAUDE.md through custom overlay
+    resolved_claude = resolver(claude_file_path)
+    print(resolved_claude)
+    if resolved_claude.exists():
+        if CLAUDE_MD_PATH.exists():
+            click.echo(f"Warning: CLAUDE.md already exists at `{CLAUDE_MD_PATH}`, skipping...")
+        else:
+            CLAUDE_MD_PATH.symlink_to(resolved_claude)
+
+    agent_file_path = mode_path / "AGENT.md"
+    # Resolve AGENT.md through custom overlay
+    resolved_agent = resolver(agent_file_path)
+    if resolved_agent.exists():
+        if AGENT_MD_PATH.exists():
+            click.echo(f"Warning: AGENT.md already exists at `{AGENT_MD_PATH}`, skipping...")
+        else:
+            AGENT_MD_PATH.symlink_to(resolved_agent)
 
     state["mode"] = mode
     state_to_file(state)
@@ -219,8 +242,7 @@ def set_mode(mode: str) -> None:
 
 def unset_mode() -> None:
     """Unset the current mode."""
-    project_path, _, _ = get_mode_paths()
-    tool_cache = project_path / ".claude" / "tools" / "__pycache__"
+    tool_cache = PROJECT_PATH / ".claude" / "tools" / "__pycache__"
     if tool_cache.exists():
         shutil.rmtree(tool_cache)
 
@@ -233,6 +255,12 @@ def unset_mode() -> None:
                 item.unlink()
         if not any(target_path.iterdir()):
             target_path.rmdir()
+
+    if CLAUDE_MD_PATH.exists() and CLAUDE_MD_PATH.is_symlink():
+        CLAUDE_MD_PATH.unlink()
+
+    if AGENT_MD_PATH.exists() and AGENT_MD_PATH.is_symlink():
+        AGENT_MD_PATH.unlink()
 
     state = state_from_file()
     remove_claude_settings(state.get("manifest", {}))
@@ -308,7 +336,7 @@ def init(target: str, force: bool) -> None:
 
     except Exception as e:
         click.echo(f"⚠️  Warning: Failed to fetch directory content: {e}", err=True)
-        click.echo("You can manually fetch it later with: amplifier fetch-directory")
+        click.echo("You can manually fetch it later with: amplifier directory fetch")
 
     finally:
         # Always restore original working directory
@@ -365,14 +393,20 @@ def unset():
     click.echo("Mode unset.")
 
 
-@click.command(name="fetch-directory")
+@click.group(name="directory")
+def directory_cmd() -> None:
+    """Manage amplifier directory."""
+    pass
+
+
+@directory_cmd.command(name="fetch")
 @click.option(
     "--force",
     "-f",
     is_flag=True,
     help="Overwrite existing directory if it exists",
 )
-def fetch_directory_cmd(force: bool) -> None:
+def directory_fetch(force: bool) -> None:
     """Fetch the directory specified in .amplifier/config.yaml."""
     from amplifier.directory_fetcher import fetch_directory as do_fetch
     from amplifier.directory_source import parse_source
@@ -413,6 +447,46 @@ def fetch_directory_cmd(force: bool) -> None:
         click.echo(f"Successfully fetched directory to {directory_path}")
     except Exception as e:
         raise click.ClickException(f"Failed to fetch directory: {e}")
+
+
+@directory_cmd.command(name="freeze")
+@click.option("--verbose", "-v", is_flag=True, help="Show skipped files")
+def directory_freeze(verbose: bool) -> None:
+    """Copy official directory files to custom overlay (skips existing files)."""
+    # Get paths
+    source_dir = Path.cwd() / ".amplifier" / "directory"
+    dest_base = Path.cwd() / ".amplifier.local" / "directory"
+
+    # Validate source exists
+    if not source_dir.exists():
+        raise click.ClickException("No official directory found. Run 'amplifier directory fetch' first.")
+
+    # Track stats
+    copied_count = 0
+    skipped_count = 0
+
+    click.echo("Freezing directory files to custom overlay...")
+
+    # Walk and copy
+    for source_file in source_dir.rglob("*"):
+        if source_file.is_file():
+            rel_path = source_file.relative_to(source_dir)
+            dest_file = dest_base / rel_path
+
+            if dest_file.exists():
+                skipped_count += 1
+                if verbose:
+                    click.echo(f"  Skipped: {rel_path}")
+            else:
+                # Create parent dirs if needed
+                dest_file.parent.mkdir(parents=True, exist_ok=True)
+                # Copy file
+                shutil.copy2(source_file, dest_file)
+                copied_count += 1
+                click.echo(f"  Copied: {rel_path}")
+
+    # Summary
+    click.echo(f"Frozen: {copied_count} files copied, {skipped_count} files skipped")
 
 
 @click.group()
@@ -657,7 +731,7 @@ def worktree_list_stashed() -> None:
 
 main.add_command(init)
 main.add_command(mode)
-main.add_command(fetch_directory_cmd)
+main.add_command(directory_cmd)
 main.add_command(transcript_cmd)
 main.add_command(worktree_cmd)
 

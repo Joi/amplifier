@@ -12,7 +12,6 @@ This file is reserved for Claude Code-specific instructions.
 - @DISCOVERIES.md
 - @ai_context/IMPLEMENTATION_PHILOSOPHY.md
 - @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
-- @ai_context/CODE_ITERATION.md
 
 # Claude's Working Philosophy and Memory System
 

@@ -73,7 +73,9 @@ def parse_source(source: str) -> SourceInfo:
             # URLs look like: https://github.com/user/repo/path
             parts = source_part.split("/")
             if len(parts) < 5:  # Need at least: https:, , domain, user, repo
-                raise ValueError(f"Invalid git URL format: '{source}'. Expected: 'git+https://domain/username/repo/path'")
+                raise ValueError(
+                    f"Invalid git URL format: '{source}'. Expected: 'git+https://domain/username/repo/path'"
+                )
 
             # Reconstruct base URL (protocol + domain + user + repo)
             base_url = "/".join(parts[:5])  # https://github.com/user/repo
@@ -83,20 +85,21 @@ def parse_source(source: str) -> SourceInfo:
                 raise ValueError(f"Invalid git URL format: '{source}'. Must specify a path within the repository")
 
             return SourceInfo(type="git", repo=base_url, path=path, branch=branch)
-        else:
-            # Short format: username/repo/path
-            parts = source_part.split("/", 2)
-            if len(parts) < 3:
-                raise ValueError(f"Invalid git source format: '{source}'. Expected: 'git+username/repo/path' or 'git+username/repo/path@branch'")
+        # Short format: username/repo/path
+        parts = source_part.split("/", 2)
+        if len(parts) < 3:
+            raise ValueError(
+                f"Invalid git source format: '{source}'. Expected: 'git+username/repo/path' or 'git+username/repo/path@branch'"
+            )
 
-            username, repo, path = parts[0], parts[1], "/".join(parts[2:])
+        username, repo, path = parts[0], parts[1], "/".join(parts[2:])
 
-            if not username or not repo or not path:
-                raise ValueError(
-                    f"Invalid git source format: '{source}'. All components (username, repo, path) must be non-empty"
-                )
+        if not username or not repo or not path:
+            raise ValueError(
+                f"Invalid git source format: '{source}'. All components (username, repo, path) must be non-empty"
+            )
 
-            return SourceInfo(type="git", repo=f"{username}/{repo}", path=path, branch=branch)
+        return SourceInfo(type="git", repo=f"{username}/{repo}", path=path, branch=branch)
 
     # Otherwise treat as local path
     path = Path(source)

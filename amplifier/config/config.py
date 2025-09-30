@@ -119,6 +119,13 @@ class DirectoryConfig(BaseModel):
     directory: str = "git+microsoft/amplifier/directory"
 
 
+class CustomDirectoryConfig(BaseModel):
+    """Custom directory overlay configuration."""
+
+    enabled: bool = True
+    path: str = ".amplifier.local/directory"
+
+
 class AmplifierConfig(BaseModel):
     """Main configuration model."""
 
@@ -133,6 +140,9 @@ class AmplifierConfig(BaseModel):
 
     # Directory configuration (existing)
     directory: DirectoryConfig = Field(default_factory=DirectoryConfig)
+
+    # Custom directory overlay
+    custom_directory: CustomDirectoryConfig = Field(default_factory=CustomDirectoryConfig)
 
     @classmethod
     def default_config(cls) -> dict[str, Any]:
