@@ -449,6 +449,46 @@ def directory_fetch(force: bool) -> None:
         raise click.ClickException(f"Failed to fetch directory: {e}")
 
 
+@directory_cmd.command(name="freeze")
+@click.option("--verbose", "-v", is_flag=True, help="Show skipped files")
+def directory_freeze(verbose: bool) -> None:
+    """Copy official directory files to custom overlay (skips existing files)."""
+    # Get paths
+    source_dir = Path.cwd() / ".amplifier" / "directory"
+    dest_base = Path.cwd() / ".amplifier.local" / "directory"
+
+    # Validate source exists
+    if not source_dir.exists():
+        raise click.ClickException("No official directory found. Run 'amplifier directory fetch' first.")
+
+    # Track stats
+    copied_count = 0
+    skipped_count = 0
+
+    click.echo("Freezing directory files to custom overlay...")
+
+    # Walk and copy
+    for source_file in source_dir.rglob("*"):
+        if source_file.is_file():
+            rel_path = source_file.relative_to(source_dir)
+            dest_file = dest_base / rel_path
+
+            if dest_file.exists():
+                skipped_count += 1
+                if verbose:
+                    click.echo(f"  Skipped: {rel_path}")
+            else:
+                # Create parent dirs if needed
+                dest_file.parent.mkdir(parents=True, exist_ok=True)
+                # Copy file
+                shutil.copy2(source_file, dest_file)
+                copied_count += 1
+                click.echo(f"  Copied: {rel_path}")
+
+    # Summary
+    click.echo(f"Frozen: {copied_count} files copied, {skipped_count} files skipped")
+
+
 @click.group()
 def main() -> None:
     """Amplifier CLI - Tools for AI-powered productivity."""
