@@ -53,7 +53,17 @@ mv .env.example backup/.env.example 2>/dev/null || true
 - Offer to copy customizations to `.amplifier.local/directory/python-coder`
 - Explain the custom directory overlay system
 
-### 5. Migration Report
+### 5. Update .gitignore
+- Ensure the following are in .gitignore:
+   ```
+   # Amplifier-created artifacts.
+   .claude
+   AGENT.md
+   CLAUDE.md
+   ai_context
+   ```
+
+### 6. Migration Report
 Provide a summary of:
 - What was backed up
 - What was migrated
@@ -81,7 +91,17 @@ Provide a summary of:
    - Offer to migrate to `.amplifier.local/`
    - Explain overlay system
 
-5. **Report Phase**
+5. **.gitignore Phase**
+- Ensure the following are in .gitignore:
+   ```
+   # Amplifier-created artifacts.
+   .claude
+   AGENT.md
+   CLAUDE.md
+   ai_context
+   ```
+
+6. **Report Phase**
    - Summarize what was done
    - List manual steps needed
    - Provide next steps
