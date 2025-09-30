@@ -299,7 +299,7 @@ amplifier mode set typescript-dev
 amplifier init
 
 # Fetch latest directory updates
-amplifier fetch-directory
+amplifier directory fetch
 ```
 
 ## 📦 Migration from v0.1.0

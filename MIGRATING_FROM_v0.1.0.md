@@ -25,7 +25,7 @@
 - Install the amplifier script: `uv pip install -e .`
 - Initialize 0.2.0: `amplifier init`. This creates the `.amplifier` directory in your project.
 - If you customized any of the config in `.env` update your values in the new config file at `.amplifier/config.yaml`. Note: You can still override config.yaml config with env vars in the form of `AMPLIFIER__NESTED__CONFIG_VALUE` type keys (they map to what is in the config.yaml).
-- Until we get the directory into `main`, you won't be able to git it, so until then, update your directory in `.amplifier/config.yaml`  to be the path to the `directory` folder, and then run: `amplifier fetch-directory` to have the directory cached/copied into your `.amplifier` directory.
+- Until we get the directory into `main`, you won't be able to git it, so until then, update your directory in `.amplifier/config.yaml`  to be the path to the `directory` folder, and then run: `amplifier directory fetch` to have the directory cached/copied into your `.amplifier` directory.
 - Change to python coder mode: `amplifier mode set python-coder`. This will re-create your .claude directory.
 
 ## Other things to know.

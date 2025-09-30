@@ -336,7 +336,7 @@ def init(target: str, force: bool) -> None:
 
     except Exception as e:
         click.echo(f"⚠️  Warning: Failed to fetch directory content: {e}", err=True)
-        click.echo("You can manually fetch it later with: amplifier fetch-directory")
+        click.echo("You can manually fetch it later with: amplifier directory fetch")
 
     finally:
         # Always restore original working directory
@@ -393,14 +393,20 @@ def unset():
     click.echo("Mode unset.")
 
 
-@click.command(name="fetch-directory")
+@click.group(name="directory")
+def directory_cmd() -> None:
+    """Manage amplifier directory."""
+    pass
+
+
+@directory_cmd.command(name="fetch")
 @click.option(
     "--force",
     "-f",
     is_flag=True,
     help="Overwrite existing directory if it exists",
 )
-def fetch_directory_cmd(force: bool) -> None:
+def directory_fetch(force: bool) -> None:
     """Fetch the directory specified in .amplifier/config.yaml."""
     from amplifier.directory_fetcher import fetch_directory as do_fetch
     from amplifier.directory_source import parse_source
@@ -685,7 +691,7 @@ def worktree_list_stashed() -> None:
 
 main.add_command(init)
 main.add_command(mode)
-main.add_command(fetch_directory_cmd)
+main.add_command(directory_cmd)
 main.add_command(transcript_cmd)
 main.add_command(worktree_cmd)
 
