@@ -36,9 +36,8 @@ default: ## Show essential commands
 	@echo "AI Context:"
 	@echo "  make ai-context-files Build AI context documentation"
 	@echo ""
-	@echo "CLI Commands:"
-	@echo "  amplifier worktree  Manage git worktrees (create, remove, list, etc.)"
-	@echo "  amplifier transcript Manage conversation transcripts (list, search, restore, etc.)"
+	@echo "Blog Writing:"
+	@echo "  make blog-write      Create a blog post from your ideas"
 	@echo ""
 	@echo "Other:"
 	@echo "  make clean          Clean build artifacts"
@@ -98,10 +97,15 @@ help: ## Show ALL available commands
 	@echo "AI CONTEXT:"
 	@echo "  make ai-context-files  Build AI context documentation"
 	@echo ""
+	@echo "BLOG WRITING:"
+	@echo "  make blog-write IDEA=<file> WRITINGS=<dir> [INSTRUCTIONS=\"...\"]  Create blog"
+	@echo "  make blog-resume       Resume most recent blog writing session"
+	@echo ""
 	@echo "UTILITIES:"
 	@echo "  make clean           Clean build artifacts"
 	@echo "  make clean-wsl-files Clean WSL-related files"
 	@echo "  make workspace-info  Show workspace information"
+	@echo "  make dot-to-mermaid INPUT=\"path\"  Convert DOT files to Mermaid"
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
@@ -376,6 +380,42 @@ ai-context-files: ## Build AI context files
 	uv run python .amplifier/directory/tools/build_git_collector_files.py
 	@echo "AI context files generated"
 
+# Blog Writing
+blog-write: ## Create a blog post from your ideas. Usage: make blog-write IDEA=ideas.md WRITINGS=my_writings/ [INSTRUCTIONS="..."]
+	@if [ -z "$(IDEA)" ]; then \
+		echo "Error: Please provide an idea file. Usage: make blog-write IDEA=ideas.md WRITINGS=my_writings/"; \
+		exit 1; \
+	fi
+	@if [ -z "$(WRITINGS)" ]; then \
+		echo "Error: Please provide a writings directory. Usage: make blog-write IDEA=ideas.md WRITINGS=my_writings/"; \
+		exit 1; \
+	fi
+	@echo "🚀 Starting blog post writer..."; \
+	echo "  Idea: $(IDEA)"; \
+	echo "  Writings: $(WRITINGS)"; \
+	if [ -n "$(INSTRUCTIONS)" ]; then echo "  Instructions: $(INSTRUCTIONS)"; fi; \
+	echo "  Output: Auto-generated from title in session directory"; \
+	if [ -n "$(INSTRUCTIONS)" ]; then \
+		uv run python -m scenarios.blog_writer \
+			--idea "$(IDEA)" \
+			--writings-dir "$(WRITINGS)" \
+			--instructions "$(INSTRUCTIONS)"; \
+	else \
+		uv run python -m scenarios.blog_writer \
+			--idea "$(IDEA)" \
+			--writings-dir "$(WRITINGS)"; \
+	fi
+
+blog-resume: ## Resume an interrupted blog writing session
+	@echo "📝 Resuming blog post writer..."
+	@uv run python -m scenarios.blog_writer --resume
+
+blog-write-example: ## Run blog writer with example data
+	@echo "📝 Running blog writer with example data..."
+	@uv run python -m scenarios.blog_writer \
+		--idea scenarios/blog_writer/tests/sample_brain_dump.md \
+		--writings-dir scenarios/blog_writer/tests/sample_writings/
+
 # Clean WSL Files
 clean-wsl-files: ## Clean up WSL-related files (Zone.Identifier, sec.endpointdlp)
 	@echo "Cleaning WSL-related files..."
@@ -389,3 +429,15 @@ workspace-info: ## Show workspace information
 	@echo ""
 	$(call list_projects)
 	@echo ""
+
+# DOT to Mermaid Converter
+dot-to-mermaid: ## Convert DOT files to Mermaid format. Usage: make dot-to-mermaid INPUT="path/to/dot/files"
+	@if [ -z "$(INPUT)" ]; then \
+		echo "Error: Please provide an input path. Usage: make dot-to-mermaid INPUT=\"path/to/dot/files\""; \
+		exit 1; \
+	fi
+	@DATA_DIR=$$(python -c "from amplifier.config.paths import paths; print(paths.data_dir)"); \
+	SESSION_DIR="$$DATA_DIR/dot_to_mermaid"; \
+	mkdir -p "$$SESSION_DIR"; \
+	echo "Converting DOT files to Mermaid format..."; \
+	uv run python -m ai_working.dot_to_mermaid.cli "$(INPUT)" --session-file "$$SESSION_DIR/session.json"
