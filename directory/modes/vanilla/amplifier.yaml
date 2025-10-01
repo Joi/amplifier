@@ -1,4 +1,4 @@
-version: 0.2.0
+version: 0.1.0
 agents:
   - ambiguity-guardian.md
   - amplifier-cli-architect.md

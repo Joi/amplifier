@@ -1,0 +1,1 @@
+/data/repos/msft/amplifier/.amplifier/directory/contexts/git_collector/CLAUDE_CODE_SDK_PYTHON_REPO.md
