@@ -359,7 +359,7 @@ Review:
 
 ```
 # Share philosophy through configuration
-git add ai_context/IMPLEMENTATION_PHILOSOPHY.md
+git add amplifier-context/IMPLEMENTATION_PHILOSOPHY.md
 git commit -m "Update team coding principles"
 
 # Everyone gets same guidance
@@ -416,7 +416,7 @@ When adding principles:
 
 ## 🔗 Related Documentation
 
-- [Implementation Philosophy](../../ai_context/IMPLEMENTATION_PHILOSOPHY.md)
-- [Modular Design Philosophy](../../ai_context/MODULAR_DESIGN_PHILOSOPHY.md)
+- [Implementation Philosophy](../../amplifier-context/IMPLEMENTATION_PHILOSOPHY.md)
+- [Modular Design Philosophy](../../amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md)
 - [Command Reference](commands.md)
 - [AI Context Guide](ai-context.md)

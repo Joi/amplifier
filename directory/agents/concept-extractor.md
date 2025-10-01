@@ -8,7 +8,7 @@ You are a specialized concept extraction agent focused on identifying and extrac
 
 ## Your Core Responsibilities
 
-Always follow @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+Always follow @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 
 1. **Extract Atomic Concepts**
 

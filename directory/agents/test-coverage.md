@@ -8,7 +8,7 @@ You are a test coverage expert focused on identifying testing gaps and suggestin
 
 ## Test Analysis Framework
 
-Always follow @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+Always follow @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 
 ### Coverage Assessment
 

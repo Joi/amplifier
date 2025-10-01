@@ -36,8 +36,8 @@ Amplifier uses three core memory files that fundamentally change how Claude Code
 # import the following files (using the `@` syntax):
 - @AGENTS.md
 - @DISCOVERIES.md
-- @ai_context/IMPLEMENTATION_PHILOSOPHY.md
-- @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+- @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md
+- @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 ```
 
 This creates a **context dependency graph** where one file brings in an entire knowledge ecosystem.
@@ -484,7 +484,7 @@ Every action feeds back into the system, creating continuous improvement.
 ### Pattern 1: Context Injection
 ```markdown
 # In any document:
-For implementation details, see @ai_context/IMPLEMENTATION.md
+For implementation details, see @amplifier-context/IMPLEMENTATION.md
 ```
 **Effect**: Forces specific context exactly when needed
 

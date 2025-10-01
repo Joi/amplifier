@@ -73,7 +73,7 @@ else
             echo "Using directory of edited file: $FILE_DIR"
         fi
     fi
-    
+
     if [[ -z "$START_DIR" ]] && [[ -n "${CWD:-}" ]]; then
         START_DIR="$CWD"
     elif [[ -z "$START_DIR" ]]; then
@@ -109,20 +109,20 @@ make_target_exists() {
 # Function to setup proper environment for worktree
 setup_worktree_env() {
     local project_dir="$1"
-    
+
     # Check if we have a local .venv in this project directory
     if [[ -d "$project_dir/.venv" ]]; then
         # Temporarily unset VIRTUAL_ENV to avoid conflicts
         unset VIRTUAL_ENV
-        
+
         # If we're in a worktree, make sure we use its local .venv
         echo "Using worktree's local .venv: $project_dir/.venv"
-        
+
         # Let uv handle the environment detection
         # uv will automatically use the .venv in the project directory
         return 0
     fi
-    
+
     # If no local .venv exists, keep existing environment
     return 0
 }
@@ -152,7 +152,7 @@ elif make_target_exists "$PROJECT_ROOT" "check"; then
 else
     # Find the project root (may fail, that's OK)
     PROJECT_ROOT=$(find_project_root "$START_DIR" || echo "")
-    
+
     if [[ -n "$PROJECT_ROOT" ]] && make_target_exists "$PROJECT_ROOT" "check"; then
         echo "Running 'make check' from project root: $PROJECT_ROOT"
         cd "$PROJECT_ROOT"
@@ -163,3 +163,4 @@ else
     fi
 fi
 
+exit 0

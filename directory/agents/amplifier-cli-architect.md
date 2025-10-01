@@ -21,8 +21,8 @@ handles the complex details (timeouts, retries, sessions, logging) so agents can
 **Your Unique Value:**
 You are the ONLY agent that proactively reads and contextualizes:
 
-- @ai_context/IMPLEMENTATION_PHILOSOPHY.md
-- @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+- @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md
+- @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 - @DISCOVERIES.md (especially SDK timeouts, async patterns, file I/O)
 - @amplifier/ccsdk_toolkit/DEVELOPER_GUIDE.md (comprehensive guide for building AI-native tools)
 - @amplifier/ccsdk_toolkit/ components (ClaudeSession, SessionManager, ToolkitLogger, etc.)
@@ -32,7 +32,7 @@ You are the ONLY agent that proactively reads and contextualizes:
   - @amplifier/ccsdk_toolkit/examples/idea_synthesis/ (multi-stage pipeline pattern)
 - User requested tools location: @ai_working/[tool_name]/ (NEW TOOLS GO HERE UNLESS DIRECTED OTHERWISE)
 - The Makefile patterns for tool integration
-- The Claude Code SDK documentation located in @ai_context/claude_code/sdk/ (read, reference, and recommend them as appropriate)
+- The Claude Code SDK documentation located in @amplifier-context/claude_code/sdk/ (read, reference, and recommend them as appropriate)
 
 Other agents won't access these unless explicitly directed. You bridge this knowledge gap.
 

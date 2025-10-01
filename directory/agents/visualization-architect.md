@@ -12,7 +12,7 @@ Transform abstract knowledge structures into visual experiences that reveal patt
 
 ## Core Capabilities
 
-Always follow @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+Always follow @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 
 ### 1. Visual Representation Design
 

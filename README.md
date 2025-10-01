@@ -54,8 +54,8 @@ uv add amplifier
 # Initialize Amplifier in your project
 amplifier init
 
-# Set your preferred mode (e.g., python-coder, typescript-dev, etc.)
-amplifier mode set python-coder
+# Set your preferred mode (e.g., amplifier-dev, typescript-dev, etc.)
+amplifier mode set amplifier-dev
 
 # Start Claude with Amplifier enhancements
 claude
@@ -74,7 +74,7 @@ Modes are pre-configured sets of agents, hooks, commands, and context files opti
 amplifier mode list
 
 # Set a mode for your project
-amplifier mode set python-coder    # Python development with testing focus
+amplifier mode set amplifier-dev    # Python development with testing focus
 amplifier mode set typescript-dev  # TypeScript/Node.js development
 amplifier mode set data-scientist  # Data analysis and ML workflows
 
@@ -86,7 +86,7 @@ amplifier mode unset
 # For now, manually copy and edit mode directories
 
 # Currently, create modes by copying existing ones:
-# cp -r .amplifier/directory/modes/python-coder .amplifier/directory/modes/my-mode
+# cp -r .amplifier/directory/modes/amplifier-dev .amplifier/directory/modes/my-mode
 ```
 
 Each mode provides:
@@ -101,7 +101,7 @@ Amplifier uses `.amplifier/config.yaml` for all configuration:
 
 ```yaml
 # Mode configuration
-mode: python-coder  # Your active mode
+mode: amplifier-dev  # Your active mode
 
 # Directory configuration
 directory: git+microsoft/amplifier/directory  # Official directory source
@@ -159,7 +159,7 @@ amplifier directory freeze
 # - Extend context files with project-specific patterns
 
 # Your customizations automatically override official versions
-amplifier mode set python-coder  # Uses your custom files when present
+amplifier mode set amplifier-dev  # Uses your custom files when present
 ```
 
 You don't need to freeze the official directory if you just want to override a few files here and there.
@@ -322,7 +322,7 @@ Create custom modes using the directory overlay system:
 # Freeze official directory as starting point
 amplifier directory freeze
 
-# Customize mode files in .amplifier.local/directory/modes/python-coder/
+# Customize mode files in .amplifier.local/directory/modes/amplifier-dev/
 # - Edit AGENTS.md to adjust agent guidance
 # - Modify CLAUDE.md for project-specific instructions
 # - Update amplifier.yaml to change available agents/commands
@@ -342,7 +342,7 @@ Use Amplifier across multiple projects with shared knowledge:
 # Project 1: Web API
 cd ~/projects/api
 uv add amplifier && amplifier init
-amplifier mode set python-coder
+amplifier mode set amplifier-dev
 
 # Project 2: Frontend
 cd ~/projects/frontend
@@ -415,7 +415,7 @@ amplifier directory --help
 
 6. **Set your mode**:
    ```bash
-   amplifier mode set python-coder
+   amplifier mode set amplifier-dev
    ```
 
 ### Command Migration Reference

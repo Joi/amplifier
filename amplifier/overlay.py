@@ -27,9 +27,9 @@ def create_overlay_resolver(
         ...     Path(".amplifier.local/directory"),
         ...     Path(".amplifier/directory")
         ... )
-        >>> resolved = resolver(Path(".amplifier/directory/modes/python-coder/AGENTS.md"))
-        >>> # Returns .amplifier.local/directory/modes/python-coder/AGENTS.md if exists
-        >>> # Otherwise returns .amplifier/directory/modes/python-coder/AGENTS.md
+        >>> resolved = resolver(Path(".amplifier/directory/modes/amplifier-dev/AGENTS.md"))
+        >>> # Returns .amplifier.local/directory/modes/amplifier-dev/AGENTS.md if exists
+        >>> # Otherwise returns .amplifier/directory/modes/amplifier-dev/AGENTS.md
     """
     if custom_dir is None:
         # No overlay configured, return identity function
