@@ -43,7 +43,7 @@ mv .env.example backup/.env.example 2>/dev/null || true
 ### 3. Amplifier v0.2.0 installation
 - Install amplifier v0.2.0 : `uv tool install --from git+https://github.com/microsoft/amplifier@v0.2.0 amplifier`
 - Intall amplifier v0.2.0 into your project `amplifier init`
-- Put amplifier v0.2.0 into python-coder mode: `amplifier mode set python-coder`
+- Put amplifier v0.2.0 into amplifier-dev mode: `amplifier mode set amplifier-dev`
 
 ### 4. Configuration Migration
 - Check for custom `.env` settings in backup that differ from what has been set in `.amplifier/config.yaml`
@@ -55,12 +55,12 @@ mv .env.example backup/.env.example 2>/dev/null || true
   - Are there any `backup/.claude/commands` that aren't in `.amplifier/directory/commands`?
   - Are there any `backup/.claude/agents` that aren't in `.amplifier/directory/agents`?
   - Are there any `backup/.claude/tools` or `tools` that aren't in `.amplifier/directory/tools`?
-  - Are there any instructions from `backup/CLAUDE.md` that aren't in `.amplifier/directory/modes/python-coder/CLAUDE.md`?
-  - Are there any instructions from `backup/AGENT.md` that aren't in `.amplifier/directory/modes/python-coder/AGENT.md`?
-  - Are there any files in `ai_context` that aren't in `.amplifier/directory/modes/python-coder/context/`?
-- If there are any customizations, explain the custom directory overlay system and offer to create custom overrides in `.amplifier.local/directory/modes/python-coder`.
-- If they want custom overrides, copy any custom commands, agents, tools, CLAUDE.md changes, AGENT.md changes and ai_context into the `.amplifier.local/directory/modes/python-coder` directory.
-- Verify all new files are referenced in `.amplifier.local/directory/modes/python-coder/amplifier.yaml`
+  - Are there any instructions from `backup/CLAUDE.md` that aren't in `.amplifier/directory/modes/amplifier-dev/CLAUDE.md`?
+  - Are there any instructions from `backup/AGENT.md` that aren't in `.amplifier/directory/modes/amplifier-dev/AGENT.md`?
+  - Are there any files in `ai_context` that aren't in `.amplifier/directory/modes/amplifier-dev/context/`?
+- If there are any customizations, explain the custom directory overlay system and offer to create custom overrides in `.amplifier.local/directory/modes/amplifier-dev`.
+- If they want custom overrides, copy any custom commands, agents, tools, CLAUDE.md changes, AGENT.md changes and ai_context into the `.amplifier.local/directory/modes/amplifier-dev` directory.
+- Verify all new files are referenced in `.amplifier.local/directory/modes/amplifier-dev/amplifier.yaml`
 
 ### 6. Migration Report
 Provide a summary of:
@@ -68,7 +68,7 @@ Provide a summary of:
 - What was migrated
 - Configuration items that need manual review
 - Next steps for the user
-  - They will need to exit claude-code, run `uvx amplifier mode unset && uvx amplifier mode set python-coder`, and restart claude code it to see the new version
+  - They will need to exit claude-code, run `uvx amplifier mode unset && uvx amplifier mode set amplifier-dev`, and restart claude code it to see the new version
   - They can continue to work on their custom files in `.amplifier.local`
 
 ## Migration Process
@@ -87,7 +87,7 @@ Provide a summary of:
 3. **Installation Phase**
     - Install amplifier v0.2.0 : `uv tool install --from git+https://github.com/microsoft/amplifier@v0.2.0 amplifier`
     - Intall amplifier v0.2.0 into your project `amplifier init`
-    - Put amplifier v0.2.0 into python-coder mode: `amplifier mode set python-coder`
+    - Put amplifier v0.2.0 into amplifier-dev mode: `amplifier mode set amplifier-dev`
 
 4. **Configuration Phase**
    - Guide config migration
@@ -95,7 +95,7 @@ Provide a summary of:
 5. **Customization Phase**
    - Identify custom files in backup
    - Explain overlay system
-   - Offer to migrate to `.amplifier.local/directory/python-coder`
+   - Offer to migrate to `.amplifier.local/directory/amplifier-dev`
    - Migrate the custom files and content
 
 6. **Report Phase**
@@ -109,7 +109,7 @@ Provide a summary of:
 - **Custom Configurations**: `.env` settings need manual migration to `.amplifier/config.yaml`
 - **Custom Files**: Any customizations in backup need to be manually copied to `.amplifier.local/directory/`
 - **New Structure**: v0.2.0 uses `.amplifier/` instead of top-level files
-- **Mode System**: v0.2.0 introduces modes - we are set to `python-coder` by default
+- **Mode System**: v0.2.0 introduces modes - we are set to `amplifier-dev` by default
 - **Directory System**: Official resources are now fetched from remote and can be customized via overlay
 
 ## Post-Migration Steps
@@ -123,7 +123,7 @@ After migration completes, you should:
 2. **Review Customizations**
    - Check `backup/` for any custom files
    - Copy customizations to `.amplifier.local/directory/` if needed
-   - Ensure all customizations for python-coder mode are references in `.amplifier.local/directory/modes/python-coder/amplifier.yaml`
+   - Ensure all customizations for amplifier-dev mode are references in `.amplifier.local/directory/modes/amplifier-dev/amplifier.yaml`
 
 3. **Test Functionality**
    - Start Claude Code: `claude`
