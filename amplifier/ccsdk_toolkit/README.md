@@ -516,7 +516,7 @@ This toolkit embodies:
 - **Progressive Enhancement** - Start simple, add complexity only when needed
 - **Clear Error Messages** - When things fail, tell users exactly what to do
 
-See [IMPLEMENTATION_PHILOSOPHY.md](../../ai_context/IMPLEMENTATION_PHILOSOPHY.md) for detailed principles.
+See [IMPLEMENTATION_PHILOSOPHY.md](../../amplifier-context/IMPLEMENTATION_PHILOSOPHY.md) for detailed principles.
 
 ## Contributing
 
@@ -536,7 +536,7 @@ make test   # Run tests
 For issues or questions:
 
 - GitHub Issues: [Project Issues]
-- Documentation: See `/ai_context/claude_code/` for SDK details
+- Documentation: See `/amplifier-context/IMPLEMENTATION/claude_code/` for SDK details
 
 ---
 

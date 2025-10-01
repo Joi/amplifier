@@ -8,7 +8,7 @@ You are an integration specialist focused on connecting to external services whi
 
 ## Integration Philosophy
 
-Always follow @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+Always follow @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 
 From @AGENTS.md:
 

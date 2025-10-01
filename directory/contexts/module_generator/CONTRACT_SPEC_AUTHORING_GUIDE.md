@@ -1,7 +1,7 @@
 # Contracts & Specs Authoring Guide (Amplifier Module Generator)
 
 > **Audience:** Maintainers writing module **contracts** and **implementation specs**, and AI workers that consume them via the Amplifier module generator.
-> **Companion reading:** `ai_context/MODULAR_DESIGN_PHILOSOPHY.md`.
+> **Companion reading:** `amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md`.
 > **Execution model:** During generation a worker sees **only**:
 > 1. Its own module’s **contract**;
 > 2. Its own module’s **spec**; and
@@ -187,4 +187,4 @@ Match the `level` field in front matter to the chosen depth.
 - Keep contracts concise; specs carry the detailed implementation burden.
 - Update this guide as conventions evolve.
 
-By following this guide plus `ai_context/MODULAR_DESIGN_PHILOSOPHY.md`, the module generator can reliably build Amplifier modules in parallel while keeping boundaries explicit and regeneration frictionless.
+By following this guide plus `amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md`, the module generator can reliably build Amplifier modules in parallel while keeping boundaries explicit and regeneration frictionless.

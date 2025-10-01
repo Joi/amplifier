@@ -18,7 +18,7 @@ Transform the user's natural language ask and chat context into a well-defined m
 - A persistent session record at `ai_working/<module_name>/session.json`
 
 **Critical Context:**
-You MUST include and reference: @ai_context/module_generator/CONTRACT_SPEC_AUTHORING_GUIDE.md
+You MUST include and reference: @amplifier-context/module_generator/CONTRACT_SPEC_AUTHORING_GUIDE.md
 
 **Operating Principles:**
 

@@ -9,9 +9,8 @@ Perform all actions below.
 Instructions assume you are in the repo root directory, change there if needed before running.
 
 READ (or RE-READ if already READ):
-@ai_context/IMPLEMENTATION_PHILOSOPHY.md
-@ai_context/MODULAR_DESIGN_PHILOSOPHY.md
-@ai_context/CODE_ITERATION.md
+@amplifier-context/IMPLEMENTATION_PHILOSOPHY.md
+@amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 
 RUN:
 make install

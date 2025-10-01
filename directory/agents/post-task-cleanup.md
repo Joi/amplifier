@@ -27,7 +27,7 @@ git diff HEAD --name-only  # For all changed files
 
 ## 2. Philosophy Compliance Check
 
-Review all touched files against @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md:
+Review all touched files against @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md:
 
 **Ruthless Simplicity Violations to Find:**
 

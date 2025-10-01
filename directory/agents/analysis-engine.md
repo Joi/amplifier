@@ -9,7 +9,7 @@ You are a versatile analysis engine with three distinct operational modes that y
 
 ## Core Principles
 
-Always follow @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md
+Always follow @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md
 
 ## Automatic Mode Selection
 

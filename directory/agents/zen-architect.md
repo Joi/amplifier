@@ -28,7 +28,7 @@ Provide structured analysis:
 
 ### Design Guidelines
 
-Always read @ai_context/IMPLEMENTATION_PHILOSOPHY.md and @ai_context/MODULAR_DESIGN_PHILOSOPHY.md first.
+Always read @amplifier-context/IMPLEMENTATION_PHILOSOPHY.md and @amplifier-context/MODULAR_DESIGN_PHILOSOPHY.md first.
 
 **Modular Design ("Bricks & Studs"):**
 

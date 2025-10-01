@@ -88,7 +88,7 @@ def _target_path(collection: str) -> Path:
     if collection in ["agents", "commands", "tools"]:
         return PROJECT_PATH / ".claude" / collection
     if collection == "contexts":
-        return PROJECT_PATH / "ai_context"
+        return PROJECT_PATH / "amplifier-context"
     raise ValueError(f"Unknown collection: {collection}")
 
 

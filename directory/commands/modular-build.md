@@ -4,7 +4,7 @@
 It does not call other commands; it drives sub‑agents and micro‑tools directly. It force‑loads the authoring guide.
 
 **Context include (MANDATORY):**
-@ai_context/module_generator/CONTRACT_SPEC_AUTHORING_GUIDE.md
+@amplifier-context/module_generator/CONTRACT_SPEC_AUTHORING_GUIDE.md
 
 **Usage (NL ask via ARGUMENTS):**
 

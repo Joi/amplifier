@@ -60,9 +60,21 @@ mv .env.example backup/.env.example 2>/dev/null || true
   - Are there any files in `ai_context` that aren't in `.amplifier/directory/modes/amplifier-dev/context/`?
 - If there are any customizations, explain the custom directory overlay system and offer to create custom overrides in `.amplifier.local/directory/modes/amplifier-dev`.
 - If they want custom overrides, copy any custom commands, agents, tools, CLAUDE.md changes, AGENT.md changes and ai_context into the `.amplifier.local/directory/modes/amplifier-dev` directory.
-- Verify all new files are referenced in `.amplifier.local/directory/modes/amplifier-dev/amplifier.yaml`
+- *IMPORTANT* Add references to the customizations in the overlay mode configuration at: `.amplifier.local/directory/modes/amplifier-dev/amplifier.yaml`. If you do not add references, they will not be copied when `amplifier mode set amplifier-dev` is run.
 
-### 6. Migration Report
+### 6. Update .gitignore
+
+Ensure the following entries are in the .gitignore file:
+
+```
+# Amplifier-created artifacts.
+.claude
+AGENT.md
+# amplifier-context (claude can't reference .gitignored context, but we SHOULD gitignore this)
+CLAUDE.md
+```
+
+### 7. Migration Report
 Provide a summary of:
 - What was backed up
 - What was migrated
@@ -98,7 +110,10 @@ Provide a summary of:
    - Offer to migrate to `.amplifier.local/directory/amplifier-dev`
    - Migrate the custom files and content
 
-6. **Report Phase**
+6. **.gitignore Update Phase**
+   - Update the .gitignore with the appropriate amplifier entries.
+
+7. **Report Phase**
    - Summarize what was done
    - List manual steps needed
    - Provide next steps
