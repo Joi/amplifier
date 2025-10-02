@@ -1,6 +1,29 @@
 ### The Amplifier CLI Tool
 
-Amplifier provides a powerful command-line interface (`amplifier`) for managing projects, modes, transcripts, worktrees, and directories. This CLI is the primary interface for configuring and controlling Amplifier's features.
+Amplifier provides a powerful command-line interface (`amplifier`) for managing projects, modes, transcripts, worktrees, and directories. Amplifier integrates with and uses claude code. This CLI is the primary interface for configuring and controlling Amplifier's features.
+
+Amplifier "modes" can be thought of as full configurations of claude code and amplifier that allow you switch configurations easily. Modes contain all the built-up knowledge and tooling to be able to use claude code in a particular scenario. Our default mode is "vanilla" which supports coding and interacting with amplifier. However, additional modes can be developed to configure claude code and amplifier. A "data-science" mode, or a "content-creation" mode would be good modes to create in the future.
+
+This document explains how modes and other amplifier features can be used via the `amplifier` client.
+
+When in claude code, modes should be interacted with interactively using the claude code command: `/mode <your instructions>`.
+
+** IMPORTANT: these commands assume you have an active uv environment that has the `amplifier` library installed along with the `amplifier` cli. This usually entails having `uv` installed and running `uv sync` in your project directory that has amplifier in your `pyproject.yaml` and running `source .venv/bin/activate`. Alternatively, all these commands can be run with `uv run <command>`.
+
+## Amplifier Modes Directory Structure
+
+**CRITICAL**: When creating or customizing modes, agents, commands, or contexts:
+- **ALWAYS use `.amplifier.local/directory/`** for custom/experimental work
+- **NEVER modify `.amplifier/directory/`** (cached official directory)
+- **NEVER use `directory/`** alone (not the right path)
+
+The overlay system:
+1. `.amplifier.local/directory/` - Your customizations (gitignored, safe to experiment)
+2. `.amplifier/directory/` - Official cached directory (updated via `amplifier directory fetch`)
+
+Example: Custom mode goes in `.amplifier.local/directory/modes/my-mode/`
+
+** IMPORTANT: If the user asks you to customize or create a custom mode, be sure to refer to the customization section below. However, in general, it is important to do all customization in the `.amplifier.local/directory/` directory which shadows the `.amplifier/directory/` which itself is a cached copy of the official amplifier directory.
 
 #### Core Commands
 
@@ -369,9 +392,12 @@ mcp:
 #### Creating a Custom Mode
 
 **Option 1: Copy Existing Mode**:
+
+Run `amplifier mode create <name>`, which does the following manually:
+
 ```bash
 # Copy an existing mode as starting point
-cp -r .amplifier/directory/modes/amplifier-dev \
+cp -r .amplifier/directory/modes/vanilla \
       .amplifier.local/directory/modes/my-mode
 
 # Customize the mode
@@ -444,8 +470,10 @@ vim .amplifier.local/directory/modes/my-mode/amplifier.yaml
 # Add agents: ["new-agent.md"]
 
 # 4. Reload mode
+exit claude
 amplifier mode unset
 amplifier mode set my-mode
+claude -r
 
 # 5. Test again and iterate
 ```

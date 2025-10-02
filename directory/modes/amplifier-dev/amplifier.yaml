@@ -27,6 +27,7 @@ commands:
   - commit.md
   - create-plan.md
   - execute-plan.md
+  - mode.md
   - modular-build.md
   - prime.md
   - review-changes.md

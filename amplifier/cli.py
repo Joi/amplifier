@@ -5,6 +5,7 @@ Amplifier CLI
 
 import json
 import os
+import re
 import shutil
 from datetime import UTC
 from pathlib import Path
@@ -29,12 +30,19 @@ AGENT_MD_PATH = PROJECT_PATH / "AGENT.md"
 
 
 def list_modes() -> list[str]:
-    """List available modes."""
-    if not MODES_DIR.exists():
-        return []
-    modes = [d.name for d in MODES_DIR.iterdir() if d.is_dir()]
-    modes = [m for m in modes if (MODES_DIR / m / "amplifier.yaml").exists()]
-    return modes
+    """List available modes from both official and custom directories."""
+    modes = set()  # Use set to deduplicate
+
+    # Check official directory
+    if MODES_DIR.exists():
+        modes.update(d.name for d in MODES_DIR.iterdir() if d.is_dir() and (d / "amplifier.yaml").exists())
+
+    # Check custom directory (overlay)
+    custom_modes_dir = PROJECT_PATH / ".amplifier.local" / "directory" / "modes"
+    if custom_modes_dir.exists():
+        modes.update(d.name for d in custom_modes_dir.iterdir() if d.is_dir() and (d / "amplifier.yaml").exists())
+
+    return sorted(modes)  # Return sorted list
 
 
 def state_from_file() -> dict[str, Any]:
@@ -67,14 +75,20 @@ def state_to_file(state: dict[str, Any]) -> None:
 
 def get_mode_manifest(mode: str) -> dict[str, Any] | None:
     """Get the manifest for a specific mode."""
+    # Check custom directory first (overlay takes precedence)
+    custom_modes_dir = PROJECT_PATH / ".amplifier.local" / "directory" / "modes"
+    custom_mode_file = custom_modes_dir / mode / "amplifier.yaml"
+    if custom_mode_file.exists():
+        with open(custom_mode_file) as f:
+            return yaml.safe_load(f)
+
+    # Fall back to official directory
     mode_file = MODES_DIR / mode / "amplifier.yaml"
-    if not mode_file.exists():
-        return None
+    if mode_file.exists():
+        with open(mode_file) as f:
+            return yaml.safe_load(f)
 
-    with open(mode_file) as f:
-        manifest = yaml.safe_load(f)
-
-    return manifest
+    return None
 
 
 def get_mode() -> str | None:
@@ -216,11 +230,18 @@ def set_mode(mode: str) -> None:
             dst.symlink_to(resolved_src)
 
     overlay_claude_settings(manifest)
-    mode_path = MODES_DIR / mode
+
+    # Determine the mode directory (custom takes precedence)
+    custom_modes_dir = PROJECT_PATH / ".amplifier.local" / "directory" / "modes"
+    custom_mode_path = custom_modes_dir / mode
+    if custom_mode_path.exists():
+        mode_path = custom_mode_path
+    else:
+        mode_path = MODES_DIR / mode
+
     claude_file_path = mode_path / "CLAUDE.md"
     # Resolve CLAUDE.md through custom overlay
     resolved_claude = resolver(claude_file_path)
-    print(resolved_claude)
     if resolved_claude.exists():
         if CLAUDE_MD_PATH.exists():
             click.echo(f"Warning: CLAUDE.md already exists at `{CLAUDE_MD_PATH}`, skipping...")
@@ -356,32 +377,27 @@ def mode(ctx):
             click.echo(current_mode)
 
 
-@mode.command()
-def list():
+@mode.command(name="list")
+def list_cmd():
     """List available modes."""
     modes = list_modes()
     for mode_name in modes:
         click.echo(mode_name)
 
 
-@mode.command()
+@mode.command(name="set")
 @click.argument("mode_name", type=str)
-def set(mode_name: str):
+def set_cmd(mode_name: str):
     """Set the current mode."""
     # Validate mode exists
     available_modes = list_modes()
     if mode_name not in available_modes:
-        click.echo(f"Error: Invalid mode '{mode_name}'", err=True)
-        click.echo(f"Available modes: {', '.join(available_modes)}", err=True)
-        ctx = click.get_current_context()
-        ctx.exit(1)
+        raise click.ClickException(f"Invalid mode '{mode_name}'. Available modes: {', '.join(available_modes)}")
 
     try:
         set_mode(mode_name)
     except Exception as e:
-        click.echo(f"Error setting mode: {e}", err=True)
-        ctx = click.get_current_context()
-        ctx.exit(1)
+        raise click.ClickException(f"Error setting mode: {e}")
 
     click.echo(f"Mode set to: {mode_name}")
 
@@ -391,6 +407,47 @@ def unset():
     """Unset the current mode."""
     unset_mode()
     click.echo("Mode unset.")
+
+
+@mode.command()
+@click.argument("name", type=str)
+def create(name: str):
+    """Create a new custom mode from the vanilla template."""
+    # Validate mode name (alphanumeric, dash, underscore only)
+    if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+        raise click.ClickException(
+            f"Invalid mode name '{name}'. Mode names must contain only letters, numbers, dashes, and underscores."
+        )
+
+    # Check for reserved names
+    reserved_names = ["vanilla", "amplifier-dev"]
+    if name in reserved_names:
+        raise click.ClickException(f"'{name}' is a reserved mode name and cannot be used.")
+
+    # Construct paths
+    vanilla_path = Path.cwd() / ".amplifier" / "directory" / "modes" / "vanilla"
+    target_path = Path.cwd() / ".amplifier.local" / "directory" / "modes" / name
+
+    # Check if vanilla mode exists
+    if not vanilla_path.exists():
+        raise click.ClickException(
+            f"Vanilla mode template not found at {vanilla_path}. Please run 'amplifier directory fetch' first."
+        )
+
+    # Check if target already exists
+    if target_path.exists():
+        raise click.ClickException(f"Mode '{name}' already exists at {target_path}")
+
+    # Create parent directories if needed
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Copy the vanilla mode to the new location
+    try:
+        shutil.copytree(vanilla_path, target_path)
+        click.echo(f"✅ Created new mode '{name}' at {target_path}")
+        click.echo(f"You can now customize your mode and activate it with: amplifier mode set {name}")
+    except Exception as e:
+        raise click.ClickException(f"Failed to create mode: {e}")
 
 
 @click.group(name="directory")
