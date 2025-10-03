@@ -68,5 +68,5 @@ ai_working/tmp
 # Amplifier-created artifacts.
 .claude
 AGENT.md
-# amplifier-context (claude can't reference .gitignored context, but we SHOULD gitignore this)
+amplifier-context
 CLAUDE.md

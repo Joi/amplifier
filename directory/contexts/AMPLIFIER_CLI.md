@@ -6,9 +6,11 @@ Amplifier "modes" can be thought of as full configurations of claude code and am
 
 This document explains how modes and other amplifier features can be used via the `amplifier` client.
 
-When in claude code, modes should be interacted with interactively using the claude code command: `/mode <your instructions>`. Make sure the user understands that any changes to mode won't be picked up until claude code is restarted.
+When in claude code, modes should be interacted with interactively using the claude code command: `/mode <your instructions>`.
 
 ** IMPORTANT: these commands assume you have an active uv environment that has the `amplifier` library installed along with the `amplifier` cli. This usually entails having `uv` installed and running `uv sync` in your project directory that has amplifier in your `pyproject.yaml` and running `source .venv/bin/activate`. Alternatively, all these commands can be run with `uv run <command>`.
+
+If you help the user create or modify an existing mode, let the user know they will have to restart claude code for the changes to be available. After exiting claude, they can use `claude -c` to continue the previous claude session.
 
 ## Amplifier Modes Directory Structure
 
@@ -473,7 +475,7 @@ vim .amplifier.local/directory/modes/my-mode/amplifier.yaml
 exit claude
 amplifier mode unset
 amplifier mode set my-mode
-claude -r
+claude -c
 
 # 5. Test again and iterate
 ```
