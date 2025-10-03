@@ -394,6 +394,15 @@ def set_cmd(mode_name: str):
     if mode_name not in available_modes:
         raise click.ClickException(f"Invalid mode '{mode_name}'. Available modes: {', '.join(available_modes)}")
 
+    # Unset existing mode if one is active
+    current_mode = get_mode()
+    if current_mode is not None:
+        click.echo(f"Unsetting current mode: {current_mode}")
+        try:
+            unset_mode()
+        except Exception as e:
+            raise click.ClickException(f"Error unsetting current mode: {e}")
+
     try:
         set_mode(mode_name)
     except Exception as e:
