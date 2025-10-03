@@ -36,7 +36,7 @@ def ensure_not_in_worktree():
             print("❌ Error: Cannot create worktrees from within a worktree.")
             print("\nPlease run this command from the main repository:")
             print(f"  cd {main_repo}")
-            print(f"  make worktree {sys.argv[1] if len(sys.argv) > 1 else '<branch-name>'}")
+            print(f"  amplifier worktree create {sys.argv[1] if len(sys.argv) > 1 else '<branch-name>'}")
             sys.exit(1)
     except subprocess.CalledProcessError:
         # Not in a git repository at all
@@ -106,8 +106,8 @@ def setup_worktree_venv(worktree_path, eval_mode=False):
 def is_eval_context():
     """Detect if we're being evaluated based on parent process."""
     # Check for explicit eval flag or if output is being captured in a subshell
-    # When run as: eval $(make worktree ...), the output is captured
-    # When run as: make worktree ..., it's displayed directly
+    # When run as: eval $(amplifier worktree create ...), the output is captured
+    # When run as: amplifier worktree create ..., it's displayed directly
     #
     # A better approach: check if we're in a command substitution
     # by looking for specific environment markers

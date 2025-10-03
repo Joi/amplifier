@@ -273,8 +273,8 @@ amplifier transcript restore           # Restore full lineage
 
 ```bash
 # Try different approaches in parallel
-make worktree feature-jwt     # JWT authentication approach
-make worktree feature-oauth   # OAuth approach in parallel
+amplifier worktree create feature-jwt     # JWT authentication approach
+amplifier worktree create feature-oauth   # OAuth approach in parallel
 
 # Compare and choose
 amplifier worktree list                   # See all experiments
