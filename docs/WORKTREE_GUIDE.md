@@ -339,7 +339,7 @@ claude  # Design approach B
 # /compact when needed (separate transcript)
 
 # Later, compare transcripts
-make transcript-search TERM="performance"
+amplifier transcript search "performance"
 ```
 
 ## Summary
