@@ -548,6 +548,11 @@ tips-synthesizer-example: ## Run tips synthesizer with example data
 		--output-file synthesized_tips_example.md \
 		--verbose
 
+# Ideas Tracker
+ideas-run: ## Run ideas tracker with arguments. Usage: make ideas-run ARGS="list" or ARGS="new project-name"
+	@echo "💡 Running ideas tracker..."
+	@uv run python -m scenarios.ideas_tracker $(ARGS)
+
 # Transcription
 transcribe: ## Transcribe audio/video files or YouTube URLs. Usage: make transcribe SOURCE="url or file" [NO_ENHANCE=true]
 	@if [ -z "$(SOURCE)" ]; then \
