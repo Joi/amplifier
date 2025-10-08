@@ -45,10 +45,16 @@ class NaturalLanguageProcessor:
     """Processes natural language commands using LLM."""
 
     def __init__(self):
-        self.agent = Agent(
-            "claude-3-5-haiku-20241022",
-            result_type=CommandIntent,
-            system_prompt="""You are an intelligent command interpreter for an ideas tracker.
+        self.agent = None
+        self._try_init_agent()
+
+    def _try_init_agent(self):
+        """Try to initialize the AI agent, fall back gracefully if no API key."""
+        try:
+            self.agent = Agent(
+                "claude-3-5-haiku-20241022",
+                result_type=CommandIntent,
+                system_prompt="""You are an intelligent command interpreter for an ideas tracker.
 
 Users can give natural language commands like:
 - "show me anything related to authentication" -> search for "authentication"
@@ -63,10 +69,17 @@ Your job is to interpret the intent and return a structured CommandIntent:
 - metadata: any additional context like completion status
 
 Be flexible with language and infer intent from context.""",
-        )
+            )
+        except Exception as e:
+            logger.debug(f"Could not initialize AI agent: {e}")
+            self.agent = None
 
     async def process_command(self, user_input: str, context: SessionContext) -> CommandIntent:
         """Process natural language input into structured intent."""
+        if self.agent is None:
+            logger.debug("No AI agent available, using fallback parsing")
+            return self._fallback_parsing(user_input)
+
         try:
             prompt = f"""
 User command: "{user_input}"
@@ -83,8 +96,7 @@ Parse this command and return the appropriate action.
             return result.data
 
         except Exception as e:
-            logger.error(f"Failed to process natural language command: {e}")
-            # Fallback to simple text matching
+            logger.debug(f"AI processing failed, using fallback: {e}")
             return self._fallback_parsing(user_input)
 
     def _fallback_parsing(self, user_input: str) -> CommandIntent:
@@ -93,12 +105,30 @@ Parse this command and return the appropriate action.
 
         # Search patterns
         if any(word in lower_input for word in ["show", "find", "search", "related", "about"]):
-            # Extract search terms
-            query = user_input
+            # Extract search terms more intelligently
+            query = user_input.lower()
             # Remove command words to get search terms
-            for word in ["show me", "find", "search for", "anything related to", "about"]:
-                query = query.replace(word, "").strip()
-            return CommandIntent(action="search", query=query)
+            remove_phrases = [
+                "show me anything",
+                "show me",
+                "find me",
+                "search for",
+                "anything related to",
+                "related to",
+                "about",
+                "find",
+                "search",
+                "show",
+                "anything",
+                "me",
+            ]
+            for phrase in remove_phrases:
+                query = query.replace(phrase, "").strip()
+
+            # Clean up extra whitespace and get meaningful terms
+            query = " ".join(query.split())
+
+            return CommandIntent(action="search", query=query if query else user_input)
 
         # Create patterns
         if any(word in lower_input for word in ["note", "create", "add", "remember"]):
@@ -117,9 +147,15 @@ class IntelligentSearcher:
 
     def __init__(self, data_manager: "IdeasDataManager"):
         self.data_manager = data_manager
-        self.agent = Agent(
-            "claude-3-5-haiku-20241022",
-            system_prompt="""You are a helpful search assistant for an ideas tracker.
+        self.agent = None
+        self._try_init_agent()
+
+    def _try_init_agent(self):
+        """Try to initialize the AI agent, fall back gracefully if no API key."""
+        try:
+            self.agent = Agent(
+                "claude-3-5-haiku-20241022",
+                system_prompt="""You are a helpful search assistant for an ideas tracker.
 
 Your job is to analyze ideas and projects to find relevant matches based on user queries.
 You'll be given a search query and a collection of projects and ideas, and should return
@@ -132,23 +168,30 @@ Focus on semantic similarity, not just keyword matching. Consider:
 - Implementation details
 
 Return results in a clear, organized format.""",
-        )
+            )
+        except Exception as e:
+            logger.debug(f"Could not initialize search agent: {e}")
+            self.agent = None
 
     async def search(self, query: str) -> dict[str, Any]:
         """Search all projects and ideas using LLM."""
+        # Gather all data
+        projects = self.data_manager.list_projects()
+        all_data = {}
+
+        for project_name in projects:
+            project_data = self.data_manager.load_project(project_name)
+            if project_data:
+                all_data[project_name] = project_data
+
+        if not all_data:
+            return {"results": [], "summary": "No projects found to search."}
+
+        if self.agent is None:
+            logger.debug("No search agent available, using fallback search")
+            return self._fallback_search(query, all_data)
+
         try:
-            # Gather all data
-            projects = self.data_manager.list_projects()
-            all_data = {}
-
-            for project_name in projects:
-                project_data = self.data_manager.load_project(project_name)
-                if project_data:
-                    all_data[project_name] = project_data
-
-            if not all_data:
-                return {"results": [], "summary": "No projects found to search."}
-
             # Prepare search context
             search_context = json.dumps(all_data, indent=2)
 
@@ -171,8 +214,7 @@ Format your response as clear, actionable information for the user.
             return {"results": result.data, "query": query}
 
         except Exception as e:
-            logger.error(f"LLM search failed: {e}")
-            # Fallback to simple keyword search
+            logger.debug(f"AI search failed, using fallback: {e}")
             return self._fallback_search(query, all_data)
 
     def _fallback_search(self, query: str, all_data: dict) -> dict[str, Any]:
