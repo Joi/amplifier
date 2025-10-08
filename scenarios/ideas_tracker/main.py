@@ -214,7 +214,7 @@ class IdeasDataManager:
 
         logger.info(f"Ideas data repository not found. Cloning from {self.repo_url}...")
         try:
-            result = subprocess.run(
+            subprocess.run(
                 ["git", "clone", self.repo_url, str(self.data_dir)], capture_output=True, text=True, check=True
             )
             logger.info("Successfully cloned ideas data repository")
@@ -561,9 +561,8 @@ class IdeasTracker:
             idea_text = intent.query
 
         # Create or add to existing project
-        if not self.data_manager.load_project(project_name):
-            if self.create_project(project_name):
-                click.echo(f"Created new project: {project_name}")
+        if not self.data_manager.load_project(project_name) and self.create_project(project_name):
+            click.echo(f"Created new project: {project_name}")
 
         if self.add_idea(project_name, idea_text):
             click.echo(f"✅ Added idea to {project_name}")
