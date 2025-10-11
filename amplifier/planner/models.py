@@ -58,3 +58,75 @@ class Project:
     def get_children(self, parent_id: str) -> list[Task]:
         """Get direct children of a task."""
         return [task for task in self.tasks.values() if task.parent_id == parent_id]
+
+    def detect_dependency_cycles(self) -> list[list[str]]:
+        """Detect circular dependencies in the task graph using DFS.
+
+        Returns:
+            List of cycles, where each cycle is a list of task IDs forming a loop.
+            Empty list if no cycles detected.
+        """
+        cycles = []
+        visited = set()
+        rec_stack = set()
+        path = []
+
+        def dfs(task_id: str) -> None:
+            """DFS to detect cycles."""
+            if task_id not in self.tasks:
+                return
+
+            visited.add(task_id)
+            rec_stack.add(task_id)
+            path.append(task_id)
+
+            task = self.tasks[task_id]
+            for dep_id in task.depends_on:
+                if dep_id not in visited:
+                    dfs(dep_id)
+                elif dep_id in rec_stack:
+                    # Found a cycle - extract it from path
+                    cycle_start = path.index(dep_id)
+                    cycle = path[cycle_start:] + [dep_id]
+
+                    # Normalize cycle to start with smallest ID (for deduplication)
+                    min_id = min(cycle[:-1])  # Exclude last duplicate
+                    min_idx = cycle.index(min_id)
+                    normalized = cycle[min_idx:-1] + cycle[:min_idx]
+
+                    # Only add if not already found
+                    if normalized not in cycles:
+                        cycles.append(normalized)
+
+            path.pop()
+            rec_stack.remove(task_id)
+
+        # Run DFS from each unvisited node
+        for task_id in self.tasks:
+            if task_id not in visited:
+                dfs(task_id)
+
+        return cycles
+
+    def validate_dependencies(self) -> tuple[bool, list[str]]:
+        """Validate that all dependencies are valid.
+
+        Returns:
+            Tuple of (is_valid, error_messages)
+        """
+        errors = []
+
+        # Check for circular dependencies
+        cycles = self.detect_dependency_cycles()
+        if cycles:
+            for cycle in cycles:
+                cycle_str = " -> ".join(cycle + [cycle[0]])
+                errors.append(f"Circular dependency detected: {cycle_str}")
+
+        # Check for missing dependencies
+        for task_id, task in self.tasks.items():
+            for dep_id in task.depends_on:
+                if dep_id not in self.tasks:
+                    errors.append(f"Task '{task_id}' depends on non-existent task '{dep_id}'")
+
+        return (len(errors) == 0, errors)

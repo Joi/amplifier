@@ -1,5 +1,6 @@
 """JSON storage operations for Super-Planner."""
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +9,21 @@ from amplifier.planner.models import Task
 from amplifier.planner.models import TaskState
 from amplifier.utils.file_io import read_json
 from amplifier.utils.file_io import write_json
+
+
+@dataclass
+class ProjectSummary:
+    """Summary information about a project."""
+
+    id: str
+    name: str
+    created_at: datetime
+    updated_at: datetime
+    total_tasks: int
+    completed_tasks: int
+    in_progress_tasks: int
+    blocked_tasks: int
+    pending_tasks: int
 
 
 def get_project_path(project_id: str) -> Path:
@@ -68,3 +84,79 @@ def load_project(project_id: str) -> Project:
         created_at=datetime.fromisoformat(data["created_at"]),
         updated_at=datetime.fromisoformat(data["updated_at"]),
     )
+
+
+def list_projects() -> list[ProjectSummary]:
+    """List all projects with summary information.
+
+    Returns:
+        List of ProjectSummary objects sorted by most recently updated first
+    """
+    base = Path("data/planner/projects")
+    if not base.exists():
+        return []
+
+    summaries = []
+    for project_file in base.glob("*.json"):
+        try:
+            data = read_json(project_file)
+
+            # Count tasks by state
+            tasks = data.get("tasks", {})
+            total_tasks = len(tasks)
+            completed = sum(1 for t in tasks.values() if t["state"] == TaskState.COMPLETED.value)
+            in_progress = sum(1 for t in tasks.values() if t["state"] == TaskState.IN_PROGRESS.value)
+            blocked = sum(1 for t in tasks.values() if t["state"] == TaskState.BLOCKED.value)
+            pending = sum(1 for t in tasks.values() if t["state"] == TaskState.PENDING.value)
+
+            summary = ProjectSummary(
+                id=data["id"],
+                name=data["name"],
+                created_at=datetime.fromisoformat(data["created_at"]),
+                updated_at=datetime.fromisoformat(data["updated_at"]),
+                total_tasks=total_tasks,
+                completed_tasks=completed,
+                in_progress_tasks=in_progress,
+                blocked_tasks=blocked,
+                pending_tasks=pending,
+            )
+            summaries.append(summary)
+
+        except Exception:
+            # Skip invalid/corrupt project files
+            continue
+
+    # Sort by most recently updated first
+    summaries.sort(key=lambda s: s.updated_at, reverse=True)
+    return summaries
+
+
+def get_most_recent_project() -> str | None:
+    """Get the ID of the most recently updated project.
+
+    Returns:
+        Project ID of most recent project, or None if no projects exist
+    """
+    summaries = list_projects()
+    return summaries[0].id if summaries else None
+
+
+def find_project_by_name(name: str, exact: bool = False) -> list[ProjectSummary]:
+    """Find projects by name.
+
+    Args:
+        name: Project name to search for
+        exact: If True, require exact match (case-insensitive). If False, match substring.
+
+    Returns:
+        List of matching ProjectSummary objects sorted by most recent first
+    """
+    summaries = list_projects()
+    name_lower = name.lower()
+
+    if exact:
+        matches = [s for s in summaries if s.name.lower() == name_lower]
+    else:
+        matches = [s for s in summaries if name_lower in s.name.lower()]
+
+    return matches

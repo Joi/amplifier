@@ -12,6 +12,10 @@ from amplifier.planner.models import TaskState
 from amplifier.planner.orchestrator import ExecutionResults
 from amplifier.planner.orchestrator import TaskResult
 from amplifier.planner.orchestrator import orchestrate_execution
+from amplifier.planner.storage import ProjectSummary
+from amplifier.planner.storage import find_project_by_name
+from amplifier.planner.storage import get_most_recent_project
+from amplifier.planner.storage import list_projects
 from amplifier.planner.storage import load_project
 from amplifier.planner.storage import save_project
 
@@ -21,6 +25,10 @@ __all__ = [
     "TaskState",
     "save_project",
     "load_project",
+    "list_projects",
+    "find_project_by_name",
+    "get_most_recent_project",
+    "ProjectSummary",
     "orchestrate_execution",
     "ExecutionResults",
     "TaskResult",

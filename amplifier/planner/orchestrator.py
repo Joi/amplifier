@@ -37,7 +37,7 @@ class TaskResult:
     """Result from executing a single task."""
 
     task_id: str
-    status: str  # "success", "failed", "skipped"
+    status: str  # "success", "failed", "skipped", "already_completed"
     output: Any = None
     error: str | None = None
     started_at: datetime = field(default_factory=datetime.now)
@@ -69,14 +69,19 @@ class ExecutionResults:
             self.failed_tasks += 1
         elif result.status == "skipped":
             self.skipped_tasks += 1
+        # "already_completed" doesn't increment any counter - not new work
 
     def finalize(self) -> None:
         """Finalize results and set overall status."""
         self.completed_at = datetime.now()
 
-        if self.failed_tasks == 0 and self.completed_tasks == self.total_tasks:
+        # Count both newly completed and already completed tasks
+        already_completed = sum(1 for r in self.task_results.values() if r.status == "already_completed")
+        total_completed = self.completed_tasks + already_completed
+
+        if self.failed_tasks == 0 and total_completed == self.total_tasks:
             self.status = "completed"
-        elif self.completed_tasks > 0:
+        elif total_completed > 0:
             self.status = "partial"
         else:
             self.status = "failed"
@@ -101,18 +106,18 @@ async def orchestrate_execution(project: Project, max_parallel: int = 5, max_ret
         results.finalize()
         return results
 
-    # Track task states
-    completed_ids: set[str] = set()
+    # Track task states - initialize from existing project state
+    completed_ids: set[str] = {tid for tid, t in project.tasks.items() if t.state == TaskState.COMPLETED}
     in_progress_ids: set[str] = set()
-    failed_ids: set[str] = set()
+    failed_ids: set[str] = {tid for tid, t in project.tasks.items() if t.state == TaskState.BLOCKED}
     queued_ids: set[str] = set()  # Track what's been queued
 
     # Create execution queue
     execution_queue = asyncio.Queue()
 
-    # Start with tasks that have no dependencies
+    # Start with tasks that are ready and not already completed or blocked
     for task in project.tasks.values():
-        if task.can_start(completed_ids):
+        if task.state == TaskState.PENDING and task.can_start(completed_ids) and task.id not in failed_ids:
             await execution_queue.put(task)
             queued_ids.add(task.id)
 
@@ -200,7 +205,9 @@ async def orchestrate_execution(project: Project, max_parallel: int = 5, max_ret
                         for task_id, task in project.tasks.items():
                             if (
                                 task_id not in queued_ids  # Not already queued
-                                and task.can_start(completed_ids)
+                                and task.state == TaskState.PENDING  # Only pending tasks
+                                and task.can_start(completed_ids)  # Dependencies met
+                                and task_id not in failed_ids  # Not blocked
                             ):
                                 await execution_queue.put(task)
                                 queued_ids.add(task_id)
@@ -215,14 +222,28 @@ async def orchestrate_execution(project: Project, max_parallel: int = 5, max_ret
     # Execute all tasks
     await process_queue()
 
-    # Handle any remaining unexecuted tasks (due to failed dependencies)
-    for task_id in project.tasks:
+    # Handle any remaining unexecuted tasks
+    for task_id, task in project.tasks.items():
         if task_id not in results.task_results:
-            result = TaskResult(
-                task_id=task_id, status="skipped", error="Dependencies failed or not met", completed_at=datetime.now()
-            )
-            results.add_result(result)
-            logger.warning(f"Task {task_id} skipped due to unmet dependencies")
+            # Tasks that were already completed before orchestration started
+            if task.state == TaskState.COMPLETED:
+                result = TaskResult(
+                    task_id=task_id,
+                    status="already_completed",
+                    output="Already completed",
+                    completed_at=task.updated_at or datetime.now(),
+                )
+                results.add_result(result)
+            # Tasks skipped due to failed dependencies
+            else:
+                result = TaskResult(
+                    task_id=task_id,
+                    status="skipped",
+                    error="Dependencies failed or not met",
+                    completed_at=datetime.now(),
+                )
+                results.add_result(result)
+                logger.warning(f"Task {task_id} skipped due to unmet dependencies")
 
     # Finalize results
     results.finalize()
