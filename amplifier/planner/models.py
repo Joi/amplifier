@@ -7,17 +7,28 @@ from enum import Enum
 
 
 class TaskState(Enum):
-    """Task states for workflow management."""
+    """Task states for workflow management with verification."""
 
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
+    TESTING = "testing"  # Running tests after implementation
+    TEST_FAILED = "test_failed"  # Tests failed, needs bug-hunter retry
     COMPLETED = "completed"
     BLOCKED = "blocked"
 
 
 @dataclass
+class TestResult:
+    """Result of running tests for a task."""
+
+    passed: bool
+    output: str
+    failure_details: str | None = None
+
+
+@dataclass
 class Task:
-    """Task with hierarchical structure and dependencies."""
+    """Task with hierarchical structure, dependencies, and verification."""
 
     id: str
     title: str
@@ -28,6 +39,15 @@ class Task:
     assigned_to: str | None = None
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
+
+    # Test verification fields
+    test_command: str | None = None  # Explicit test command (e.g., "pytest tests/test_buffer.py")
+    test_file: str | None = None  # Test file path for convention-based discovery
+    requires_testing: bool = True  # False for planning/docs tasks that don't need testing
+
+    # Hierarchical sub-project fields
+    is_parent: bool = False  # True if this task has sub-tasks in a nested project
+    sub_project_id: str | None = None  # Reference to nested Project ID
 
     def can_start(self, completed_ids: set[str]) -> bool:
         """Check if task can start based on dependency completion."""

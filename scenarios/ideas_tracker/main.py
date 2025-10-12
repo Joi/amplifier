@@ -53,7 +53,7 @@ class NaturalLanguageProcessor:
         try:
             self.agent = Agent(
                 "claude-3-5-haiku-20241022",
-                result_type=CommandIntent,
+                output_type=CommandIntent,
                 system_prompt="""You are an intelligent command interpreter for an ideas tracker.
 
 Users can give natural language commands like:
@@ -93,7 +93,7 @@ Parse this command and return the appropriate action.
 """
 
             result = await self.agent.run(prompt)
-            return result.data
+            return result.output
 
         except Exception as e:
             logger.debug(f"AI processing failed, using fallback: {e}")
@@ -211,7 +211,7 @@ Format your response as clear, actionable information for the user.
 """
 
             result = await self.agent.run(prompt)
-            return {"results": result.data, "query": query}
+            return {"results": result.output, "query": query}
 
         except Exception as e:
             logger.debug(f"AI search failed, using fallback: {e}")
@@ -528,7 +528,7 @@ class IdeasTracker:
         return SessionContext(
             branch=repo_info.get("branch"),
             repo=repo_info.get("repo_name"),
-            working_directory=repo_info.get("working_directory", ""),
+            working_directory=repo_info.get("working_directory") or "",
         )
 
     async def process_intelligent_command(self, user_input: str) -> None:
@@ -596,11 +596,12 @@ class IdeasTracker:
             return
 
         # Generate intelligent idea content
-        if "working on" in intent.query.lower() or "current" in intent.query.lower():
+        query = intent.query or ""
+        if "working on" in query.lower() or "current" in query.lower():
             # Session-aware idea creation
-            idea_text = f"Working on: {context.branch or 'unknown branch'} - {intent.query}"
+            idea_text = f"Working on: {context.branch or 'unknown branch'} - {query}"
         else:
-            idea_text = intent.query
+            idea_text = query
 
         # Create or add to existing project
         if not self.data_manager.load_project(project_name) and self.create_project(project_name):
