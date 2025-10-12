@@ -98,12 +98,80 @@ Output should include:
 
 ### Execute Mode
 
-1. **Load project** (most recent if no ID given)
-2. **Find ready tasks** (dependencies met, not started)
-3. **Spawn agents in parallel** (respects max_parallel limit)
-4. **Monitor execution** and update task states
-5. **Handle failures** with retry logic
-6. **Update project state** after each task completes
+**IMPORTANT: Execute mode must spawn REAL agents, not simulate**
+
+1. **Load project** (most recent if no ID given):
+```python
+from amplifier.planner import load_project, find_project_by_name, TaskState, save_project
+
+if project_name == "resume":
+    from amplifier.planner.storage import get_most_recent_project
+    project_id = get_most_recent_project()
+    if not project_id:
+        print("No projects found")
+        return
+else:
+    matches = find_project_by_name(project_name)
+    if not matches:
+        print(f"No project found: {project_name}")
+        return
+    project_id = matches[0].id
+
+project = load_project(project_id)
+```
+
+2. **Find ready tasks** (dependencies met, not started):
+```python
+completed_ids = {tid for tid, t in project.tasks.items() if t.state == TaskState.COMPLETED}
+
+ready_tasks = [
+    t for t in project.tasks.values()
+    if t.state == TaskState.PENDING and t.can_start(completed_ids)
+]
+```
+
+3. **Execute tasks using Task tool to spawn REAL agents**:
+```python
+# For EACH ready task, spawn the actual agent using Task tool
+for task in ready_tasks[:max_parallel]:  # Respect parallel limit
+    agent_name = task.assigned_to or "modular-builder"
+
+    # Build detailed prompt for agent
+    prompt = f"""Execute this task from super-planner project '{project.name}':
+
+Task: {task.title}
+Description: {task.description}
+
+Dependencies completed: {[project.tasks[dep_id].title for dep_id in task.depends_on if dep_id in completed_ids]}
+
+Please complete this task and report back when done."""
+
+    # Use Task tool to spawn REAL agent (not simulation)
+    # The agent will execute in a sub-context and return results
+```
+
+4. **Use Task tool calls to spawn agents** - do NOT simulate:
+```
+For each ready task:
+- Use Task tool with subagent_type = task.assigned_to
+- Pass task description and context as prompt
+- Wait for agent to complete
+- Update task state based on result
+```
+
+5. **Monitor execution** and update task states:
+```python
+# After agent completes (successfully or failed):
+if agent_succeeded:
+    task.state = TaskState.COMPLETED
+else:
+    task.state = TaskState.BLOCKED
+
+task.updated_at = datetime.now()
+save_project(project)
+```
+
+6. **Handle failures** with retry logic
 7. **Report results** showing success/failure/skipped
 
 ### Resume Mode
