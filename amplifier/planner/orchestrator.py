@@ -234,8 +234,8 @@ async def orchestrate_execution(
                     task.state = TaskState.IN_PROGRESS
                     task.updated_at = datetime.now()
 
-                    # Execute via agent (simplified for now - would integrate with Task tool)
-                    output = await _execute_with_agent(task)
+                    # Execute via agent using Claude Code SDK
+                    output = await _execute_with_agent(task, project_dir)
 
                     # Check if task requires testing
                     if task.requires_testing:
@@ -468,28 +468,166 @@ def _load_project(project_id: str) -> Project:
     return project
 
 
-async def _execute_with_agent(task: Task) -> Any:
-    """Execute task with assigned agent.
-
-    This is a simplified placeholder. In production, this would:
-    1. Use the Task tool to spawn the appropriate agent
-    2. Pass the task description and context
-    3. Wait for and return the agent's output
+async def _execute_with_agent(task: Task, project_dir: str) -> Any:
+    """Execute task with assigned agent using Claude Code SDK.
 
     Args:
         task: Task to execute
+        project_dir: Working directory for task execution
 
     Returns:
         Agent execution output
     """
-    # Simulate agent execution
-    await asyncio.sleep(0.5)  # Simulate work
+    try:
+        from claude_code_sdk import ClaudeCodeOptions
+        from claude_code_sdk import ClaudeSDKClient
+        from claude_code_sdk import CLINotFoundError
+        from claude_code_sdk import ProcessError
+    except ImportError as e:
+        logger.error("Claude Code SDK not installed. Run: pip install claude-code-sdk")
+        raise ImportError("Claude Code SDK not installed") from e
 
-    if task.assigned_to:
-        logger.debug(f"Would execute with agent: {task.assigned_to}")
-        return f"Executed by {task.assigned_to}: {task.title}"
-    logger.debug(f"Executing task without specific agent: {task.title}")
-    return f"Executed: {task.title}"
+    # Infer best agent for this task if not assigned
+    agent_type = task.assigned_to or _infer_agent_type(task)
+
+    # Build comprehensive prompt for the agent
+    prompt_parts = [f"Task: {task.title}"]
+
+    if task.description:
+        prompt_parts.append(f"Description: {task.description}")
+
+    prompt_parts.append("\nPlease implement this task completely.")
+
+    if task.test_command:
+        prompt_parts.append(f"\nTest command: {task.test_command}")
+        prompt_parts.append("Ensure the implementation passes all tests.")
+    elif task.test_file:
+        prompt_parts.append(f"\nTest file: {task.test_file}")
+        prompt_parts.append("Ensure the implementation passes the tests in this file.")
+
+    if task.depends_on:
+        prompt_parts.append(f"\nThis task depends on: {', '.join(task.depends_on)}")
+        prompt_parts.append("The dependencies should already be completed.")
+
+    prompt = "\n".join(prompt_parts)
+
+    # Configure SDK options based on agent type
+    system_prompt = None
+    if agent_type:
+        # Set system prompt based on agent type
+        agent_prompts = {
+            "modular-builder": "You are a modular implementation specialist. Build self-contained modules with clear contracts.",
+            "test-coverage": "You are a test coverage specialist. Write comprehensive tests with high coverage.",
+            "bug-hunter": "You are a bug hunting specialist. Find and fix bugs systematically.",
+            "zen-architect": "You are a zen architect. Design clean, simple, elegant solutions.",
+            "integration-specialist": "You are an integration specialist. Connect services and APIs seamlessly.",
+            "database-architect": "You are a database architect. Design efficient schemas and queries.",
+        }
+        system_prompt = agent_prompts.get(agent_type)
+
+        if system_prompt:
+            logger.info(f"Using agent type: {agent_type} for task {task.id}")
+
+    options = ClaudeCodeOptions(
+        cwd=project_dir,
+        max_turns=5,
+        permission_mode="acceptEdits",
+        system_prompt=system_prompt,
+    )
+
+    try:
+        # Execute with agent
+        async with ClaudeSDKClient(options=options) as client:
+            # Send the task query
+            await client.query(prompt)
+
+            # Collect response
+            output_parts = []
+            total_cost = 0.0
+            duration_ms = 0
+
+            async for message in client.receive_response():
+                # Handle text content
+                if hasattr(message, "content"):
+                    content = getattr(message, "content", None)
+                    if content:
+                        for block in content:
+                            # Check for text attribute safely
+                            if hasattr(block, "text"):
+                                text_value = getattr(block, "text", None)
+                                if text_value:
+                                    output_parts.append(str(text_value))
+                            elif hasattr(block, "type") and getattr(block, "type", None) == "text":
+                                # Alternative text access pattern
+                                if hasattr(block, "value"):
+                                    value = getattr(block, "value", None)
+                                    if value:
+                                        output_parts.append(str(value))
+
+                # Capture metadata from result message
+                msg_type = type(message).__name__
+                if msg_type == "ResultMessage":
+                    # Safe attribute access with defaults
+                    total_cost = getattr(message, "total_cost_usd", 0.0) if hasattr(message, "total_cost_usd") else 0.0
+                    duration_ms = getattr(message, "duration_ms", 0) if hasattr(message, "duration_ms") else 0
+
+                    logger.info(
+                        f"Task {task.id} completed by {agent_type or 'default agent'} "
+                        f"(cost: ${total_cost:.4f}, duration: {duration_ms}ms)"
+                    )
+
+            output = "".join(output_parts)
+            return output if output else f"Task {task.title} completed successfully"
+
+    except CLINotFoundError:
+        error_msg = "Claude Code CLI not found. Please install it with: npm install -g @anthropic-ai/claude-code"
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+    except ProcessError as e:
+        logger.error(f"Process error executing task {task.id}: {e}")
+        raise RuntimeError(f"Agent execution failed: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error executing task {task.id}: {e}")
+        raise RuntimeError(f"Agent execution failed: {e}")
+
+
+def _infer_agent_type(task: Task) -> str | None:
+    """Infer the best agent type based on task title and description.
+
+    Args:
+        task: Task to analyze
+
+    Returns:
+        Agent type name or None if unclear
+    """
+    # Combine title and description for analysis
+    text = f"{task.title} {task.description}".lower()
+
+    # Keywords for each agent type
+    agent_keywords = {
+        "modular-builder": ["implement", "build", "create", "module", "component", "feature"],
+        "test-coverage": ["test", "spec", "validate", "coverage", "testing", "unit test"],
+        "bug-hunter": ["fix", "bug", "debug", "error", "issue", "failure", "broken"],
+        "zen-architect": ["design", "architect", "structure", "refactor", "pattern"],
+        "integration-specialist": ["integrate", "api", "service", "connect", "endpoint", "webhook"],
+        "database-architect": ["database", "schema", "migration", "query", "sql", "index"],
+    }
+
+    # Score each agent type
+    scores = {}
+    for agent_type, keywords in agent_keywords.items():
+        score = sum(1 for keyword in keywords if keyword in text)
+        if score > 0:
+            scores[agent_type] = score
+
+    # Return agent with highest score, or None if no matches
+    if scores:
+        best_agent = max(scores.keys(), key=lambda k: scores[k])
+        logger.debug(f"Inferred agent type '{best_agent}' for task: {task.title}")
+        return best_agent
+
+    logger.debug(f"Could not infer agent type for task: {task.title}")
+    return None
 
 
 async def _run_task_tests(task: Task, project_dir: str) -> TestResult:
@@ -755,7 +893,7 @@ Focus on fixing the specific test failures mentioned above. Make minimal changes
     task.updated_at = datetime.now()
 
     # Execute bug-hunter
-    fix_output = await _execute_with_bug_hunter(bug_hunter_prompt, task)
+    fix_output = await _execute_with_bug_hunter(bug_hunter_prompt, task, project_dir)
 
     # Re-run tests
     logger.info(f"Re-running tests after bug-hunter fixes for task {task.id}")
@@ -782,27 +920,56 @@ Focus on fixing the specific test failures mentioned above. Make minimal changes
     return await _handle_test_failure(task, retest_result, project_dir, retry_count + 1, max_retries)
 
 
-async def _execute_with_bug_hunter(prompt: str, task: Task) -> str:
-    """Spawn bug-hunter agent via Task tool.
-
-    This is a placeholder that would integrate with the Task tool to spawn
-    the bug-hunter agent with the given prompt.
+async def _execute_with_bug_hunter(prompt: str, task: Task, project_dir: str) -> str:
+    """Spawn bug-hunter agent using Claude Code SDK.
 
     Args:
         prompt: Bug-hunter prompt with failure details
         task: Task context
+        project_dir: Working directory for execution
 
     Returns:
         Bug-hunter output
     """
-    # Placeholder implementation
-    # In production, this would use the Task tool to spawn bug-hunter agent
-    logger.info("Would spawn bug-hunter agent with prompt")
+    try:
+        from claude_code_sdk import ClaudeCodeOptions
+        from claude_code_sdk import ClaudeSDKClient
+    except ImportError as e:
+        logger.error("Claude Code SDK not installed")
+        raise ImportError("Claude Code SDK not installed") from e
 
-    # Simulate bug-hunter execution
-    await asyncio.sleep(2)
+    # Configure for bug-hunter with bug-fixing system prompt
+    options = ClaudeCodeOptions(
+        cwd=project_dir,
+        max_turns=5,
+        permission_mode="acceptEdits",
+        system_prompt="You are a bug-hunting specialist. Find and fix bugs systematically with minimal changes.",
+    )
 
-    return f"Bug-hunter fixed issues in task {task.id}"
+    try:
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(prompt)
+
+            # Collect response
+            output_parts = []
+            async for message in client.receive_response():
+                if hasattr(message, "content"):
+                    content = getattr(message, "content", None)
+                    if content:
+                        for block in content:
+                            if hasattr(block, "text"):
+                                text_value = getattr(block, "text", None)
+                                if text_value:
+                                    output_parts.append(str(text_value))
+
+            output = "".join(output_parts)
+
+        # Return after context manager closes
+        return output if output else "Bug-hunter completed fixes"
+
+    except Exception as e:
+        logger.error(f"Error executing bug-hunter: {e}")
+        raise RuntimeError(f"Bug-hunter execution failed: {e}")
 
 
 # Public exports
