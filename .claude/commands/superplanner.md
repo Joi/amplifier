@@ -11,6 +11,10 @@ Coordinate large, complex projects with hierarchical tasks, multi-agent executio
 ## Usage
 
 ```bash
+# Show help and usage instructions
+/superplanner help
+/superplanner usage
+
 # List all projects
 /superplanner list
 
@@ -39,6 +43,7 @@ Coordinate large, complex projects with hierarchical tasks, multi-agent executio
 ## Arguments
 
 **Mode Selection (first argument):**
+- `help` or `usage` - Show detailed usage instructions and examples
 - `list` - Show all projects with summaries
 - `create` - Initialize new project from goal description
 - `status` - Display project state and available tasks (defaults to most recent if no ID given)
@@ -49,6 +54,22 @@ Coordinate large, complex projects with hierarchical tasks, multi-agent executio
 - `$ARGUMENTS` - Project ID or goal description depending on mode (optional for status/execute/resume)
 
 ## What This Command Does
+
+### Help/Usage Mode
+
+When the user runs `/superplanner help` or `/superplanner usage`:
+
+1. **Display usage instructions** from this document
+2. **Show command examples** for each mode
+3. **Explain when to use super-planner** vs simple tasks
+4. **List available agents** that work with super-planner
+5. **Provide workflow examples** for common scenarios
+
+Output should include:
+- Quick reference for all commands
+- Example workflows (create → execute → status → resume)
+- When to use super-planner guidance
+- Link to full documentation in amplifier/planner/README.md
 
 ### List Mode
 

@@ -293,4 +293,30 @@ def suggest_agent_for_domain(domain: str, available_agents: list[str]) -> str:
     return available_agents[0] if available_agents else DEFAULT_AGENT
 
 
-__all__ = ["assign_agent", "get_agent_workload", "suggest_agent_for_domain"]
+def assign_agents_to_tasks(project) -> None:
+    """Assign agents to all tasks in a project.
+
+    This function iterates through all tasks in a project and assigns
+    the most appropriate agent based on task analysis.
+
+    Args:
+        project: Project instance with tasks to assign agents to
+
+    Side Effects:
+        Updates task.assigned_to for each task in the project
+    """
+    from amplifier.planner.models import Project
+
+    if not isinstance(project, Project):
+        raise TypeError("project must be a Project instance")
+
+    # Get all available agents
+    available_agents = list(AGENT_CAPABILITIES.keys())
+
+    # Assign agents to each task
+    for task in project.tasks.values():
+        if not task.assigned_to:  # Only assign if not already assigned
+            task.assigned_to = assign_agent(task, available_agents)
+
+
+__all__ = ["assign_agent", "get_agent_workload", "suggest_agent_for_domain", "assign_agents_to_tasks"]

@@ -188,6 +188,31 @@ After fixing, always suggest:
 
 Remember: Focus on finding and fixing the ROOT CAUSE, not just the symptoms. Keep fixes minimal and always add tests to prevent regression.
 
+## Super-Planner Integration
+
+When fixing bugs within a larger project context:
+
+**Check for active projects:**
+```python
+from amplifier.planner import find_project_by_name, load_project, TaskState, save_project
+
+# Look for bug-related tasks
+matches = find_project_by_name("project name")
+if matches:
+    project = load_project(matches[0].id)
+
+    # Find your debugging tasks
+    my_tasks = [t for t in project.tasks.values()
+                if t.assigned_to == "bug-hunter" and t.state == TaskState.PENDING]
+
+    # Update after fixing
+    task.state = TaskState.COMPLETED
+    save_project(project)
+```
+
+**Suggest super-planner for multi-component debugging:**
+"This bug affects multiple components. Consider using `/superplanner create` to coordinate the debugging and testing across the affected areas."
+
 ---
 
 # Additional Instructions

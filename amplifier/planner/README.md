@@ -2,7 +2,184 @@
 
 Super-Planner is a core amplifier module that manages large projects with hierarchical tasks, supporting coordination between multiple AI agents and humans. It follows amplifier's "bricks and studs" philosophy with ruthless simplicity.
 
-## Quick Start
+## How to Use in Amplifier
+
+Super-Planner is designed to work seamlessly with amplifier through the `/superplanner` slash command. Here's how to use it in your amplifier workflow:
+
+### Creating a New Project
+
+```bash
+# Start a new super-planned project
+/superplanner create "Build a REST API with authentication, product catalog, and order management"
+```
+
+The system will:
+1. Analyze your goal using the super-planner-coordinator agent
+2. Decompose it into hierarchical tasks with dependencies
+3. Assign appropriate agents to each task
+4. Save the project and show you the initial task tree
+5. Display which tasks are ready to start
+
+### Checking Project Status
+
+```bash
+# Check status of most recent project
+/superplanner status
+
+# Check specific project by ID
+/superplanner status my-project-id
+```
+
+This shows:
+- Overall completion percentage
+- Visual task tree with states (✓ completed, → ready, ⏸ blocked)
+- Which agents are assigned to tasks
+- What tasks can be started now
+- What's blocking pending tasks
+
+### Executing Tasks
+
+```bash
+# Execute next batch of ready tasks (most recent project)
+/superplanner execute
+
+# Execute tasks for specific project
+/superplanner execute my-project-id
+```
+
+Super-planner will:
+- Find all tasks whose dependencies are met
+- Spawn appropriate agents in parallel
+- Monitor their progress
+- Update task states as they complete
+- Save project state
+- Report what completed and what's newly available
+
+### Resuming After Interruptions
+
+```bash
+# Resume most recent project
+/superplanner resume
+
+# Resume specific project
+/superplanner resume my-project-id
+```
+
+Perfect for when:
+- Your session ended mid-project
+- Context got compacted/cleared
+- You took a break and want to continue
+- Tasks were interrupted or failed
+
+### Listing All Projects
+
+```bash
+/superplanner list
+```
+
+Shows all projects sorted by most recent, with:
+- Project names and IDs
+- Task completion counts (e.g., 12/20)
+- Completion percentages
+- Last updated timestamps
+
+### How Agents Work with Super-Planner
+
+When you use super-planner, amplifier's agents automatically:
+
+1. **Check for active projects** when starting complex work
+2. **Update project state** as they complete tasks
+3. **Report to super-planner** what they accomplished
+4. **Query project context** to understand dependencies
+5. **Coordinate with other agents** through shared project state
+
+Agents that are planner-aware include:
+- `zen-architect` - Design and architecture tasks
+- `modular-builder` - Implementation tasks
+- `bug-hunter` - Debugging and fixes
+- `test-coverage` - Test creation
+- `integration-specialist` - External service integration
+- `database-architect` - Database design
+- `api-contract-designer` - API specifications
+
+### When to Use Super-Planner
+
+**Use super-planner for:**
+- Projects with 5+ distinct, interdependent tasks
+- Multi-session or multi-day work
+- Work requiring multiple agent types
+- Projects needing human collaboration
+- Complex dependency chains
+- Interruptible/resumable workflows
+
+**Don't use super-planner for:**
+- Simple single-task operations
+- Quick fixes or small changes
+- Work that fits in one session
+- Tasks with no interdependencies
+
+### Example Workflow
+
+```bash
+# Day 1: Start project
+/superplanner create "Build e-commerce platform"
+# Output: Created project with 20 tasks across 8 phases
+
+/superplanner execute
+# Output: Completed 3 architecture tasks
+
+# [Take a break, context cleared...]
+
+# Day 2: Resume
+/superplanner resume
+# Output: Resuming "Build e-commerce platform" (3/20 completed)
+
+/superplanner execute
+# Output: Completed 5 more tasks (8/20 now complete)
+
+/superplanner status
+# Output: Shows progress, 4 tasks ready, 8 blocked
+
+/superplanner execute
+# Continues until all tasks complete or blocked
+```
+
+### Getting Help
+
+```bash
+# Show usage instructions
+/superplanner help
+
+# Show available commands
+/superplanner usage
+```
+
+### Integration with Python Code
+
+While the slash command is the primary interface, you can also use super-planner programmatically in amplifier tools:
+
+```python
+from amplifier.planner import (
+    Project, Task, TaskState,
+    load_project, save_project,
+    find_project_by_name
+)
+
+# Find project by name
+matches = find_project_by_name("e-commerce")
+if matches:
+    project = load_project(matches[0].id)
+
+    # Check what's ready
+    completed_ids = {t.id for t in project.tasks.values()
+                     if t.state == TaskState.COMPLETED}
+
+    for task in project.tasks.values():
+        if task.state == TaskState.PENDING and task.can_start(completed_ids):
+            print(f"Ready: {task.title}")
+```
+
+## Quick Start (Python API)
 
 ```python
 from amplifier.planner import Task, Project, TaskState, save_project, load_project

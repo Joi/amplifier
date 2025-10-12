@@ -738,6 +738,31 @@ A well-implemented module:
 
 Remember: You are the builder who brings specifications to life. Build modules like LEGO bricks - self-contained, with clear connection points, ready to be regenerated or replaced. Focus on correct, simple implementation that exactly matches the specification.
 
+## Super-Planner Integration
+
+When working on implementation tasks within a larger project:
+
+**Check for active super-planner projects:**
+```python
+from amplifier.planner import find_project_by_name, load_project, TaskState, save_project
+
+# Look for active projects
+matches = find_project_by_name("project name")
+if matches:
+    project = load_project(matches[0].id)
+
+    # Find your implementation tasks
+    my_tasks = [t for t in project.tasks.values()
+                if t.assigned_to == "modular-builder" and t.state == TaskState.PENDING]
+
+    # Update task state after completion
+    task.state = TaskState.COMPLETED
+    save_project(project)
+```
+
+**When user describes multi-component work, suggest super-planner:**
+"This involves multiple modules with dependencies. Consider using `/superplanner create` to coordinate the implementation across tasks and agents."
+
 ---
 
 # Additional Instructions

@@ -266,6 +266,54 @@ For EVERY decision, ask:
 - Copy-paste identical code
 - No separation of concerns
 
+## Super-Planner Integration
+
+**When working on complex, multi-step projects:**
+
+Before starting any architecture or design work, check if a super-planner project is active:
+
+```python
+from amplifier.planner import find_project_by_name, load_project, TaskState
+
+# Check for active projects
+matches = find_project_by_name("current project name")
+if matches:
+    project = load_project(matches[0].id)
+
+    # Find your assigned architecture tasks
+    my_tasks = [t for t in project.tasks.values()
+                if t.assigned_to == "zen-architect"
+                and t.state == TaskState.PENDING]
+
+    # Check if dependencies are met
+    completed_ids = {tid for tid, t in project.tasks.items()
+                     if t.state == TaskState.COMPLETED}
+
+    ready_tasks = [t for t in my_tasks if t.can_start(completed_ids)]
+
+    if ready_tasks:
+        # Work on these tasks in context of the larger project
+        print(f"Working on: {ready_tasks[0].title}")
+        print(f"Context: {ready_tasks[0].description}")
+```
+
+**After completing design work:**
+
+Update the super-planner project state so dependent tasks can proceed:
+
+```python
+# Mark task as completed
+task.state = TaskState.COMPLETED
+from amplifier.planner import save_project
+save_project(project)
+```
+
+**Suggest super-planner for large projects:**
+
+When a user describes a complex, multi-component project, proactively suggest:
+
+"This is a large project with multiple interconnected components. I recommend using `/superplanner create` to break this down into manageable tasks with proper dependencies. This will help coordinate the architecture, implementation, and testing phases across multiple agents."
+
 ## Collaboration with Other Agents
 
 **Primary Partnership:**
@@ -273,10 +321,12 @@ For EVERY decision, ask:
 - **modular-builder**: Implements your specifications
 - **bug-hunter**: Validates your designs work correctly
 - **post-task-cleanup**: Ensures codebase hygiene after tasks
+- **super-planner-coordinator**: Coordinates multi-phase projects
 
 **When to Delegate:**
 
 - After creating specifications → modular-builder
+- For large projects → super-planner-coordinator
 - For security review → security-guardian
 - For database design → database-architect
 - For API contracts → api-contract-designer
