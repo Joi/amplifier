@@ -129,7 +129,9 @@ class NormalCommandHandler:
             handler = self.commands[key]
             handler(count)
             self.state.last_command = key
-            self.state.reset_command_state()
+            # Don't reset command state for commands that wait for more input
+            if key not in ["r", "m", "'", "`", "@"]:
+                self.state.reset_command_state()
             return True
 
         # Check for two-character commands
@@ -187,10 +189,24 @@ class NormalCommandHandler:
         # Handle motion
         if key in self.motion_handler.motions:
             start_pos = self.state.cursor.position
-            end_pos = self.motion_handler.execute_motion(key, count)
+            # For operators, multiply the counts (e.g., d3w = delete 3 words, 2d2w = delete 4 words)
+            total_count = op_count * count
+            end_pos = self.motion_handler.execute_motion(key, total_count)
 
             if end_pos and operator:
-                self._apply_operator(operator, start_pos, end_pos, op_count)
+                # Special handling for $ motion - make it inclusive
+                if key == "$":
+                    # For $ motion, include the character at the end position
+                    line_len = self.state.current_buffer.get_line_length(end_pos[0])
+                    if line_len > 0:
+                        end_pos = (end_pos[0], line_len)  # Include entire line end
+                self._apply_operator(operator, start_pos, end_pos, 1)  # Count already applied to motion
+                # Save the operator+motion for repeat command (.)
+                self.state.last_operator_motion = (operator, key, op_count, count)
+
+                # For yank, restore cursor to original position
+                if operator == "y":
+                    self.state.cursor.set_position(start_pos[0], start_pos[1])
 
             self.pending_operator = None
             self.state.reset_command_state()
@@ -413,7 +429,11 @@ class NormalCommandHandler:
         buffer = self.state.current_buffer
         cursor = self.state.cursor
 
-        for _ in range(count):
+        # For J with count, join count lines (e.g., 3J joins current + next 2)
+        # But we do count-1 joins since first line is current
+        joins_to_make = max(1, count - 1) if count > 1 else 1
+
+        for _ in range(joins_to_make):
             if cursor.row < buffer.line_count - 1:
                 current = buffer.get_line(cursor.row)
                 next_line = buffer.get_line(cursor.row + 1)
@@ -590,7 +610,9 @@ class NormalCommandHandler:
                 line = buffer.get_line(cursor.row)
                 new_line = line[: cursor.col + 1] + text + line[cursor.col + 1 :]
                 buffer.replace_line(cursor.row, new_line)
-                cursor.move_right(len(text))
+                # Position cursor after the last character of pasted text
+                # Note: vi seems to position cursor one past the last pasted character
+                cursor.set_position(cursor.row, cursor.col + len(text) + 1)
 
     def put_before(self, count: int = 1) -> None:
         """Put yanked text before cursor."""
@@ -629,8 +651,17 @@ class NormalCommandHandler:
 
     def repeat_last(self, count: int = 1) -> None:
         """Repeat last command."""
-        if self.state.last_command:
-            # Re-execute last command
+        # Check for operator+motion commands first
+        if hasattr(self.state, "last_operator_motion") and self.state.last_operator_motion:
+            operator, motion, op_count, motion_count = self.state.last_operator_motion
+            for _ in range(count):
+                # Set up the operator
+                self.pending_operator = operator
+                self.operator_count = 1  # Use 1 since we'll apply the original counts in motion
+                # Execute the motion with original counts
+                self._handle_operator_motion(motion, 1)
+        elif self.state.last_command:
+            # Re-execute last simple command
             for _ in range(count):
                 self.handle_command(self.state.last_command)
 

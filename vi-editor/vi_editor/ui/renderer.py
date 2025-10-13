@@ -55,7 +55,6 @@ class Renderer:
             width: Terminal width.
         """
         buffer = self.state.current_buffer
-        cursor = self.state.cursor
         viewport_start = self.state.viewport_row
 
         # Get visual selection if in visual mode

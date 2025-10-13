@@ -86,7 +86,6 @@ class MotionHandler:
     def move_left(self, count: int = 1) -> Tuple[int, int]:
         """Move cursor left."""
         cursor = self.state.cursor
-        buffer = self.state.current_buffer
 
         new_col = max(0, cursor.col - count)
         cursor.set_position(cursor.row, new_col)
