@@ -159,8 +159,8 @@ class TestVisualDelete:
 
         visual_handler.handle_command("d")
 
-        # "Hello " + " is great" = "Hello  is great"
-        assert editor_state.current_buffer.get_line(0) == "Hello  is great"
+        # Deleting "World\nPython is gr" leaves "Hello " + "eat" = "Hello eat"
+        assert editor_state.current_buffer.get_line(0) == "Hello eat"
         assert editor_state.mode_manager.current_mode == Mode.NORMAL
 
     def test_delete_stores_in_register(self, visual_handler, editor_state):

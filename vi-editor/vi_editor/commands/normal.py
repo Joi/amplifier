@@ -538,9 +538,9 @@ class NormalCommandHandler:
                     line = buffer.get_line(cursor.row)
                     buffer.replace_line(cursor.row, "")
                     lines.append(line)
-                else:
-                    # Additional lines - delete
-                    line = buffer.delete_line(cursor.row)
+                elif cursor.row + 1 < buffer.line_count:
+                    # Additional lines - delete the NEXT line (since cursor stays at same row)
+                    line = buffer.delete_line(cursor.row + 1)
                     if line:
                         lines.append(line)
 
@@ -661,9 +661,14 @@ class NormalCommandHandler:
                 # Execute the motion with original counts
                 self._handle_operator_motion(motion, 1)
         elif self.state.last_command:
-            # Re-execute last simple command
+            # For simple commands like 'x', repeat them count times
+            # Each repetition executes the command once (not with a count)
+            saved_command = self.state.last_command
             for _ in range(count):
-                self.handle_command(self.state.last_command)
+                # Execute the command without accumulating counts
+                if saved_command in self.commands:
+                    handler = self.commands[saved_command]
+                    handler(1)  # Always execute with count=1 for each repetition
 
     # Marks
     def set_mark(self, count: int = 1) -> None:
