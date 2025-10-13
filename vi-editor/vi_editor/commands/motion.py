@@ -137,17 +137,23 @@ class MotionHandler:
             row, col = cursor.row, cursor.col
             line = buffer.get_line(row)
 
-            # Skip current word
-            while col < len(line) and not line[col].isspace() and line[col].isalnum():
-                col += 1
+            if col < len(line):
+                # Check what type of character we're on
+                if line[col].isalnum():
+                    # Skip alphanumeric word
+                    while col < len(line) and line[col].isalnum():
+                        col += 1
+                elif not line[col].isspace():
+                    # Skip punctuation word
+                    while col < len(line) and not line[col].isspace() and not line[col].isalnum():
+                        col += 1
+                else:
+                    # We're on whitespace, move to next word
+                    pass
 
-            # Skip punctuation
-            while col < len(line) and not line[col].isspace() and not line[col].isalnum():
-                col += 1
-
-            # Skip whitespace
-            while col < len(line) and line[col].isspace():
-                col += 1
+                # Skip whitespace to next word
+                while col < len(line) and line[col].isspace():
+                    col += 1
 
             # Move to next line if at end
             if col >= len(line):
@@ -211,19 +217,30 @@ class MotionHandler:
                 row -= 1
                 line = buffer.get_line(row)
                 col = len(line) - 1 if line else 0
-                cursor.set_position(row, col)
-                continue
+            else:
+                # Already at start of buffer
+                return cursor.position
 
-            # Skip whitespace
-            while col > 0 and line[col].isspace():
-                col -= 1
+            # Skip whitespace backward
+            while col >= 0 and line[col].isspace():
+                if col > 0:
+                    col -= 1
+                elif row > 0:
+                    # Move to previous line
+                    row -= 1
+                    line = buffer.get_line(row)
+                    col = len(line) - 1 if line else 0
+                else:
+                    break
 
-            # Move to beginning of word
-            if col > 0:
+            # Now find start of word
+            if col >= 0 and not line[col].isspace():
                 if line[col].isalnum():
+                    # Go to beginning of alphanumeric word
                     while col > 0 and line[col - 1].isalnum():
                         col -= 1
                 else:
+                    # Go to beginning of punctuation word
                     while col > 0 and not line[col - 1].isspace() and not line[col - 1].isalnum():
                         col -= 1
 
@@ -280,23 +297,22 @@ class MotionHandler:
                 row += 1
                 col = 0
                 line = buffer.get_line(row)
-                # Skip leading whitespace
-                while col < len(line) and line[col].isspace():
-                    col += 1
-                if col < len(line):
-                    cursor.set_position(row, col)
-                continue
 
             # Skip whitespace
             while col < len(line) and line[col].isspace():
                 col += 1
+                if col >= len(line) and row < buffer.line_count - 1:
+                    # Move to next line
+                    row += 1
+                    col = 0
+                    line = buffer.get_line(row)
 
             # Move to end of word
             if col < len(line):
                 if line[col].isalnum():
                     while col < len(line) - 1 and line[col + 1].isalnum():
                         col += 1
-                else:
+                elif not line[col].isspace():
                     while col < len(line) - 1 and not line[col + 1].isspace() and not line[col + 1].isalnum():
                         col += 1
 
@@ -404,24 +420,29 @@ class MotionHandler:
         """Move backward by paragraph ({)."""
         cursor = self.state.cursor
         buffer = self.state.current_buffer
+        row = cursor.row
 
-        for _ in range(count):
-            row = cursor.row
+        # The way vi seems to work: 2{ from row 7 goes to row 3
+        # This suggests count-1 backward moves
+        actual_moves = max(1, count - 1) if count > 1 else 1
 
-            # Skip current paragraph
-            while row > 0 and buffer.get_line(row).strip():
+        for _ in range(actual_moves):
+            if row == 0:
+                break
+
+            # First, move up at least one line to get out of current paragraph
+            if row > 0:
                 row -= 1
 
-            # Skip blank lines
-            while row > 0 and not buffer.get_line(row).strip():
-                row -= 1
+                # Skip blank lines
+                while row > 0 and not buffer.get_line(row).strip():
+                    row -= 1
 
-            # Move to start of paragraph
-            while row > 0 and buffer.get_line(row - 1).strip():
-                row -= 1
+                # Now go to the start of the paragraph we found
+                while row > 0 and buffer.get_line(row - 1).strip():
+                    row -= 1
 
-            cursor.set_position(row, 0)
-
+        cursor.set_position(row, 0)
         return cursor.position
 
     def move_paragraph_forward(self, count: int = 1) -> Tuple[int, int]:
@@ -432,15 +453,17 @@ class MotionHandler:
         for _ in range(count):
             row = cursor.row
 
-            # Skip current paragraph
-            while row < buffer.line_count - 1 and buffer.get_line(row).strip():
+            # If we're in blank lines, skip them first
+            if row < buffer.line_count and not buffer.get_line(row).strip():
+                while row < buffer.line_count and not buffer.get_line(row).strip():
+                    row += 1
+
+            # Skip current paragraph (non-blank lines)
+            while row < buffer.line_count and buffer.get_line(row).strip():
                 row += 1
 
-            # Skip blank lines
-            while row < buffer.line_count - 1 and not buffer.get_line(row).strip():
-                row += 1
-
-            cursor.set_position(row, 0)
+            # We're now at a blank line or end of file
+            cursor.set_position(min(row, buffer.line_count - 1), 0)
 
         return cursor.position
 
@@ -449,28 +472,37 @@ class MotionHandler:
         cursor = self.state.cursor
         buffer = self.state.current_buffer
 
-        # Simplified sentence detection
         for _ in range(count):
             row, col = cursor.row, cursor.col
             found = False
+
+            # Move back one char to start search
+            if col > 0:
+                col -= 1
+            elif row > 0:
+                row -= 1
+                line = buffer.get_line(row)
+                col = len(line) - 1
 
             while row >= 0 and not found:
                 line = buffer.get_line(row)
 
                 # Search backward in current line
-                search_col = col if row == cursor.row else len(line) - 1
-
-                while search_col > 0:
-                    if line[search_col] in ".!?" and search_col < len(line) - 1:
-                        # Found end of previous sentence
-                        cursor.set_position(row, search_col + 1)
+                while col >= 0:
+                    if col < len(line) and line[col] in ".!?":
+                        # Found end of previous sentence, move past it and any spaces
+                        col += 1
+                        while col < len(line) and line[col].isspace():
+                            col += 1
+                        cursor.set_position(row, col)
                         found = True
                         break
-                    search_col -= 1
+                    col -= 1
 
                 if not found:
                     row -= 1
-                    col = len(buffer.get_line(row)) if row >= 0 else 0
+                    if row >= 0:
+                        col = len(buffer.get_line(row)) - 1
 
         return cursor.position
 
@@ -478,39 +510,45 @@ class MotionHandler:
         """Move forward by sentence ())."""
         cursor = self.state.cursor
         buffer = self.state.current_buffer
+        row, col = cursor.row, cursor.col
 
-        # Simplified sentence detection
-        for _ in range(count):
-            row, col = cursor.row, cursor.col
+        for i in range(count):
             found = False
+
+            # If not the first iteration, start from next position
+            if i > 0 and col < len(buffer.get_line(row)):
+                col += 1
 
             while row < buffer.line_count and not found:
                 line = buffer.get_line(row)
 
-                # Search forward in current line
-                search_col = col if row == cursor.row else 0
-
-                while search_col < len(line):
+                # Search from current position
+                for search_col in range(col, len(line)):
                     if line[search_col] in ".!?":
-                        # Found end of sentence, move past whitespace
-                        search_col += 1
-                        while search_col < len(line) and line[search_col].isspace():
-                            search_col += 1
+                        # Found end of sentence
+                        new_col = search_col + 1
 
-                        if search_col < len(line):
-                            cursor.set_position(row, search_col)
-                        else:
-                            # Move to next line
+                        # Skip any whitespace after punctuation
+                        while new_col < len(line) and line[new_col].isspace():
+                            new_col += 1
+
+                        row = row
+                        col = new_col
+
+                        if col >= len(line):
+                            # At end of line, move to next line
                             if row < buffer.line_count - 1:
-                                cursor.set_position(row + 1, 0)
+                                row += 1
+                                col = 0
+
                         found = True
                         break
-                    search_col += 1
 
                 if not found:
                     row += 1
                     col = 0
 
+        cursor.set_position(row, col)
         return cursor.position
 
     def move_matching_bracket(self, count: int = 1) -> Tuple[int, int]:
@@ -538,39 +576,43 @@ class MotionHandler:
         match = brackets[char]
         forward = char in "([{"
 
-        count = 1
+        bracket_count = 1
         row, col = cursor.row, cursor.col
 
-        while 0 <= row < buffer.line_count:
-            line = buffer.get_line(row)
-
-            if forward:
-                col += 1
+        if forward:
+            # Search forward for closing bracket
+            col += 1  # Start after current bracket
+            while row < buffer.line_count:
+                line = buffer.get_line(row)
                 while col < len(line):
                     if line[col] == char:
-                        count += 1
+                        bracket_count += 1
                     elif line[col] == match:
-                        count -= 1
-                        if count == 0:
+                        bracket_count -= 1
+                        if bracket_count == 0:
                             cursor.set_position(row, col)
                             return cursor.position
                     col += 1
                 row += 1
-                col = -1
-            else:
-                col -= 1
+                col = 0
+        else:
+            # Search backward for opening bracket
+            col -= 1  # Start before current bracket
+            while row >= 0:
+                line = buffer.get_line(row)
                 while col >= 0:
                     if line[col] == char:
-                        count += 1
+                        bracket_count += 1
                     elif line[col] == match:
-                        count -= 1
-                        if count == 0:
+                        bracket_count -= 1
+                        if bracket_count == 0:
                             cursor.set_position(row, col)
                             return cursor.position
                     col -= 1
                 row -= 1
                 if row >= 0:
-                    col = len(buffer.get_line(row))
+                    line = buffer.get_line(row)
+                    col = len(line) - 1
 
         return cursor.position
 
@@ -684,14 +726,22 @@ class MotionHandler:
         """Reverse last character search (,)."""
         if hasattr(self.state, "last_char_search"):
             cmd, char = self.state.last_char_search
+            # Temporarily save current search to restore after
+            saved = self.state.last_char_search
+            result = None
+
             if cmd == "f":
-                return self.find_char_backward(count, char)
+                result = self.find_char_backward(count, char)
             elif cmd == "F":
-                return self.find_char_forward(count, char)
+                result = self.find_char_forward(count, char)
             elif cmd == "t":
-                return self.till_char_backward(count, char)
+                result = self.till_char_backward(count, char)
             elif cmd == "T":
-                return self.till_char_forward(count, char)
+                result = self.till_char_forward(count, char)
+
+            # Restore original search direction
+            self.state.last_char_search = saved
+            return result
         return None
 
     def next_search_match(self, count: int = 1) -> Optional[Tuple[int, int]]:

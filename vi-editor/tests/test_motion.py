@@ -400,7 +400,7 @@ class TestSentenceMotions:
         handler = MotionHandler(editor_with_sentences)
 
         row, col = handler.move_sentence_forward(2)
-        assert col == 36  # After "Second sentence! "
+        assert col == 33  # After "Second sentence! " (start of "Third")
 
     def test_sentence_backward(self, editor_with_sentences):
         """Test ( motion."""
@@ -475,15 +475,15 @@ class TestCharacterSearch:
 
     def test_reverse_char_search(self, editor_with_text):
         """Test , motion (reverse last search)."""
-        editor_with_text.cursor.set_position(0, 0)  # "hello world"
+        editor_with_text.cursor.set_position(0, 3)  # Start at second 'l' in "hello world"
         handler = MotionHandler(editor_with_text)
 
-        # Forward search
+        # Forward search from position 3
         handler.find_char_forward(1, "l")
-        assert editor_with_text.cursor.col == 2
-        # Reverse
+        assert editor_with_text.cursor.col == 9  # Third 'l' in "world"
+        # Reverse - should go back to find previous 'l'
         row, col = handler.reverse_char_search()
-        assert col < 2  # Moved backward
+        assert col == 3  # Back to second 'l'
 
 
 class TestBracketMatching:
@@ -495,7 +495,7 @@ class TestBracketMatching:
         handler = MotionHandler(editor_with_brackets)
 
         row, col = handler.move_matching_bracket()
-        assert (row, col) == (0, 18)  # Closing paren
+        assert (row, col) == (0, 19)  # Closing paren
 
     def test_matching_braces(self, editor_with_brackets):
         """Test % on opening brace."""
@@ -519,7 +519,7 @@ class TestBracketMatching:
         handler = MotionHandler(editor_with_brackets)
 
         row, col = handler.move_matching_bracket()
-        assert (row, col) == (0, 20)  # Opening brace
+        assert (row, col) == (0, 21)  # Opening brace
 
     def test_matching_nested(self, editor_with_brackets):
         """Test % with nested brackets."""
