@@ -164,11 +164,13 @@ class Display:
 
     def update_cursor_style(self) -> None:
         """Update cursor style based on current mode."""
+        from vi_editor.core.mode import Mode
+
         mode = self.state.mode_manager.current_mode
 
-        if mode == self.state.mode_manager.Mode.INSERT:
+        if mode == Mode.INSERT:
             self.terminal.set_cursor_style("bar")
-        elif mode == self.state.mode_manager.Mode.REPLACE:
+        elif mode == Mode.REPLACE:
             self.terminal.set_cursor_style("underline")
         else:
             self.terminal.set_cursor_style("block")

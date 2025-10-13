@@ -806,7 +806,8 @@ class MotionHandler:
             self.state.search_state.pattern = r"\b" + re.escape(word) + r"\b"
             self.state.search_state.direction = "forward"
             # Execute search
-            return self.next_search_match(count)
+            result = self.next_search_match(count)
+            return result if result is not None else cursor.position
 
         return cursor.position
 
@@ -835,6 +836,7 @@ class MotionHandler:
             self.state.search_state.pattern = r"\b" + re.escape(word) + r"\b"
             self.state.search_state.direction = "backward"
             # Execute search
-            return self.prev_search_match(count)
+            result = self.prev_search_match(count)
+            return result if result is not None else cursor.position
 
         return cursor.position

@@ -68,8 +68,8 @@ class Terminal:
         try:
             # Try ioctl first
             if sys.stdout.isatty():
-                size = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, "    ")
-                rows, cols = struct.unpack("hh", size)
+                size = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, b"\x00" * 8)
+                rows, cols = struct.unpack("hh", size[:4])
                 if rows > 0 and cols > 0:
                     self._height = rows
                     self._width = cols

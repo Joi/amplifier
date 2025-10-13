@@ -342,7 +342,7 @@ class Editor:
 
         # Clean up swap files
         for buffer in self.state.buffers:
-            if buffer.filename and hasattr(buffer, "swap_file"):
+            if buffer.filename and hasattr(buffer, "swap_file") and buffer.swap_file:
                 self.recovery_manager.remove_swap_file(buffer.swap_file)
 
         # Clean up display

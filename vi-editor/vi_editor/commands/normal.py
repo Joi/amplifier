@@ -189,7 +189,7 @@ class NormalCommandHandler:
             start_pos = self.state.cursor.position
             end_pos = self.motion_handler.execute_motion(key, count)
 
-            if end_pos:
+            if end_pos and operator:
                 self._apply_operator(operator, start_pos, end_pos, op_count)
 
             self.pending_operator = None
@@ -224,10 +224,12 @@ class NormalCommandHandler:
 
         elif operator == "c":
             # Change range
+            from vi_editor.core.mode import Mode
+
             text = buffer.delete_range(start[0], start[1], end[0], end[1])
             buffer.set_register('"', text)
             self.state.cursor.set_position(start[0], start[1])
-            self.state.mode_manager.set_mode(self.state.mode_manager.Mode.INSERT)
+            self.state.mode_manager.set_mode(Mode.INSERT)
 
         elif operator == "y":
             # Yank range

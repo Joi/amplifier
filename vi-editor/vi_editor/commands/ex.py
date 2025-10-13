@@ -1,7 +1,7 @@
 """Ex (colon) commands for vi editor."""
 
 import re
-from typing import Callable, Optional
+from typing import Callable, Literal, Union
 
 
 class ExCommand:
@@ -16,8 +16,8 @@ class ExCommand:
         self.raw = command
         self.command = ""
         self.args = []
-        self.range_start: Optional[int] = None
-        self.range_end: Optional[int] = None
+        self.range_start: Union[int, Literal["current", "last"], None] = None
+        self.range_end: Union[int, Literal["current", "last"], None] = None
         self._parse()
 
     def _parse(self) -> None:
@@ -125,14 +125,14 @@ class ExCommandHandler:
             "version": self.show_version,
         }
 
-    def execute(self, command_str: str) -> bool:
+    def execute(self, command_str: str) -> Union[bool, Literal["quit"]]:
         """Execute an ex command.
 
         Args:
             command_str: The command string (without the colon).
 
         Returns:
-            True if command executed successfully, False otherwise.
+            True if command executed successfully, False otherwise, or "quit" to signal quit.
         """
         if not command_str:
             return False
@@ -166,7 +166,7 @@ class ExCommandHandler:
         return False
 
     # File commands
-    def quit(self, cmd: ExCommand) -> bool:
+    def quit(self, cmd: ExCommand) -> Union[bool, Literal["quit"]]:
         """Quit the editor."""
         buffer = self.state.current_buffer
         if buffer.modified:
@@ -174,7 +174,7 @@ class ExCommandHandler:
             return False
         return "quit"  # Special return value to signal quit
 
-    def force_quit(self, cmd: ExCommand) -> bool:
+    def force_quit(self, cmd: ExCommand) -> Union[bool, Literal["quit"]]:
         """Force quit without saving."""
         return "quit"  # Special return value to signal quit
 
@@ -200,7 +200,7 @@ class ExCommandHandler:
             self.state.set_status(f"Error writing file: {str(e)}", "error")
             return False
 
-    def write_quit(self, cmd: ExCommand) -> bool:
+    def write_quit(self, cmd: ExCommand) -> Union[bool, Literal["quit"]]:
         """Write and quit."""
         if self.write(cmd):
             return "quit"

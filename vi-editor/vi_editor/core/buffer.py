@@ -32,6 +32,7 @@ class Buffer:
         self._redo_stack: Deque[UndoEntry] = deque(maxlen=1000)
         self._registers: dict[str, str] = {}
         self._marks: dict[str, tuple[int, int]] = {}
+        self.swap_file: Optional[str] = None  # Path to swap file for recovery
 
     @property
     def lines(self) -> List[str]:

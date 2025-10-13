@@ -61,7 +61,7 @@ class Cursor:
         """
         self._row = max(0, self._row - count)
 
-    def move_down(self, count: int = 1, max_row: int = None) -> None:
+    def move_down(self, count: int = 1, max_row: Optional[int] = None) -> None:
         """Move cursor down by count lines.
 
         Args:
@@ -82,7 +82,7 @@ class Cursor:
         self._col = max(0, self._col - count)
         self._desired_col = self._col
 
-    def move_right(self, count: int = 1, max_col: int = None) -> None:
+    def move_right(self, count: int = 1, max_col: Optional[int] = None) -> None:
         """Move cursor right by count columns.
 
         Args:
