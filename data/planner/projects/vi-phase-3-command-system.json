@@ -1,0 +1,162 @@
+{
+  "id": "vi-phase-3-command-system",
+  "name": "Vi Phase 3: Command System & Movement",
+  "created_at": "2025-10-13T00:00:00.000000",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "commands": {
+      "id": "commands",
+      "title": "Command System",
+      "description": "Vi command parsing, execution, and modal interface",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "cmd-parser": {
+      "id": "cmd-parser",
+      "title": "Command Parser",
+      "description": "Parse vi commands with error handling",
+      "state": "pending",
+      "parent_id": "commands",
+      "depends_on": [
+        "commands"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "cmd-modes": {
+      "id": "cmd-modes",
+      "title": "Modal Interface",
+      "description": "Normal, insert, visual, command modes",
+      "state": "pending",
+      "parent_id": "commands",
+      "depends_on": [
+        "cmd-parser"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "cmd-movement": {
+      "id": "cmd-movement",
+      "title": "Movement Commands",
+      "description": "h,j,k,l, w,e,b, $,^, G, etc.",
+      "state": "pending",
+      "parent_id": "commands",
+      "depends_on": [
+        "cmd-modes"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "cmd-editing": {
+      "id": "cmd-editing",
+      "title": "Editing Commands",
+      "description": "i,a,o, d,c,y, p, u, ., etc.",
+      "state": "pending",
+      "parent_id": "commands",
+      "depends_on": [
+        "cmd-movement"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "cmd-visual": {
+      "id": "cmd-visual",
+      "title": "Visual Mode",
+      "description": "Visual selection, visual block",
+      "state": "pending",
+      "parent_id": "commands",
+      "depends_on": [
+        "cmd-editing"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "cmd-ex": {
+      "id": "cmd-ex",
+      "title": "Ex Commands",
+      "description": ":w, :q, :s, :!, etc.",
+      "state": "pending",
+      "parent_id": "commands",
+      "depends_on": [
+        "cmd-visual"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "move-char": {
+      "id": "move-char",
+      "title": "Character Movement",
+      "description": "h,l,space,backspace movement",
+      "state": "pending",
+      "parent_id": "cmd-movement",
+      "depends_on": [
+        "cmd-movement"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "move-word": {
+      "id": "move-word",
+      "title": "Word Movement",
+      "description": "w,e,b,W,E,B word boundaries",
+      "state": "pending",
+      "parent_id": "cmd-movement",
+      "depends_on": [
+        "move-char"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "move-line": {
+      "id": "move-line",
+      "title": "Line Movement",
+      "description": "j,k,$,^,0,+,- movements",
+      "state": "pending",
+      "parent_id": "cmd-movement",
+      "depends_on": [
+        "move-word"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "move-search": {
+      "id": "move-search",
+      "title": "Search Movement",
+      "description": "f,F,t,T,;,, and /,? searches",
+      "state": "pending",
+      "parent_id": "cmd-movement",
+      "depends_on": [
+        "move-line"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "move-jump": {
+      "id": "move-jump",
+      "title": "Jump Commands",
+      "description": "G,gg,H,M,L,ctrl-f,ctrl-b",
+      "state": "pending",
+      "parent_id": "cmd-movement",
+      "depends_on": [
+        "move-search"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}

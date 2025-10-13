@@ -1,0 +1,136 @@
+{
+  "id": "vi-phase-7-testing-polish",
+  "name": "Vi Phase 7: Testing & Polish",
+  "created_at": "2025-10-13T00:00:00.000000",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "test-unit": {
+      "id": "test-unit",
+      "title": "Unit Tests",
+      "description": "Unit tests for all components",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "test-integration": {
+      "id": "test-integration",
+      "title": "Integration Tests",
+      "description": "Integration tests across components",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "test-unit"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "test-compatibility": {
+      "id": "test-compatibility",
+      "title": "Vi Compatibility Tests",
+      "description": "Test compatibility with real vi",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "test-integration"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "test-performance": {
+      "id": "test-performance",
+      "title": "Performance Tests",
+      "description": "Large file performance, memory usage",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "test-compatibility"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "test-edge-cases": {
+      "id": "test-edge-cases",
+      "title": "Edge Case Tests",
+      "description": "Binary files, huge files, corner cases",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "test-performance"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "polish-docs": {
+      "id": "polish-docs",
+      "title": "Documentation",
+      "description": "User manual, developer docs",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "test-edge-cases"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "polish-package": {
+      "id": "polish-package",
+      "title": "Packaging",
+      "description": "Setup.py, distribution, installation",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "polish-docs"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "polish-ci": {
+      "id": "polish-ci",
+      "title": "CI/CD Setup",
+      "description": "GitHub actions, automated testing",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "polish-package"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "release-beta": {
+      "id": "release-beta",
+      "title": "Beta Release",
+      "description": "Initial beta release",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "polish-ci"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "release-stable": {
+      "id": "release-stable",
+      "title": "Stable Release",
+      "description": "1.0 stable release",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "release-beta"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}

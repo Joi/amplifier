@@ -1,0 +1,45 @@
+{
+  "id": "vi-phase-6-integration",
+  "name": "Vi Phase 6: Integration",
+  "created_at": "2025-10-13T00:00:00.000000",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "integration-basic": {
+      "id": "integration-basic",
+      "title": "Basic Integration",
+      "description": "Integrate core editing with UI",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "integration-advanced": {
+      "id": "integration-advanced",
+      "title": "Advanced Integration",
+      "description": "Integrate search, ex commands",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "integration-basic"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "integration-files": {
+      "id": "integration-files",
+      "title": "File Integration",
+      "description": "Integrate file operations",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "integration-advanced"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "vi-phase-4-ui-display",
+  "name": "Vi Phase 4: User Interface & Display",
+  "created_at": "2025-10-13T00:00:00.000000",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "ui": {
+      "id": "ui",
+      "title": "User Interface System",
+      "description": "Terminal handling, screen rendering, input processing",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "ui-terminal": {
+      "id": "ui-terminal",
+      "title": "Terminal Interface",
+      "description": "Raw terminal control, escape sequences",
+      "state": "pending",
+      "parent_id": "ui",
+      "depends_on": [
+        "ui"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "ui-screen": {
+      "id": "ui-screen",
+      "title": "Screen Management",
+      "description": "Screen buffer, scrolling, refresh",
+      "state": "pending",
+      "parent_id": "ui",
+      "depends_on": [
+        "ui-terminal"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "ui-input": {
+      "id": "ui-input",
+      "title": "Input Processing",
+      "description": "Key mapping, special keys, timing",
+      "state": "pending",
+      "parent_id": "ui",
+      "depends_on": [
+        "ui-screen"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "ui-rendering": {
+      "id": "ui-rendering",
+      "title": "Text Rendering",
+      "description": "Syntax highlighting, line numbers",
+      "state": "pending",
+      "parent_id": "ui",
+      "depends_on": [
+        "ui-input"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "ui-status": {
+      "id": "ui-status",
+      "title": "Status Line",
+      "description": "Mode indicator, position, filename",
+      "state": "pending",
+      "parent_id": "ui",
+      "depends_on": [
+        "ui-rendering"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}

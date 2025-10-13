@@ -1,0 +1,71 @@
+{
+  "id": "vi-phase-5-file-ops",
+  "name": "Vi Phase 5: File Operations",
+  "created_at": "2025-10-13T00:00:00.000000",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "filesystem": {
+      "id": "filesystem",
+      "title": "File Operations",
+      "description": "File I/O, backup, recovery, file type detection",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "file-io": {
+      "id": "file-io",
+      "title": "Basic File I/O",
+      "description": "Read/write files, error handling",
+      "state": "pending",
+      "parent_id": "filesystem",
+      "depends_on": [
+        "filesystem"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "file-backup": {
+      "id": "file-backup",
+      "title": "Backup System",
+      "description": "Swap files, backup files, recovery",
+      "state": "pending",
+      "parent_id": "filesystem",
+      "depends_on": [
+        "file-io"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "file-detection": {
+      "id": "file-detection",
+      "title": "File Type Detection",
+      "description": "Syntax detection, file associations",
+      "state": "pending",
+      "parent_id": "filesystem",
+      "depends_on": [
+        "file-backup"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "file-encoding": {
+      "id": "file-encoding",
+      "title": "Encoding Detection",
+      "description": "Auto-detect and handle encodings",
+      "state": "pending",
+      "parent_id": "filesystem",
+      "depends_on": [
+        "file-detection"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}
