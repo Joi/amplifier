@@ -46,9 +46,15 @@ class Display:
         Args:
             force: Force render even if not needed.
         """
-        # Rate limiting
-        current_time = time.time()
+        # Only render if needed
         if not force and not self.needs_full_redraw:
+            # Check if partial update is needed
+            if not self._status_changed() and not self._command_changed():
+                return
+
+        # Rate limiting for full redraws
+        current_time = time.time()
+        if not force and self.needs_full_redraw:
             if current_time - self.last_render_time < self.min_render_interval:
                 return
 
@@ -91,8 +97,26 @@ class Display:
         Returns:
             True if command line changed.
         """
-        # Check for changes that affect command line
-        return bool(self.state.command_buffer or self.state.status_message)
+        # Track last state to detect changes
+        if not hasattr(self, "_last_command_buffer"):
+            self._last_command_buffer = ""
+            self._last_status_message = None
+
+        # Check if command buffer changed
+        command_changed = self.state.command_buffer != self._last_command_buffer
+        self._last_command_buffer = self.state.command_buffer
+
+        # Check if status message changed
+        status_changed = False
+        if self.state.status_message:
+            if self._last_status_message != self.state.status_message.text:
+                status_changed = True
+                self._last_status_message = self.state.status_message.text
+        elif self._last_status_message is not None:
+            status_changed = True
+            self._last_status_message = None
+
+        return command_changed or status_changed
 
     def request_redraw(self) -> None:
         """Request a full redraw on next render."""

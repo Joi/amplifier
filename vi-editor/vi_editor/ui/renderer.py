@@ -272,9 +272,14 @@ class Renderer:
         else:
             self.terminal.set_cursor_style("block")
 
-        # Position cursor
+        # Position cursor - ensure it's visible
         self.terminal.move_cursor(screen_row, screen_col)
         self.terminal.show_cursor()
+
+        # Force flush to ensure cursor updates
+        import sys
+
+        sys.stdout.flush()
 
         # Store last position
         self.last_cursor_row = screen_row

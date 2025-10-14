@@ -70,7 +70,9 @@ class Editor:
 
                 # Check for recovery
                 if self.recovery_manager.check_recovery_needed(filename):
-                    self.state.set_status(f"Swap file exists for {filename}. Use :recover to restore.", "warning")
+                    self.state.set_status(
+                        f"Swap file exists for {filename}. Use :recover to restore.", "warning", timeout=5.0
+                    )
 
                 # Read file
                 buffer = self.file_handler.read_file(filename)
@@ -100,16 +102,23 @@ class Editor:
 
         try:
             while self.running:
-                # Render display
+                # Render display only when needed
                 self.display.render()
 
-                # Get input
-                key = self.input_handler.read_key()
+                # Get input with a small timeout to allow for rendering updates
+                key = self.input_handler.read_key(timeout=0.05)
                 if not key:
                     continue
 
+                # Clear status message on any key press if it's been shown
+                if self.state.status_message:
+                    self.state.clear_status()
+
                 # Process input based on mode
                 self._process_input(key)
+
+                # Request redraw after input processing
+                self.display.request_redraw()
 
                 # Auto-save to swap file periodically
                 self._update_swap_file()

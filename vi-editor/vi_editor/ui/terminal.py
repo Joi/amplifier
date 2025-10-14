@@ -31,11 +31,14 @@ class Terminal:
         # Enter raw mode
         self.enter_raw_mode()
 
-        # Hide cursor initially
-        self.hide_cursor()
+        # Don't hide cursor - we want it visible for editing
+        # self.hide_cursor()
 
         # Clear screen
         self.clear_screen()
+
+        # Show cursor
+        self.show_cursor()
 
     def cleanup(self) -> None:
         """Restore terminal to original state."""

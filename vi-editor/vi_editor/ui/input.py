@@ -32,6 +32,11 @@ class InputHandler:
             ready, _, _ = select.select([sys.stdin], [], [], timeout)
             if not ready:
                 return None
+        else:
+            # For blocking read, also use select to avoid hanging
+            ready, _, _ = select.select([sys.stdin], [], [], None)
+            if not ready:
+                return None
 
         # Read character
         char = sys.stdin.read(1)
