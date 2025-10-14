@@ -103,7 +103,8 @@ class Renderer:
                     self.terminal.write(line_display, screen_row, col_offset)
             else:
                 # Empty line indicator
-                self.terminal.write_styled("~", "34", screen_row, 0)  # Blue color
+                self.terminal.move_cursor(screen_row, 0)
+                self.terminal.write_styled("~", "34")  # Blue color
 
     def _render_line_with_selection(
         self, line: str, row: int, visual_start: Tuple[int, int], visual_end: Tuple[int, int], max_width: int
@@ -204,7 +205,8 @@ class Renderer:
         status = f" {left}{' ' * padding}{right} "[:width]
 
         # Render with inverse colors
-        self.terminal.write_styled(status, "7", row, 0)  # Inverse video
+        self.terminal.move_cursor(row, 0)
+        self.terminal.write_styled(status, "7")  # Inverse video
 
     def _render_command_line(self, row: int, width: int) -> None:
         """Render the command line.
