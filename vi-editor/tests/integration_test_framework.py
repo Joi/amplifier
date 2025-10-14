@@ -189,11 +189,10 @@ def run_test(name: str, initial: str, keys: str, expected: str) -> bool:
     if result == expected:
         print("✅ PASS")
         return True
-    else:
-        print("❌ FAIL")
-        print(f"  Expected:\n{repr(expected)}")
-        print(f"  Got:\n{repr(result)}")
-        return False
+    print("❌ FAIL")
+    print(f"  Expected:\n{repr(expected)}")
+    print(f"  Got:\n{repr(result)}")
+    return False
 
 
 if __name__ == "__main__":

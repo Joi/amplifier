@@ -11,8 +11,8 @@ security theater - it actually prevents shortcuts.
 """
 
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -137,17 +137,17 @@ def calculate_answer():
             # Check that coder didn't actually access the golden file
             execution_logs = result.get("logs", "")
             # The coder should have failed to access the golden file
-            assert "Permission denied" in execution_logs or "FileNotFoundError" in execution_logs or result[
-                "coder_cheated"
-            ] is False
+            assert (
+                "Permission denied" in execution_logs
+                or "FileNotFoundError" in execution_logs
+                or result["coder_cheated"] is False
+            )
         else:
             # Test failed because coder couldn't figure out the answer
             # This is expected - coder can't see golden file
             assert not result["passed"]
 
-    def test_04_cannot_use_weak_placeholder_evidence(
-        self, agent_api: AgentAPI, evidence_store: EvidenceStore
-    ) -> None:
+    def test_04_cannot_use_weak_placeholder_evidence(self, agent_api: AgentAPI, evidence_store: EvidenceStore) -> None:
         """
         ATTACK: Try to use placeholder/weak evidence like "TODO" or "TBD".
         EXPECTED: System rejects weak evidence.
@@ -175,9 +175,7 @@ def calculate_answer():
         # assert result["can_complete"] is False
         # assert "weak" in result["reason"].lower() or "placeholder" in result["reason"].lower()
 
-    def test_05_legitimate_evidence_allows_completion(
-        self, agent_api: AgentAPI, evidence_store: EvidenceStore
-    ) -> None:
+    def test_05_legitimate_evidence_allows_completion(self, agent_api: AgentAPI, evidence_store: EvidenceStore) -> None:
         """
         SUCCESS CASE: Provide real, legitimate evidence.
         EXPECTED: System allows completion.
@@ -209,9 +207,7 @@ def calculate_answer():
         assert result["evidence_status"]["has_evidence"] is True
         assert result["evidence_status"]["all_valid"] is True
 
-    def test_06_three_agent_workflow_prevents_cheating_end_to_end(
-        self, temp_evidence_dir: Path
-    ) -> None:
+    def test_06_three_agent_workflow_prevents_cheating_end_to_end(self, temp_evidence_dir: Path) -> None:
         """
         END-TO-END TEST: Run complete 3-agent workflow and verify:
         1. Spec writer creates golden files

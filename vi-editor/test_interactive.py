@@ -44,7 +44,7 @@ def test_vi_editor():
     proc.wait(timeout=2)
 
     # Check if file was saved
-    with open("test.txt", "r") as f:
+    with open("test.txt") as f:
         content = f.read()
         print(f"File content after edit: {repr(content)}")
         if "TEST" in content:

@@ -290,15 +290,14 @@ def main():
         print()
         print("The vi editor logic is FULLY FUNCTIONAL.")
         return 0
-    elif percentage >= 80:
+    if percentage >= 80:
         print(f"✅ MOSTLY WORKING ({percentage:.0f}% pass rate)")
         print()
         print("Core vi functionality verified through direct testing.")
         print("Minor issues in some test expectations.")
         return 0
-    else:
-        print(f"❌ {failed} test(s) failed")
-        return 1
+    print(f"❌ {failed} test(s) failed")
+    return 1
 
 
 if __name__ == "__main__":

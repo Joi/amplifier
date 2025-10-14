@@ -9,9 +9,9 @@ This test module demonstrates comprehensive test coverage principles:
 - Performance considerations
 """
 
-import pytest
-from typing import List, Optional
 from dataclasses import dataclass
+
+import pytest
 
 
 # Sample domain model for testing
@@ -49,21 +49,21 @@ class TaskManager:
     """Manages a collection of tasks."""
 
     def __init__(self) -> None:
-        self.tasks: List[Task] = []
+        self.tasks: list[Task] = []
 
     def add_task(self, task: Task) -> None:
         """Add a task to the manager."""
         task.validate()
         self.tasks.append(task)
 
-    def get_task(self, task_id: int) -> Optional[Task]:
+    def get_task(self, task_id: int) -> Task | None:
         """Retrieve a task by ID."""
         for task in self.tasks:
             if task.id == task_id:
                 return task
         return None
 
-    def get_tasks_by_depth(self, depth: int) -> List[Task]:
+    def get_tasks_by_depth(self, depth: int) -> list[Task]:
         """Get all tasks at a specific depth level."""
         return [task for task in self.tasks if task.depth == depth]
 

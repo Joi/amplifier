@@ -187,8 +187,7 @@ def test_file_operations():
     if failed == 0:
         print("✅ ALL FILE I/O TESTS PASSED!")
         return 0
-    else:
-        return 1
+    return 1
 
 
 if __name__ == "__main__":

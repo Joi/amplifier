@@ -9,10 +9,11 @@ This test module demonstrates comprehensive test coverage principles:
 - Performance considerations
 """
 
-import pytest
-from typing import List, Optional, Dict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
+
+import pytest
 
 
 # Sample domain model for testing
@@ -26,7 +27,7 @@ class Task:
     position: int
     completed: bool = False
     created_at: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, str] = field(default_factory=dict)
 
     def validate(self) -> bool:
         """Validate task properties."""
@@ -50,7 +51,7 @@ class Task:
             raise ValueError("Metadata key cannot be empty")
         self.metadata[key] = value
 
-    def get_metadata(self, key: str) -> Optional[str]:
+    def get_metadata(self, key: str) -> str | None:
         """Retrieve metadata value by key."""
         return self.metadata.get(key)
 
@@ -64,29 +65,29 @@ class TaskManager:
     """Manages a collection of tasks."""
 
     def __init__(self) -> None:
-        self.tasks: List[Task] = []
+        self.tasks: list[Task] = []
 
     def add_task(self, task: Task) -> None:
         """Add a task to the manager."""
         task.validate()
         self.tasks.append(task)
 
-    def get_task(self, task_id: int) -> Optional[Task]:
+    def get_task(self, task_id: int) -> Task | None:
         """Retrieve a task by ID."""
         for task in self.tasks:
             if task.id == task_id:
                 return task
         return None
 
-    def get_tasks_by_depth(self, depth: int) -> List[Task]:
+    def get_tasks_by_depth(self, depth: int) -> list[Task]:
         """Get all tasks at a specific depth level."""
         return [task for task in self.tasks if task.depth == depth]
 
-    def get_tasks_by_position(self, position: int) -> List[Task]:
+    def get_tasks_by_position(self, position: int) -> list[Task]:
         """Get all tasks at a specific position."""
         return [task for task in self.tasks if task.position == position]
 
-    def get_tasks_by_depth_and_position(self, depth: int, position: int) -> List[Task]:
+    def get_tasks_by_depth_and_position(self, depth: int, position: int) -> list[Task]:
         """Get all tasks at a specific depth and position."""
         return [task for task in self.tasks if task.depth == depth and task.position == position]
 
@@ -105,7 +106,7 @@ class TaskManager:
         completed = sum(1 for task in self.tasks if task.completed)
         return (completed / len(self.tasks)) * 100
 
-    def get_incomplete_tasks(self) -> List[Task]:
+    def get_incomplete_tasks(self) -> list[Task]:
         """Get all incomplete tasks."""
         return [task for task in self.tasks if not task.completed]
 

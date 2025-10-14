@@ -417,14 +417,14 @@ try:
 
     # FIRST: Check for suspicious patterns in the source code
     suspicious_patterns = [
-        r'import\s+(os|subprocess|pathlib|shutil)',  # Suspicious imports
-        r'__import__\s*\(',  # Direct __import__ calls
-        r'open\s*\([^)]*golden',  # Opening files with 'golden' in path
-        r'open\s*\([^)]*\.\.',  # Path traversal attempts
+        r'import\\s+(os|subprocess|pathlib|shutil)',  # Suspicious imports
+        r'__import__\\s*\\(',  # Direct __import__ calls
+        r'open\\s*\\([^)]*golden',  # Opening files with 'golden' in path
+        r'open\\s*\\([^)]*\\.\\.',  # Path traversal attempts
         r'environ.*GOLDEN',  # Environment variable probes
         r'/golden/',  # Golden directory references
         r'SECRET',  # Secret keywords
-        r'\.\./',  # Path traversal
+        r'\\.\\./',  # Path traversal
     ]
 
     pattern_detected = False

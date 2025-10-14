@@ -181,7 +181,9 @@ class TestRealEvidenceProof:
         evidence_subdirs = list(temp_evidence_dir.glob("*"))
         # Evidence store creates files with UUID names in base_dir
         all_files = list(temp_evidence_dir.rglob("*.json"))
-        assert len(all_files) > 0, f"FAILED: No evidence files created on disk! Checked: {temp_evidence_dir}, subdirs: {evidence_subdirs}"
+        assert len(all_files) > 0, (
+            f"FAILED: No evidence files created on disk! Checked: {temp_evidence_dir}, subdirs: {evidence_subdirs}"
+        )
 
         print(f"✅ PROOF 6: Evidence persists to disk ({len(all_files)} files)")
 
@@ -204,9 +206,11 @@ class TestRealEvidenceProof:
 
         # MUST reject weak evidence
         assert result["can_complete"] is False, "FAILED: System accepted weak evidence!"
-        assert "placeholder" in result["reason"].lower() or "weak" in result["reason"].lower() or "TODO" in result[
-            "reason"
-        ]
+        assert (
+            "placeholder" in result["reason"].lower()
+            or "weak" in result["reason"].lower()
+            or "TODO" in result["reason"]
+        )
 
         print("✅ PROOF 7: System detects and rejects weak evidence")
 
@@ -248,7 +252,6 @@ def test_FINAL_PROOF_system_is_real():
     from amplifier.bplan.evidence_system import EvidenceStore
     from amplifier.bplan.meta_validation import MetaValidator
     from amplifier.bplan.three_agent_workflow import WorkflowOrchestrator
-    from amplifier.bplan.todowrite_integration import CompletionValidator
 
     # Can create instances
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -272,8 +275,8 @@ def test_FINAL_PROOF_system_is_real():
     print("\n" + "=" * 70)
     print("FINAL PROOF: EVIDENCE SYSTEM IS REAL")
     print("=" * 70)
-    print(f"✅ All modules import successfully")
-    print(f"✅ All classes instantiate successfully")
+    print("✅ All modules import successfully")
+    print("✅ All classes instantiate successfully")
     print(f"✅ Meta-validation reports {completion_pct}% completion")
     print(f"✅ System has {report['summary']['met_criteria']}/{report['summary']['total_criteria']} criteria met")
     print("=" * 70)
