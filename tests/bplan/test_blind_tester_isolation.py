@@ -182,18 +182,16 @@ def func(x):
 
             # Create separate directories
             coder_workspace = workspace / "coder"
-            tester_workspace = workspace / "tester"
             coder_workspace.mkdir()
-            tester_workspace.mkdir()
 
             # Coder's artifacts (should not be accessible)
             coder_secret = coder_workspace / "secret.txt"
             coder_secret.write_text("CODER_SECRET")
 
-            # Tester's files
-            test_file = tester_workspace / "test.py"
-            impl_file = tester_workspace / "impl.py"
-            golden_file = tester_workspace / "golden.py"
+            # Tester's files (in the main workspace, not a subdirectory)
+            test_file = workspace / "test.py"
+            impl_file = workspace / "impl.py"
+            golden_file = workspace / "golden.py"
 
             test_file.write_text("""
 def test_isolation():
@@ -212,11 +210,11 @@ def test_isolation():
             impl_file.write_text('def func(): return "ok"')
             golden_file.write_text('def func(): return "ok"')
 
-            # Run in tester workspace
-            agent.workspace = tester_workspace
+            # Don't set agent.workspace - let it create its own isolated temp directory
+            # This naturally provides isolation from coder_workspace
             result = agent.validate(impl_file, test_file, golden_file)
 
-            # Should pass (can't access coder's files)
+            # Should pass (can't access coder's files due to separate temp workspace)
             assert result.tests_passed
 
     def test_validate_timeout_handling(self):

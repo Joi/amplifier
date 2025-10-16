@@ -201,11 +201,23 @@ def square(x):
             golden_file.write_text("def func(): pass")
             impl_file.write_text("def func(): pass")
 
-            with patch.object(orchestrator.spec_writer, "create_artifacts", return_value=(test_file, golden_file)):
-                with patch.object(orchestrator.coder, "implement_from_test", return_value=impl_file):
-                    with patch.object(
-                        orchestrator.tester, "validate", return_value=ValidationResult(True, True, None, {})
-                    ):
+            # Create side effects that also call add_evidence
+            def mock_create_artifacts(*args, **kwargs):
+                evidence_store.add_evidence(type="artifact", content={"artifact_type": "test_specification"}, validator_id="spec_writer")
+                evidence_store.add_evidence(type="artifact", content={"artifact_type": "golden_reference"}, validator_id="spec_writer")
+                return test_file, golden_file
+
+            def mock_implement(*args, **kwargs):
+                evidence_store.add_evidence(type="artifact", content={"artifact_type": "implementation"}, validator_id="coder")
+                return impl_file
+
+            def mock_validate(*args, **kwargs):
+                evidence_store.add_evidence(type="validation", content={"tests_passed": True}, validator_id="blind_tester")
+                return ValidationResult(True, True, None, {})
+
+            with patch.object(orchestrator.spec_writer, "create_artifacts", side_effect=mock_create_artifacts):
+                with patch.object(orchestrator.coder, "implement_from_test", side_effect=mock_implement):
+                    with patch.object(orchestrator.tester, "validate", side_effect=mock_validate):
                         orchestrator.execute_workflow(task, evidence_store)
 
             # Check evidence store interactions
