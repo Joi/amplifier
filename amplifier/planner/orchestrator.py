@@ -22,7 +22,6 @@ import asyncio
 import json
 import logging
 import re
-import shlex
 import subprocess
 from dataclasses import dataclass
 from dataclasses import field
@@ -658,14 +657,15 @@ async def _run_task_tests(task: Task, project_dir: str) -> TestResult:
 
     # Execute test command
     try:
-        # Use shlex.split to safely parse command without shell=True
-        command_args = shlex.split(test_command)
+        # Execute with shell=True to support shell built-ins like 'exit'
+        # This is safe because test_command comes from task configuration, not user input
         result = subprocess.run(
-            command_args,
+            test_command,
             cwd=project_dir,
             capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout for tests
+            shell=True,
         )
 
         # Parse output to determine pass/fail
