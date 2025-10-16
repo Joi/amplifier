@@ -16,7 +16,6 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
-from dataclasses import field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -46,7 +45,7 @@ class WorkflowResult:
     golden_path: Path | None = None
     validation_result: ValidationResult | None = None
     error: str | None = None
-    evidence: dict[str, Any] = field(default_factory=dict)
+    evidence: dict[str, Any] = None
 
 
 class FilesystemRestrictor:
@@ -302,10 +301,6 @@ def solution():
 
     def _run_restricted(self, impl_path: Path, restrictor: FilesystemRestrictor) -> None:
         """Run implementation in restricted environment."""
-        # Ensure workspace is set
-        if not self.workspace:
-            raise RuntimeError("Workspace must be set before running restricted environment")
-
         # Create restricted environment
         env = restrictor.create_restricted_env(
             allowed_paths=[self.workspace],
@@ -569,7 +564,7 @@ class BlindTesterAgent:
 
             # Try to extract the module name being imported
             import_lines = [line for line in test_content.split("\n") if "from" in line and "import" in line]
-            if import_lines and self.workspace:
+            if import_lines:
                 # Extract module name from import statement
                 for import_line in import_lines:
                     if "from" in import_line and "import" in import_line:
@@ -615,20 +610,7 @@ class BlindTesterAgent:
 
     def _compare_with_golden(self, impl_path: Path, golden_path: Path) -> bool:
         """Compare implementation behavior with golden reference."""
-        # Ensure workspace is set
-        if not self.workspace:
-            return False
-
         try:
-            # Simple byte-for-byte comparison for exact matches
-            impl_content = impl_path.read_text().strip()
-            golden_content = golden_path.read_text().strip()
-
-            # If they're exactly the same, return True immediately
-            if impl_content == golden_content:
-                return True
-
-            # Otherwise, try behavioral comparison
             # Create a test script that compares both implementations
             compare_script = self.workspace / "compare.py"
             compare_content = f"""
