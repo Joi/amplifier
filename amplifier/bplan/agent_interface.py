@@ -21,6 +21,7 @@ from amplifier.bplan.three_agent_workflow import WorkflowOrchestrator
 from amplifier.bplan.todowrite_integration import BlockingEnforcer
 from amplifier.bplan.todowrite_integration import CompletionValidator
 from amplifier.bplan.todowrite_integration import EvidenceRequiredTodo
+from amplifier.bplan.todowrite_integration import EvidenceStore as TodoWriteEvidenceStore
 
 # Default evidence directory
 DEFAULT_EVIDENCE_DIR = Path(".beads/evidence")
@@ -38,7 +39,9 @@ class AgentAPI:
         """
         self.evidence_dir = evidence_dir or DEFAULT_EVIDENCE_DIR
         self.evidence_store = EvidenceStore(base_dir=self.evidence_dir)
-        self.validator = CompletionValidator(self.evidence_store)
+        # Use TodoWrite evidence store wrapper for validation (has retrieve_evidence method)
+        todowrite_store = TodoWriteEvidenceStore(base_path=self.evidence_dir)
+        self.validator = CompletionValidator(todowrite_store)
         self.enforcer = BlockingEnforcer(self.validator)
 
     def validate_code(
@@ -58,16 +61,21 @@ class AgentAPI:
         Returns:
             dict with keys: passed (bool), evidence_id (str), message (str)
         """
-        orchestrator = WorkflowOrchestrator(self.evidence_store)
+        orchestrator = WorkflowOrchestrator()
 
         try:
             result = orchestrator.execute_workflow(task, self.evidence_store)
 
+            # Extract evidence from workflow result
+            evidence_id = None
+            if hasattr(result, "evidence") and result.evidence:
+                evidence_id = result.evidence.get("id") if isinstance(result.evidence, dict) else None
+
             return {
-                "passed": result.passed,
-                "evidence_id": result.evidence.id if result.evidence else None,
-                "message": result.details,
-                "cheating_detected": result.cheating_detected,
+                "passed": result.success,
+                "evidence_id": evidence_id,
+                "message": result.error if result.error else "Validation successful",
+                "cheating_detected": False,  # Would be in validation_result if detected
             }
         except Exception as e:
             return {
@@ -87,22 +95,29 @@ class AgentAPI:
         Returns:
             dict with keys: exists (bool), valid (bool), details (str)
         """
-        evidence = self.evidence_store.get_evidence(evidence_id)
+        try:
+            evidence = self.evidence_store.get_evidence(evidence_id)
 
-        if not evidence:
+            if not evidence:
+                return {
+                    "exists": False,
+                    "valid": False,
+                    "details": f"Evidence not found: {evidence_id}",
+                }
+
+            return {
+                "exists": True,
+                "valid": True,
+                "details": f"Evidence type: {evidence.type}, created: {evidence.timestamp}",
+                "type": evidence.type,
+                "timestamp": evidence.timestamp.isoformat(),
+            }
+        except (FileNotFoundError, KeyError):
             return {
                 "exists": False,
                 "valid": False,
                 "details": f"Evidence not found: {evidence_id}",
             }
-
-        return {
-            "exists": True,
-            "valid": True,
-            "details": f"Evidence type: {evidence.type}, created: {evidence.timestamp}",
-            "type": evidence.type,
-            "timestamp": evidence.timestamp.isoformat(),
-        }
 
     def validate_todo_completion(
         self,
@@ -119,7 +134,7 @@ class AgentAPI:
             requires_evidence: Whether evidence is required
 
         Returns:
-            dict with keys: can_complete (bool), reason (str)
+            dict with keys: can_complete (bool), reason (str), evidence_status (dict)
         """
         todo = EvidenceRequiredTodo(
             content=content,
@@ -129,16 +144,37 @@ class AgentAPI:
             requires_evidence=requires_evidence,
         )
 
+        # Build evidence status
+        evidence_status = {
+            "has_evidence": bool(evidence_ids),
+            "evidence_count": len(evidence_ids),
+            "all_valid": False,
+            "invalid_ids": [],
+        }
+
+        # Check each evidence ID
+        for evidence_id in evidence_ids:
+            try:
+                evidence = self.evidence_store.get_evidence(evidence_id)
+                if not evidence:
+                    evidence_status["invalid_ids"].append(evidence_id)
+            except (FileNotFoundError, KeyError):
+                evidence_status["invalid_ids"].append(evidence_id)
+
+        evidence_status["all_valid"] = len(evidence_status["invalid_ids"]) == 0 and len(evidence_ids) > 0
+
         try:
             can_complete = self.validator.validate_completion(todo)
             return {
                 "can_complete": can_complete,
                 "reason": "Evidence validated successfully",
+                "evidence_status": evidence_status,
             }
         except Exception as e:
             return {
                 "can_complete": False,
                 "reason": str(e),
+                "evidence_status": evidence_status,
             }
 
 
