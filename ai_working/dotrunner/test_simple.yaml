@@ -1,0 +1,17 @@
+workflow:
+  name: simple_test
+  description: Simple workflow to test CLI functionality
+  context:
+    subject: "DotRunner CLI"
+
+nodes:
+  - id: greeting
+    name: Generate Greeting
+    prompt: "Say hello to {subject} and explain that this is a test workflow"
+    outputs: ["greeting_message"]
+    next: conclusion
+
+  - id: conclusion
+    name: Conclude Test
+    prompt: "Based on the greeting: {greeting_message}, write a brief conclusion that the test was successful"
+    type: terminal

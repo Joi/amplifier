@@ -1,0 +1,109 @@
+{
+  "name": "pr-review",
+  "description": "Pull request review with conditional paths based on PR size",
+  "nodes": [
+    {
+      "id": "check-size",
+      "name": "Check PR Size",
+      "prompt": "Check if PR #{pr_number} in {repo} has more than 500 lines changed.\n\nReturn JSON with:\n- is_large: true if > 500 lines, false otherwise\n- lines_changed: actual number of lines\n- files_changed: number of files modified\n",
+      "agent": "auto",
+      "outputs": [
+        "is_large",
+        "lines_changed",
+        "files_changed"
+      ],
+      "next": [
+        {
+          "when": "{is_large} == true",
+          "goto": "deep-review"
+        },
+        {
+          "default": "quick-review"
+        }
+      ],
+      "retry_on_failure": 1,
+      "type": null
+    },
+    {
+      "id": "quick-review",
+      "name": "Quick Review",
+      "prompt": "Perform a quick review of PR #{pr_number} with {lines_changed} lines across {files_changed} files.\n\nFocus on:\n- Code style and formatting\n- Obvious bugs or issues\n- Basic best practices\n\nReturn JSON with:\n- approved: true/false\n- issues: list of any issues found\n- comments: review comments\n",
+      "agent": "auto",
+      "outputs": [
+        "approved",
+        "issues",
+        "comments"
+      ],
+      "next": "done",
+      "retry_on_failure": 1,
+      "type": null
+    },
+    {
+      "id": "deep-review",
+      "name": "Deep Review",
+      "prompt": "Perform a thorough architecture review of PR #{pr_number}.\n\nThis is a large PR with {lines_changed} lines across {files_changed} files.\n\nAnalyze:\n- Architecture implications\n- Design patterns and principles\n- Scalability and maintainability\n- Breaking changes\n- Migration requirements\n\nReturn JSON with:\n- architecture_concerns: list of concerns\n- design_quality: rating 1-10\n- requires_security_review: true/false\n- summary: overall assessment\n",
+      "agent": "zen-architect",
+      "outputs": [
+        "architecture_concerns",
+        "design_quality",
+        "requires_security_review",
+        "architecture_summary"
+      ],
+      "next": [
+        {
+          "when": "{requires_security_review} == true",
+          "goto": "security-check"
+        },
+        {
+          "default": "finalize"
+        }
+      ],
+      "retry_on_failure": 1,
+      "type": null
+    },
+    {
+      "id": "security-check",
+      "name": "Security Review",
+      "prompt": "Perform security review of PR #{pr_number}.\n\nArchitecture concerns:\n{architecture_concerns}\n\nCheck for:\n- Security vulnerabilities\n- Data exposure risks\n- Authentication/authorization issues\n- Input validation\n- Injection vulnerabilities\n\nReturn JSON with:\n- security_issues: list of security issues found\n- severity: overall severity (low/medium/high/critical)\n- approved: true if safe, false if issues found\n- recommendations: security recommendations\n",
+      "agent": "security-guardian",
+      "outputs": [
+        "security_issues",
+        "security_severity",
+        "security_approved",
+        "security_recommendations"
+      ],
+      "next": "finalize",
+      "retry_on_failure": 2,
+      "type": null
+    },
+    {
+      "id": "finalize",
+      "name": "Finalize Review",
+      "prompt": "Create final PR review summary.\n\nAvailable data:\n- Lines changed: {lines_changed}\n- Files changed: {files_changed}\n- Architecture summary: {architecture_summary}\n- Security severity: {security_severity}\n\nProvide:\n1. Overall recommendation (Approve/Request Changes/Reject)\n2. Key points for reviewer attention\n3. Required actions before merge\n4. Estimated risk level\n",
+      "agent": "auto",
+      "outputs": [
+        "final_recommendation",
+        "key_points",
+        "required_actions",
+        "risk_level"
+      ],
+      "next": "done",
+      "retry_on_failure": 1,
+      "type": null
+    },
+    {
+      "id": "done",
+      "name": "Complete",
+      "prompt": "Workflow complete",
+      "agent": "auto",
+      "outputs": [],
+      "next": null,
+      "retry_on_failure": 1,
+      "type": "terminal"
+    }
+  ],
+  "context": {
+    "pr_number": "${PR_NUMBER}",
+    "repo": "${REPO_NAME}"
+  }
+}

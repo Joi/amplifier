@@ -1,0 +1,56 @@
+workflow:
+  name: "code-review-flow"
+  description: "Automated code review workflow - linear execution"
+
+nodes:
+  - id: "analyze"
+    name: "Analyze Code"
+    agent: "zen-architect"
+    prompt: |
+      Analyze the code in {file_path} and identify:
+      - Architecture concerns
+      - Potential improvements
+      - Design patterns used
+
+      Return your analysis as JSON with these fields:
+      - concerns: list of architecture concerns
+      - improvements: list of suggested improvements
+      - patterns: list of design patterns identified
+    outputs:
+      - analysis_report
+
+  - id: "find-bugs"
+    name: "Hunt for Bugs"
+    agent: "bug-hunter"
+    prompt: |
+      Review the code and architecture analysis below.
+      Find potential bugs, edge cases, and issues.
+
+      Code: {file_path}
+      Analysis: {analysis_report}
+
+      Return your findings as JSON with:
+      - bugs: list of potential bugs
+      - severity: severity level for each bug
+      - suggestions: how to fix each issue
+    outputs:
+      - bug_report
+
+  - id: "summarize"
+    name: "Create Summary"
+    prompt: |
+      Create a comprehensive summary of the code review.
+
+      Architecture Analysis:
+      {analysis_report}
+
+      Bug Report:
+      {bug_report}
+
+      Provide:
+      1. Executive summary (2-3 sentences)
+      2. Key findings
+      3. Priority actions
+      4. Overall assessment (Ready/Needs Work/Major Issues)
+    outputs:
+      - final_summary

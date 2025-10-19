@@ -1,0 +1,115 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.4.1, pluggy-1.6.0 -- /workspaces/amplifier/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /workspaces/amplifier
+configfile: pyproject.toml
+plugins: logfire-4.8.0, asyncio-1.1.0, anyio-4.9.0, cov-6.2.1, langsmith-0.4.9, mock-3.14.1
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 91 items
+
+tests/test_context.py::TestInterpolate::test_interpolate_single_variable PASSED [  1%]
+tests/test_context.py::TestInterpolate::test_interpolate_multiple_variables PASSED [  2%]
+tests/test_context.py::TestInterpolate::test_interpolate_in_sentence PASSED [  3%]
+tests/test_context.py::TestInterpolate::test_interpolate_no_variables PASSED [  4%]
+tests/test_context.py::TestInterpolate::test_interpolate_unused_context PASSED [  5%]
+tests/test_context.py::TestInterpolate::test_interpolate_missing_variable_raises PASSED [  6%]
+tests/test_context.py::TestInterpolate::test_interpolate_some_missing_raises PASSED [  7%]
+tests/test_context.py::TestInterpolate::test_interpolate_multiline_template PASSED [  8%]
+tests/test_context.py::TestInterpolate::test_interpolate_with_numbers PASSED [  9%]
+tests/test_context.py::TestInterpolate::test_interpolate_with_booleans PASSED [ 10%]
+tests/test_context.py::TestInterpolate::test_interpolate_same_variable_multiple_times PASSED [ 12%]
+tests/test_context.py::TestExtractVariables::test_extract_single_variable PASSED [ 13%]
+tests/test_context.py::TestExtractVariables::test_extract_multiple_variables PASSED [ 14%]
+tests/test_context.py::TestExtractVariables::test_extract_no_variables PASSED [ 15%]
+tests/test_context.py::TestExtractVariables::test_extract_duplicate_variables PASSED [ 16%]
+tests/test_context.py::TestExtractVariables::test_extract_from_multiline PASSED [ 17%]
+tests/test_context.py::TestExtractVariables::test_extract_with_underscores PASSED [ 18%]
+tests/test_context.py::TestExtractVariables::test_extract_with_numbers PASSED [ 19%]
+tests/test_context.py::TestValidateContext::test_validate_all_present PASSED [ 20%]
+tests/test_context.py::TestValidateContext::test_validate_all_present_exact_match PASSED [ 21%]
+tests/test_context.py::TestValidateContext::test_validate_some_missing PASSED [ 23%]
+tests/test_context.py::TestValidateContext::test_validate_all_missing PASSED [ 24%]
+tests/test_context.py::TestValidateContext::test_validate_no_variables PASSED [ 25%]
+tests/test_context.py::TestValidateContext::test_validate_empty_context_with_variables PASSED [ 26%]
+tests/test_context.py::TestValidateContext::test_validate_returns_unique_missing PASSED [ 27%]
+tests/test_context.py::TestContextError::test_context_error_creation PASSED [ 28%]
+tests/test_context.py::TestContextError::test_context_error_from_interpolate PASSED [ 29%]
+tests/test_engine.py::TestWorkflowEngine::test_run_simple_workflow PASSED [ 30%]
+tests/test_engine.py::TestWorkflowEngine::test_run_workflow_context_accumulation PASSED [ 31%]
+tests/test_engine.py::TestWorkflowEngine::test_run_workflow_execution_order PASSED [ 32%]
+tests/test_engine.py::TestWorkflowEngine::test_run_workflow_stops_on_node_failure PASSED [ 34%]
+tests/test_engine.py::TestWorkflowEngine::test_run_empty_workflow PASSED [ 35%]
+tests/test_engine.py::TestWorkflowEngine::test_run_workflow_with_exception PASSED [ 36%]
+tests/test_engine.py::TestGetNextNode::test_get_next_node_first PASSED   [ 37%]
+tests/test_engine.py::TestGetNextNode::test_get_next_node_follows_chain PASSED [ 38%]
+tests/test_engine.py::TestGetNextNode::test_get_next_node_terminal PASSED [ 39%]
+tests/test_engine.py::TestGetNextNode::test_get_next_node_nonexistent_node PASSED [ 40%]
+tests/test_engine.py::TestExecuteNode::test_execute_node_delegates_to_executor PASSED [ 41%]
+tests/test_engine.py::TestExecuteNode::test_execute_node_passes_context PASSED [ 42%]
+tests/test_engine.py::TestWorkflowInitialization::test_initial_state_creation PASSED [ 43%]
+tests/test_engine.py::TestWorkflowInitialization::test_workflow_id_preserved PASSED [ 45%]
+tests/test_engine.py::TestWorkflowLogging::test_logs_workflow_start PASSED [ 46%]
+tests/test_engine.py::TestWorkflowLogging::test_logs_node_execution PASSED [ 47%]
+tests/test_engine.py::TestWorkflowLogging::test_logs_workflow_completion PASSED [ 48%]
+tests/test_engine.py::TestWorkflowLogging::test_logs_node_failure PASSED [ 49%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_success PASSED [ 50%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_with_multiple_outputs PASSED [ 51%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_missing_context_variable PASSED [ 52%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_interpolates_context PASSED [ 53%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_extracts_json_outputs PASSED [ 54%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_handles_ai_timeout PASSED [ 56%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_handles_ai_error PASSED [ 57%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_partial_output_extraction PASSED [ 58%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_no_outputs_requested PASSED [ 59%]
+tests/test_executor.py::TestNodeExecutor::test_execute_node_timing PASSED [ 60%]
+tests/test_executor.py::TestOutputExtraction::test_extract_outputs_pattern_based PASSED [ 61%]
+tests/test_executor.py::TestOutputExtraction::test_extract_outputs_json_format PASSED [ 62%]
+tests/test_executor.py::TestOutputExtraction::test_extract_outputs_missing_outputs PASSED [ 63%]
+tests/test_executor.py::TestPromptInterpolation::test_interpolate_prompt_single_var PASSED [ 64%]
+tests/test_executor.py::TestPromptInterpolation::test_interpolate_prompt_multiple_vars PASSED [ 65%]
+tests/test_executor.py::TestPromptInterpolation::test_interpolate_prompt_missing_var_raises PASSED [ 67%]
+tests/test_state.py::TestNodeResult::test_node_result_success PASSED     [ 68%]
+tests/test_state.py::TestNodeResult::test_node_result_failed PASSED      [ 69%]
+tests/test_state.py::TestNodeResult::test_node_result_with_multiple_outputs PASSED [ 70%]
+tests/test_state.py::TestNodeResult::test_node_result_serialization PASSED [ 71%]
+tests/test_state.py::TestWorkflowState::test_workflow_state_initialization PASSED [ 72%]
+tests/test_state.py::TestWorkflowState::test_workflow_state_with_results PASSED [ 73%]
+tests/test_state.py::TestWorkflowState::test_workflow_state_context_accumulation PASSED [ 74%]
+tests/test_state.py::TestWorkflowResult::test_workflow_result_completed PASSED [ 75%]
+tests/test_state.py::TestWorkflowResult::test_workflow_result_failed PASSED [ 76%]
+tests/test_state.py::TestWorkflowResult::test_workflow_result_serialization PASSED [ 78%]
+tests/test_workflow_model.py::TestNodeDataclass::test_node_minimal_creation PASSED [ 79%]
+tests/test_workflow_model.py::TestNodeDataclass::test_node_full_creation PASSED [ 80%]
+tests/test_workflow_model.py::TestNodeDataclass::test_node_conditional_next PASSED [ 81%]
+tests/test_workflow_model.py::TestNodeDataclass::test_node_to_dict PASSED [ 82%]
+tests/test_workflow_model.py::TestWorkflowDataclass::test_workflow_minimal_creation PASSED [ 83%]
+tests/test_workflow_model.py::TestWorkflowDataclass::test_workflow_with_context PASSED [ 84%]
+tests/test_workflow_model.py::TestWorkflowDataclass::test_workflow_to_dict PASSED [ 85%]
+tests/test_workflow_model.py::TestWorkflowGetNode::test_get_node_by_id_found PASSED [ 86%]
+tests/test_workflow_model.py::TestWorkflowGetNode::test_get_node_by_id_not_found PASSED [ 87%]
+tests/test_workflow_model.py::TestWorkflowGetNode::test_get_first_node PASSED [ 89%]
+tests/test_workflow_model.py::TestWorkflowValidation::test_validate_empty_workflow PASSED [ 90%]
+tests/test_workflow_model.py::TestWorkflowValidation::test_validate_duplicate_node_ids PASSED [ 91%]
+tests/test_workflow_model.py::TestWorkflowValidation::test_validate_invalid_node_reference PASSED [ 92%]
+tests/test_workflow_model.py::TestWorkflowValidation::test_validate_circular_dependency_simple PASSED [ 93%]
+tests/test_workflow_model.py::TestWorkflowValidation::test_validate_valid_workflow PASSED [ 94%]
+tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_simple_linear PASSED [ 95%]
+tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_with_context PASSED [ 96%]
+tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_invalid_file PASSED [ 97%]
+tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_invalid_yaml PASSED [ 98%]
+tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_missing_required_fields PASSED [100%]
+
+=============================== warnings summary ===============================
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+../../.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323
+  /workspaces/amplifier/.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 91 passed, 8 warnings in 14.97s ========================

@@ -70,3 +70,5 @@ ai_working/tmp
 
 # Beads issue tracker database (keep JSONL in version control)
 .beads/*.db
+# DotRunner sessions
+.dotrunner/
