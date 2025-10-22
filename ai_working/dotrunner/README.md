@@ -71,7 +71,7 @@ nodes:
 python -m ai_working.dotrunner run my_workflow.yaml --context file_path=src/main.py
 ```
 
-3. **Results saved automatically** - Find them in `.data/dotrunner/runs/simple-review/`
+3. **Results saved automatically** - Find them in `.dotrunner/sessions/simple-review/`
 
 ## Usage Examples
 
@@ -124,7 +124,7 @@ python -m ai_working.dotrunner run examples/simple_linear.yaml --context file_pa
 - zen-architect analyzes the code
 - bug-hunter reviews for issues
 - Final summary combines both reports
-- All results saved to `.data/dotrunner/runs/code-review-flow/`
+- All results saved to `.dotrunner/sessions/code-review-flow/`
 
 ### Example 2: Conditional Branching
 
@@ -223,8 +223,8 @@ YAML Workflow Definition
 
 - **Workflow Parser**: Loads and validates YAML workflow definitions
 - **Execution Engine**: Orchestrates node execution with state management
-- **Node Executor**: Delegates work to specialized agents via Task tool
-- **Condition Evaluator**: Uses AI to evaluate routing conditions
+- **Node Executor**: Delegates work to specialized agents via subprocess (`amplifier agent`)
+- **Condition Evaluator**: Routes based on dict-matching or expressions (Phase 2)
 - **State Manager**: Saves progress after every node (incremental checkpoints)
 
 ### Why It Works
@@ -301,16 +301,24 @@ Conditions are evaluated by AI with access to all context.
 
 ```yaml
 agent: "zen-architect"     # Use specific agent
-agent: "auto"              # Let system choose (default)
+agent_mode: "ANALYZE"      # Optional: Standard mode or natural language
 ```
 
-Available agents:
+**Standard Agent Modes**:
+- `ANALYZE` - Examine and break down information
+- `EVALUATE` - Assess quality, completeness, or correctness
+- `EXECUTE` - Perform actions or implement changes
+- `REVIEW` - Check work for issues or improvements
+- `GENERATE` - Create new content or artifacts
+
+Natural language modes also supported: `agent_mode: "Check if tests pass and return status"`
+
+**Available agents**:
 - `zen-architect` - Architecture analysis and design
 - `bug-hunter` - Bug detection and fixing
 - `test-coverage` - Test analysis and suggestions
 - `security-guardian` - Security review
 - `modular-builder` - Code implementation
-- `auto` - Generic Claude session
 
 ## Configuration
 
@@ -327,7 +335,7 @@ python -m ai_working.dotrunner run WORKFLOW.yaml [OPTIONS]
 --resume                # Resume from saved state
 --reset                 # Start fresh (discard saved state)
 --verbose              # Enable detailed logging
---state-dir PATH       # Custom state directory (default: .data/dotrunner/runs/)
+--state-dir PATH       # Custom state directory (default: .dotrunner/sessions/)
 ```
 
 ### Resume workflow
@@ -340,10 +348,11 @@ python -m ai_working.dotrunner resume WORKFLOW_NAME [OPTIONS]
 
 ### State Files
 
-All working files saved to `.data/dotrunner/runs/<workflow-name>/`:
+All working files saved to `.dotrunner/sessions/<session-id>/`:
 - `state.json` - Execution state for resume
-- `results/<node-id>.json` - Each node's results
-- `workflow.yaml` - Copy of original workflow
+- `metadata.json` - Session metadata
+- `trace.jsonl` - Execution trace log
+- `nodes/<node-id>/` - Per-node input/output files
 
 ## Troubleshooting
 
@@ -358,7 +367,7 @@ All working files saved to `.data/dotrunner/runs/<workflow-name>/`:
 **Problem**: Node execution failed repeatedly.
 
 **Solution**:
-1. Check `.data/dotrunner/runs/<workflow>/state.json` for error details
+1. Check `.dotrunner/sessions/<session-id>/state.json` for error details
 2. Fix the issue (API key, agent availability, etc.)
 3. Resume with `python -m ai_working.dotrunner resume <workflow>`
 

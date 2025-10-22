@@ -30,6 +30,9 @@ dependencies = [
     "yt-dlp>=2025.9.26",
 ]
 
+[project.scripts]
+flow-builder = "amplifier.flow_builder.cli:cli"
+
 [tool.uv.workspace]
 # Add all projects in the workspace
 members = []

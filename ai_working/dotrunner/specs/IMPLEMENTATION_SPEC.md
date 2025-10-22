@@ -11,7 +11,7 @@ See `/workspaces/amplifier/ai_working/dotrunner/ARCHITECTURE_DECISIONS.md` for d
 This document specifies the internal implementation details of DotRunner, focusing on how components interact to execute workflows reliably.
 
 **Key Decisions**:
-- Task tool backend is default (subprocess for parallel Phase 2)
+- Subprocess agent invocation (calling `amplifier agent` CLI)
 - State directory: `.dotrunner/sessions/`
 - Expression evaluation via `ast.literal_eval`
 - Atomic writes for crash safety
@@ -21,62 +21,66 @@ This document specifies the internal implementation details of DotRunner, focusi
 
 ### 1. Agent Invocation System
 
-#### Task Tool Backend (Default)
+#### Subprocess Agent Execution
 
-The primary agent invocation method uses the Claude Code SDK Task tool for seamless integration:
+DotRunner invokes agents via subprocess calls to the `amplifier agent` CLI command. This approach allows DotRunner to work as a standalone Python library in any context:
 
 ```python
-async def invoke_agent_task(node: Node, context: dict) -> dict:
-    """Invoke agent using Task tool backend."""
+async def invoke_agent(node: Node, context: dict) -> dict:
+    """
+    Invoke agent via subprocess calling amplifier CLI.
+
+    This approach:
+    - Works in any Python environment (not just Claude Code)
+    - Provides process isolation for agent execution
+    - Allows proper timeout handling
+    - Supports both standard and natural language agent modes
+    """
 
     # Resolve prompt with context variables
     prompt = interpolate_template(node.prompt, context)
 
-    # Execute via Task tool
-    response = await task_tool.execute(
-        agent_name=node.agent,
-        mode=node.agent_mode,  # Can be enum or natural language
-        prompt=prompt
-    )
+    # Write prompt to temporary file
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write(prompt)
+        prompt_file = f.name
 
-    # Parse response and extract outputs
-    return parse_agent_response(response, node.outputs)
+    try:
+        # Build command
+        cmd = ["amplifier", "agent", node.agent]
+        if node.agent_mode:
+            cmd.extend(["--mode", node.agent_mode])
+        cmd.extend(["--prompt-file", prompt_file])
+        cmd.append("--json")  # Request JSON output
+
+        # Execute with timeout
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5-minute default timeout
+        )
+
+        if result.returncode != 0:
+            raise NodeExecutionError(f"Agent {node.agent} failed: {result.stderr}")
+
+        # Parse agent response and extract specified outputs
+        return parse_agent_response(result.stdout, node.outputs)
+
+    finally:
+        # Clean up temporary prompt file
+        Path(prompt_file).unlink(missing_ok=True)
 ```
 
-#### Subprocess Backend (Isolation Option)
+**Why Subprocess?**
 
-For cases requiring process isolation:
+Subprocess invocation is the correct approach for DotRunner because:
 
-```python
-def invoke_agent_subprocess(node: Node, context: dict) -> dict:
-    """Invoke agent in isolated subprocess."""
-
-    prompt = interpolate_template(node.prompt, context)
-
-    # Prepare command
-    cmd = ["amplifier", "agent", node.agent]
-    if node.agent_mode:
-        cmd.extend(["--mode", node.agent_mode])
-
-    # Execute subprocess
-    input_data = json.dumps({
-        "prompt": prompt,
-        "mode": node.agent_mode
-    })
-
-    result = subprocess.run(
-        cmd,
-        input=input_data,
-        capture_output=True,
-        text=True,
-        timeout=300  # 5-minute timeout
-    )
-
-    if result.returncode != 0:
-        raise NodeExecutionError(f"Agent {node.agent} failed")
-
-    return parse_agent_response(result.stdout, node.outputs)
-```
+1. **Universal Compatibility**: Works in any Python environment, not just Claude Code
+2. **Process Isolation**: Each agent runs in its own process with clear boundaries
+3. **Timeout Support**: Can reliably kill hung agent processes
+4. **Standard Interface**: Uses the same `amplifier agent` CLI that users invoke manually
+5. **Future-Proof**: When agents become long-running services, this interface remains stable
 
 ### 2. Sub-Workflow Execution
 

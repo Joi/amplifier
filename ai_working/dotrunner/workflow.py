@@ -7,11 +7,34 @@ loaded from YAML files.
 
 from dataclasses import dataclass
 from dataclasses import field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 from typing import Union
 
 import yaml
+
+
+class AgentMode(str, Enum):
+    """
+    Standard agent execution modes.
+
+    These modes provide semantic hints about what the agent should do:
+    - ANALYZE: Examine and break down information
+    - EVALUATE: Assess quality, completeness, or correctness
+    - EXECUTE: Perform actions or implement changes
+    - REVIEW: Check work for issues or improvements
+    - GENERATE: Create new content or artifacts
+
+    Note: Natural language mode strings are also supported for flexibility.
+    The enum provides standard modes for common cases, but any string is valid.
+    """
+
+    ANALYZE = "ANALYZE"
+    EVALUATE = "EVALUATE"
+    EXECUTE = "EXECUTE"
+    REVIEW = "REVIEW"
+    GENERATE = "GENERATE"
 
 
 @dataclass
@@ -21,6 +44,8 @@ class Node:
 
     A node is the atomic unit of work in a workflow. Each node:
     - Has a unique ID within the workflow
+    - Has a name (human-readable) and optional description
+    - Can have inputs mapped from parent context
     - Defines a prompt to execute (with context interpolation)
     - Can specify which agent to use
     - Can produce named outputs for downstream nodes
@@ -29,13 +54,16 @@ class Node:
 
     id: str  # Unique node identifier
     name: str  # Human-readable name
-    prompt: str  # Prompt template with {var} interpolation
+    prompt: str = ""  # Prompt template (required for agent nodes, empty for workflow nodes)
 
     # Optional fields with defaults
+    description: str | None = None  # Node purpose description
+    inputs: dict[str, Any] = field(default_factory=dict)  # Input parameter mapping
     agent: str | None = None  # Agent to use (None for AI, name for specific agent)
     agent_mode: str | None = None  # Optional mode for agent (e.g., "REVIEW", "ANALYZE")
+    workflow: str | None = None  # Path to sub-workflow YAML (for workflow nodes)
     outputs: list[str] = field(default_factory=list)  # Named outputs to capture
-    next: Union[str, dict[str, str]] | None = None  # Next node or conditions
+    next: Union[str, dict[str, str], list[dict[str, str]]] | None = None  # Routing config
     retry_on_failure: int = 1  # Number of retry attempts
     type: str | None = None  # "terminal" for end nodes
 
@@ -47,7 +75,7 @@ class Workflow:
 
     A workflow is a directed graph of nodes that execute in sequence or
     based on conditional routing. It includes:
-    - Metadata (name, description)
+    - Metadata (name, description, version)
     - List of nodes to execute
     - Global context available to all nodes
     """
@@ -57,6 +85,7 @@ class Workflow:
     nodes: list[Node]  # Ordered list of nodes
 
     # Optional fields with defaults
+    version: str = "1.0.0"  # Semantic version
     context: dict[str, Any] = field(default_factory=dict)  # Global context
 
     def get_node(self, node_id: str) -> Node | None:
@@ -219,17 +248,26 @@ class Workflow:
         nodes = []
         for node_data in nodes_data:
             # Validate required node fields
-            for field_name in ["id", "name", "prompt"]:
+            for field_name in ["id", "name"]:
                 if field_name not in node_data:
                     raise ValueError(f"Missing required field in node: {field_name}")
+
+            # Node must have either prompt or workflow
+            has_prompt = "prompt" in node_data and node_data["prompt"]
+            has_workflow = "workflow" in node_data and node_data["workflow"]
+            if not has_prompt and not has_workflow:
+                raise ValueError(f"Node '{node_data.get('id')}' must have either 'prompt' or 'workflow' field")
 
             # Create node with all fields
             node = Node(
                 id=node_data["id"],
                 name=node_data["name"],
-                prompt=node_data["prompt"],
+                prompt=node_data.get("prompt", ""),
+                description=node_data.get("description"),
+                inputs=node_data.get("inputs", {}),
                 agent=node_data.get("agent"),
                 agent_mode=node_data.get("agent_mode"),
+                workflow=node_data.get("workflow"),
                 outputs=node_data.get("outputs", []),
                 next=node_data.get("next"),
                 retry_on_failure=node_data.get("retry_on_failure", 1),
@@ -242,6 +280,7 @@ class Workflow:
             name=workflow_data["name"],
             description=workflow_data["description"],
             nodes=nodes,
+            version=workflow_data.get("version", "1.0.0"),
             context=workflow_data.get("context", {}),
         )
 
@@ -262,9 +301,21 @@ class Workflow:
         # Convert nodes to dict format
         nodes_data = []
         for node in self.nodes:
-            node_dict = {"id": node.id, "name": node.name, "prompt": node.prompt}
+            node_dict = {"id": node.id, "name": node.name}
+
+            # Include prompt if present (agent nodes)
+            if node.prompt:
+                node_dict["prompt"] = node.prompt
+
+            # Include workflow if present (workflow nodes)
+            if node.workflow is not None:
+                node_dict["workflow"] = node.workflow
 
             # Only include non-default values
+            if node.description is not None:
+                node_dict["description"] = node.description
+            if node.inputs:
+                node_dict["inputs"] = node.inputs
             if node.agent is not None:
                 node_dict["agent"] = node.agent
             if node.agent_mode is not None:
@@ -281,7 +332,14 @@ class Workflow:
             nodes_data.append(node_dict)
 
         # Build complete workflow dict
-        workflow_dict = {"workflow": {"name": self.name, "description": self.description}, "nodes": nodes_data}
+        workflow_dict = {
+            "workflow": {
+                "name": self.name,
+                "description": self.description,
+                "version": self.version,
+            },
+            "nodes": nodes_data,
+        }
 
         # Add context if not empty
         if self.context:

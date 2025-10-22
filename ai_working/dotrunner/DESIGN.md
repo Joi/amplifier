@@ -55,9 +55,9 @@ ai_working/dotrunner/
 ├── workflow.py              # Workflow & Node data models
 ├── engine.py                # WorkflowEngine orchestration
 ├── executor.py              # NodeExecutor for agent delegation
-├── evaluator.py             # ConditionEvaluator for routing
-├── state.py                 # StateManager for persistence
-├── parser.py                # YAML parsing and validation
+├── context.py               # Context interpolation and management
+├── state.py                 # State models for tracking execution
+├── persistence.py           # State persistence and recovery
 │
 ├── examples/                # Example workflow files
 │   ├── simple_linear.yaml
@@ -293,18 +293,43 @@ class NodeExecutor:
             response = await session.generate(prompt)
             return response
 
-    async def _delegate_to_agent(self, agent: str, task: str) -> str:
-        """Delegate to specific agent via Task tool"""
-        # Note: Task tool is synchronous in Claude Code
-        # This would need to be adapted for actual usage
+    async def _delegate_to_agent(self, agent: str, prompt: str, mode: str = None) -> str:
+        """Delegate to specific agent via subprocess calling amplifier CLI"""
+        import subprocess
+        import tempfile
+        from pathlib import Path
 
-        # For now, placeholder showing the pattern
         logger.info(f"Delegating to agent: {agent}")
 
-        # In real implementation, this would use:
-        # result = task_tool(subagent_type=agent, prompt=task)
+        # Write prompt to temporary file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write(prompt)
+            prompt_file = f.name
 
-        raise NotImplementedError("Task tool delegation needs integration")
+        try:
+            # Build command
+            cmd = ["amplifier", "agent", agent]
+            if mode:
+                cmd.extend(["--mode", mode])
+            cmd.extend(["--prompt-file", prompt_file])
+            cmd.append("--json")
+
+            # Execute with timeout
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5-minute timeout
+            )
+
+            if result.returncode != 0:
+                raise RuntimeError(f"Agent {agent} failed: {result.stderr}")
+
+            return result.stdout.strip()
+
+        finally:
+            # Clean up temporary file
+            Path(prompt_file).unlink(missing_ok=True)
 
     def _extract_outputs(self, result: str, output_names: List[str]) -> Dict[str, Any]:
         """Extract named outputs from result"""
@@ -493,13 +518,15 @@ from amplifier.utils.file_io import write_json, read_json
 
 ### With Amplifier Agent Ecosystem
 
-Delegation to agents via Claude Code's Task tool:
+Delegation to agents via subprocess calling `amplifier agent` CLI:
 - zen-architect
 - bug-hunter
 - test-coverage
 - security-guardian
 - modular-builder
 - etc.
+
+**Note**: Using subprocess ensures DotRunner works in any Python environment, not just within Claude Code.
 
 ## Testing Strategy
 
