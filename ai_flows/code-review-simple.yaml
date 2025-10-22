@@ -1,0 +1,22 @@
+workflow:
+  name: code-review-simple
+  description: Simple code review workflow - check style and run tests
+  version: 1.0.0
+
+nodes:
+  - id: style-check
+    name: Style Check
+    prompt: Check code style and formatting for {files}
+    agent: code-reviewer
+    outputs:
+      - style_issues
+
+  - id: run-tests
+    name: Run Tests
+    prompt: Run tests for {files} in {project}
+    agent: test-coverage
+    next: done
+
+  - id: done
+    name: Complete
+    prompt: Code review complete

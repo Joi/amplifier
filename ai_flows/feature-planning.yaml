@@ -1,0 +1,36 @@
+workflow:
+  name: feature-planning
+  description: Plan new feature with architecture and test strategy
+  version: 1.0.0
+
+nodes:
+  - id: analyze
+    name: Analyze Requirements
+    prompt: Analyze feature requirements for {feature_description}
+    agent: zen-architect
+    outputs:
+      - requirements
+    next: design
+
+  - id: design
+    name: Design Architecture
+    prompt: Design architecture for {requirements} following simplicity principles
+    agent: zen-architect
+    outputs:
+      - architecture
+    next: test-strategy
+
+  - id: test-strategy
+    name: Define Test Strategy
+    prompt: Create comprehensive test strategy for {architecture}
+    agent: test-coverage
+    outputs:
+      - test_plan
+    next: review
+
+  - id: review
+    name: Review Plan
+    prompt: Review feature plan including {architecture} and {test_plan}
+    agent: zen-architect
+    outputs:
+      - review_notes

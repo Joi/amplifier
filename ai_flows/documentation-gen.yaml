@@ -1,0 +1,36 @@
+workflow:
+  name: documentation-gen
+  description: Generate comprehensive documentation from code
+  version: 1.0.0
+
+nodes:
+  - id: analyze-code
+    name: Analyze Code Structure
+    prompt: Analyze code structure and key components in {codebase}
+    agent: zen-architect
+    outputs:
+      - code_structure
+    next: generate-api
+
+  - id: generate-api
+    name: Generate API Docs
+    prompt: Generate API documentation from {code_structure}
+    agent: api-contract-designer
+    outputs:
+      - api_docs
+    next: generate-guide
+
+  - id: generate-guide
+    name: Generate User Guide
+    prompt: Create user guide based on {code_structure} and {api_docs}
+    agent: content-researcher
+    outputs:
+      - user_guide
+    next: review
+
+  - id: review
+    name: Review Documentation
+    prompt: Review documentation quality and completeness for {api_docs} and {user_guide}
+    agent: analysis-engine
+    outputs:
+      - review_feedback
