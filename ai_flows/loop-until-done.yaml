@@ -1,0 +1,59 @@
+workflow:
+  name: "loop-until-done"
+  description: "Keep working on a goal until completion criteria are met"
+
+  context:
+    goal: "${GOAL}"  # The user's goal/task description
+    max_iterations: 20  # Safety limit
+
+nodes:
+  - id: "work"
+    name: "Work on Goal"
+    prompt: |
+      Work on this goal: {goal}
+
+      IMPORTANT: Do not stop partway through. Complete as much as possible in this iteration.
+      If you have completed all aspects of the goal, indicate clearly that you are DONE.
+      If more work remains, indicate what you've completed and what's left.
+    outputs:
+      - work_result
+    next: "check"
+
+  - id: "check"
+    name: "Check Completion"
+    prompt: |
+      Based on this goal: {goal}
+
+      And this work result: {work_result}
+
+      Has the goal been FULLY completed? Answer with ONLY one of:
+      - COMPLETE: if all aspects of the goal are done
+      - INCOMPLETE: if more work is needed
+
+      Respond with just the word COMPLETE or INCOMPLETE.
+    outputs:
+      - status
+    next:
+      - when: "{status} contains 'COMPLETE'"
+        goto: "done"
+      - default: "continue"
+
+  - id: "continue"
+    name: "Continue Working"
+    prompt: |
+      The goal "{goal}" is not yet complete.
+
+      Previous work: {work_result}
+
+      Continue with the next section. Do not stop until the goal is fully achieved.
+    outputs:
+      - work_result
+    next: "check"
+
+  - id: "done"
+    name: "Goal Complete"
+    type: "terminal"
+    prompt: |
+      Goal complete: {goal}
+
+      Final result: {work_result}
