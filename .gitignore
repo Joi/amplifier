@@ -45,6 +45,8 @@ logs
 
 # Working folders
 ai_working/tmp
+ai_working/*/
+ai_working/.gitignore
 .tmp
 
 # Ignore Windows Alternate Data Streams (ADS) files that may appear in WSL
@@ -52,6 +54,11 @@ ai_working/tmp
 **/*:Zone.Identifier
 **/*sec.endpointdlp
 **/*:sec.endpointdlp
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
 
 # Default data directory
 .data/
@@ -61,3 +68,4 @@ ai_working/tmp
 
 # Smoke test runtime logs
 .smoke_test_data/data
+*.log.jsonl
