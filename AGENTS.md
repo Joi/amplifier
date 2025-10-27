@@ -23,6 +23,18 @@ This file provides guidance to AI assistants when working with code in this repo
 
 ---
 
+## Git Commit Message Guidelines
+
+When creating git commit messages, always insert the following at the end of your commit message:
+
+```
+🤖 Generated with [Amplifier](https://github.com/microsoft/amplifier)
+
+Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.com>
+```
+
+---
+
 ## Important: Consult DISCOVERIES.md
 
 Before implementing solutions to complex problems:
@@ -340,6 +352,7 @@ Every function must work or not exist. Every file must be complete or not create
 **For detailed guidance on organizing amplifier CLI tools, consult the `amplifier-cli-architect` agent.**
 
 This specialized agent has comprehensive context on:
+
 - Progressive Maturity Model (scenarios/ vs ai_working/ vs amplifier/)
 - Tool creation patterns and templates
 - Documentation requirements
@@ -347,6 +360,7 @@ This specialized agent has comprehensive context on:
 - THE exemplar to model after: @scenarios/blog_writer/
 
 When creating amplifier CLI tools:
+
 1. Delegate to `amplifier-cli-architect` in GUIDE mode for complete guidance
 2. When in doubt about tool organization, consult `amplifier-cli-architect` and validate against @scenarios/blog_writer/ implementation
 
