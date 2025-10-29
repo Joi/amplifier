@@ -214,6 +214,34 @@ Amplifier is designed so **you can create new AI-powered tools** just by describ
 
 - _View the documentation:_ [Scenario Creation Guide](docs/CREATE_YOUR_OWN_TOOLS.md)
 
+### 🎨 Design Intelligence
+
+Amplifier includes comprehensive design intelligence with 7 specialist agents, evidence-based design knowledge, and orchestrated design workflows:
+
+- _Tell Claude Code:_
+
+  `/designer create a button component with hover states and accessibility`
+
+  `Use the art-director agent to establish visual direction for my app`
+
+  `Deploy component-designer to create a reusable card component`
+
+- _Available Design Specialists:_
+  - **animation-choreographer** - Motion design and transitions
+  - **art-director** - Aesthetic strategy and visual direction
+  - **component-designer** - Component design and creation
+  - **design-system-architect** - Design system architecture
+  - **layout-architect** - Information architecture and layout
+  - **responsive-strategist** - Device adaptation and responsive design
+  - **voice-strategist** - Voice & tone for UI copy
+
+- _Design Framework:_
+  - **9 Dimensions** - Purpose, hierarchy, color, typography, spacing, responsive, accessibility, motion, voice
+  - **4 Layers** - Foundational, structural, behavioral, experiential
+  - **Evidence-based** - WCAG 2.1, color theory, animation principles, accessibility standards
+
+- _View the documentation:_ [Design Intelligence](docs/design/README.md)
+
 ### 🤖 Explore Amplifier's agents on your code
 
 Try out one of the specialized experts:

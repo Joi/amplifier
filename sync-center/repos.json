@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "repos": [
+    {
+      "name": "amplifier",
+      "path": "~/amplifier",
+      "type": "git",
+      "remote": "https://github.com/Joi/amplifier.git",
+      "syncMechanism": "git",
+      "dependencies": [],
+      "checkCommands": [
+        "git fetch",
+        "git status"
+      ],
+      "syncPrompt": "sync-center/sync-prompts/amplifier.md"
+    },
+    {
+      "name": "obs-dailynotes",
+      "path": "~/obs-dailynotes",
+      "type": "git",
+      "remote": "https://github.com/Joi/obs-dailynotes.git",
+      "syncMechanism": "git",
+      "dependencies": [
+        "dotfiles-private",
+        "switchboard"
+      ],
+      "checkCommands": [
+        "git fetch",
+        "git status",
+        "work read list",
+        "work pres list"
+      ],
+      "syncPrompt": "sync-center/sync-prompts/obs-dailynotes.md",
+      "notes": "Data lives in ~/switchboard/data (Obsidian-synced)"
+    },
+    {
+      "name": "dotfiles-private",
+      "path": "~/dotfiles-private",
+      "type": "git",
+      "remote": "git@github.com:Joi/dotfiles-private.git",
+      "syncMechanism": "git",
+      "dependencies": [],
+      "checkCommands": [
+        "git fetch",
+        "git status"
+      ],
+      "syncPrompt": "sync-center/sync-prompts/dotfiles-private.md",
+      "notes": "Private secrets - never make public"
+    },
+    {
+      "name": "switchboard",
+      "path": "~/switchboard",
+      "type": "obsidian-vault",
+      "syncMechanism": "obsidian",
+      "dependencies": [],
+      "checkCommands": [],
+      "notes": "Syncs via Obsidian - check Obsidian sync status"
+    }
+  ],
+  "syncOrder": [
+    "dotfiles-private",
+    "amplifier",
+    "switchboard",
+    "obs-dailynotes"
+  ]
+}
