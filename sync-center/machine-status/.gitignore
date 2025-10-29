@@ -1,0 +1,5 @@
+# Machine-specific state files
+# These should NOT be synced via git (causes conflicts)
+*
+!.gitignore
+!README.md
