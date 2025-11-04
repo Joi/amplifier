@@ -9,7 +9,9 @@ dependencies = [
     "beautifulsoup4>=4.14.2",
     "claude-code-sdk>=0.0.20",
     "click>=8.2.1",
+    "genjax>=0.10.3",
     "httpx>=0.28.1",
+    "jax[cpu]>=0.5.3",
     "langchain>=0.2.1",
     "langchain-openai>=0.3.28",
     "markdownify>=1.2.0",
@@ -28,6 +30,14 @@ dependencies = [
     "tqdm>=4.67.1",
     "yt-dlp>=2025.9.26",
 ]
+
+[project.scripts]
+git-bug-analyzer = "amplifier.prob_tools.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["amplifier*"]
+exclude = ["scenarios*", "ai_context*", "ai_working*"]
 
 [tool.uv.workspace]
 # Add all projects in the workspace
