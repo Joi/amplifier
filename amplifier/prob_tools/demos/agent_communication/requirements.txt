@@ -1,0 +1,17 @@
+# Requirements for Agent Communication Demo
+
+# Core dependencies
+pydantic>=2.0.0
+
+# vLLM approach
+vllm>=0.6.0
+openai>=1.0.0  # For vLLM OpenAI-compatible API
+
+# LLaMPPL approach (research/experimental)
+# Note: LLaMPPL may require additional setup
+# llamppl>=0.1.0  # Uncomment when ready to install
+transformers>=4.30.0
+torch>=2.0.0
+
+# Utilities
+rich>=13.0.0  # For pretty printing (optional)
