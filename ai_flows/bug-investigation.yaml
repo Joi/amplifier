@@ -1,0 +1,36 @@
+workflow:
+  name: bug-investigation
+  description: Systematic bug investigation and fix proposal
+  version: 1.0.0
+
+nodes:
+  - id: reproduce
+    name: Reproduce Issue
+    prompt: Analyze bug report {bug_description} and create reproduction steps
+    agent: bug-hunter
+    outputs:
+      - reproduction_steps
+    next: investigate
+
+  - id: investigate
+    name: Investigate Root Cause
+    prompt: Investigate root cause using {reproduction_steps} in {codebase}
+    agent: bug-hunter
+    outputs:
+      - root_cause
+    next: propose-fix
+
+  - id: propose-fix
+    name: Propose Fix
+    prompt: Propose fix for {root_cause} following simplicity principles
+    agent: bug-hunter
+    outputs:
+      - fix_proposal
+    next: test-plan
+
+  - id: test-plan
+    name: Create Test Plan
+    prompt: Create test plan to prevent regression of {root_cause}
+    agent: test-coverage
+    outputs:
+      - test_cases

@@ -5,9 +5,9 @@ in a multi-agent code review system.
 """
 
 from enum import Enum
-from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class Severity(str, Enum):
@@ -45,15 +45,15 @@ class CodeFinding(BaseModel):
     file_path: str = Field(..., description="Path to the file with the issue")
     line_number: int = Field(..., description="Line number where issue occurs", ge=1)
     description: str = Field(..., description="Description of the issue")
-    suggested_fix: Optional[str] = Field(None, description="Suggested fix for the issue")
+    suggested_fix: str | None = Field(None, description="Suggested fix for the issue")
 
 
 class AnalyzerMessage(BaseModel):
     """Message from the Analyzer Agent to Reviewer Agent."""
 
     agent_id: str = Field(..., description="Unique identifier for the analyzer agent")
-    analyzed_files: List[str] = Field(..., description="List of files analyzed")
-    findings: List[CodeFinding] = Field(..., description="List of findings discovered")
+    analyzed_files: list[str] = Field(..., description="List of files analyzed")
+    findings: list[CodeFinding] = Field(..., description="List of findings discovered")
     total_lines_analyzed: int = Field(..., description="Total lines of code analyzed", ge=0)
     analysis_duration_ms: int = Field(..., description="Analysis duration in milliseconds", ge=0)
 
@@ -73,7 +73,7 @@ class ReviewerMessage(BaseModel):
     agent_id: str = Field(..., description="Unique identifier for the reviewer agent")
     analyzer_id: str = Field(..., description="ID of the analyzer that produced the findings")
     review_status: ReviewStatus = Field(..., description="Overall review status")
-    recommendations: List[ReviewRecommendation] = Field(..., description="Specific recommendations")
+    recommendations: list[ReviewRecommendation] = Field(..., description="Specific recommendations")
     blocking_issues_count: int = Field(..., description="Number of blocking issues found", ge=0)
     overall_assessment: str = Field(..., description="Overall assessment of the code")
 
@@ -85,9 +85,9 @@ class CoordinatorDecision(BaseModel):
     final_status: ReviewStatus = Field(..., description="Final review status")
     total_findings: int = Field(..., description="Total findings across all reviewers", ge=0)
     critical_issues: int = Field(..., description="Number of critical issues", ge=0)
-    must_fix_before_merge: List[str] = Field(..., description="Issues that must be fixed")
+    must_fix_before_merge: list[str] = Field(..., description="Issues that must be fixed")
     rationale: str = Field(..., description="Explanation for the decision")
-    next_steps: List[str] = Field(..., description="Recommended next steps")
+    next_steps: list[str] = Field(..., description="Recommended next steps")
 
 
 # Example usage and validation

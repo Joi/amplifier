@@ -1,0 +1,25 @@
+workflow:
+  name: test-phase2-manual
+  description: Manual test for Phase 2 - 3-node workflow with routing
+  version: 1.0.0
+
+nodes:
+  - id: validate-input
+    name: Validate Input
+    prompt: Check if the input file exists and is readable. Set output 'is_valid' to true or false.
+    outputs:
+      - is_valid
+    next:
+      success: process-data
+      failure: error-handler
+      default: process-data
+
+  - id: process-data
+    name: Process Data
+    prompt: Process the validated data and generate a summary
+    outputs:
+      - summary
+
+  - id: error-handler
+    name: Error Handler
+    prompt: Handle validation errors gracefully

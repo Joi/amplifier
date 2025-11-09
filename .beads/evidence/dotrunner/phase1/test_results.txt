@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.4.1, pluggy-1.6.0 -- /workspaces/amplifier/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /workspaces/amplifier
+configfile: pyproject.toml
+plugins: logfire-4.8.0, asyncio-1.1.0, anyio-4.9.0, cov-6.2.1, langsmith-0.4.9, mock-3.14.1
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 20 items
+
+ai_working/dotrunner/tests/test_workflow_model.py::TestNodeDataclass::test_node_minimal_creation PASSED [  5%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestNodeDataclass::test_node_full_creation PASSED [ 10%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestNodeDataclass::test_node_conditional_next PASSED [ 15%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestNodeDataclass::test_node_to_dict PASSED [ 20%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowDataclass::test_workflow_minimal_creation PASSED [ 25%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowDataclass::test_workflow_with_context PASSED [ 30%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowDataclass::test_workflow_to_dict PASSED [ 35%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowGetNode::test_get_node_by_id_found PASSED [ 40%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowGetNode::test_get_node_by_id_not_found PASSED [ 45%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowGetNode::test_get_first_node PASSED [ 50%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowValidation::test_validate_empty_workflow PASSED [ 55%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowValidation::test_validate_duplicate_node_ids PASSED [ 60%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowValidation::test_validate_invalid_node_reference PASSED [ 65%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowValidation::test_validate_circular_dependency_simple PASSED [ 70%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowValidation::test_validate_valid_workflow PASSED [ 75%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_simple_linear PASSED [ 80%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_with_context PASSED [ 85%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_invalid_file PASSED [ 90%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_invalid_yaml PASSED [ 95%]
+ai_working/dotrunner/tests/test_workflow_model.py::TestWorkflowFromYAML::test_from_yaml_missing_required_fields PASSED [100%]
+
+============================== 20 passed in 0.05s ==============================

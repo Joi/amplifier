@@ -1,0 +1,149 @@
+{
+  "id": "vi-phase-2-core-engine",
+  "name": "Vi Phase 2: Core Engine & Buffer Management",
+  "created_at": "2025-10-13T00:00:00.000000",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "core": {
+      "id": "core",
+      "title": "Core Editing Engine",
+      "description": "Text buffer management, cursor handling, basic operations",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "core-buffer": {
+      "id": "core-buffer",
+      "title": "Text Buffer",
+      "description": "Efficient text storage with undo/redo",
+      "state": "pending",
+      "parent_id": "core",
+      "depends_on": [
+        "core"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "core-cursor": {
+      "id": "core-cursor",
+      "title": "Cursor Management",
+      "description": "Cursor positioning, movement, selection",
+      "state": "pending",
+      "parent_id": "core",
+      "depends_on": [
+        "core-buffer"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "core-operations": {
+      "id": "core-operations",
+      "title": "Basic Operations",
+      "description": "Insert, delete, replace operations",
+      "state": "pending",
+      "parent_id": "core",
+      "depends_on": [
+        "core-cursor"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "core-marks": {
+      "id": "core-marks",
+      "title": "Marks and Registers",
+      "description": "Named marks, registers, clipboard",
+      "state": "pending",
+      "parent_id": "core",
+      "depends_on": [
+        "core-operations"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "core-search": {
+      "id": "core-search",
+      "title": "Search Engine",
+      "description": "Pattern matching, regex, search/replace",
+      "state": "pending",
+      "parent_id": "core",
+      "depends_on": [
+        "core-operations"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "buffer-gap": {
+      "id": "buffer-gap",
+      "title": "Gap Buffer Implementation",
+      "description": "Efficient gap buffer with automatic expansion",
+      "state": "pending",
+      "parent_id": "core-buffer",
+      "depends_on": [
+        "core-buffer"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "buffer-lines": {
+      "id": "buffer-lines",
+      "title": "Line Management",
+      "description": "Line indexing, wrapping, virtual lines",
+      "state": "pending",
+      "parent_id": "core-buffer",
+      "depends_on": [
+        "buffer-gap"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "buffer-encoding": {
+      "id": "buffer-encoding",
+      "title": "Text Encoding",
+      "description": "UTF-8, line endings, BOM handling",
+      "state": "pending",
+      "parent_id": "core-buffer",
+      "depends_on": [
+        "buffer-lines"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "buffer-undo": {
+      "id": "buffer-undo",
+      "title": "Undo System",
+      "description": "Efficient undo/redo with branching",
+      "state": "pending",
+      "parent_id": "core-buffer",
+      "depends_on": [
+        "buffer-encoding"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "buffer-diff": {
+      "id": "buffer-diff",
+      "title": "Change Tracking",
+      "description": "Track changes for diff, backup",
+      "state": "pending",
+      "parent_id": "core-buffer",
+      "depends_on": [
+        "buffer-undo"
+      ],
+      "assigned_to": null,
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}

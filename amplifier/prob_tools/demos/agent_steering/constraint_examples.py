@@ -15,8 +15,6 @@ import importlib
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Optional
-
 
 # ==============================================================================
 # SYNTAX CONSTRAINTS
@@ -166,11 +164,7 @@ def no_hardcoded_secrets(code: str) -> bool:
         r'(?:secret|private_key)\s*=\s*["\'][^"\']+["\']',
     ]
 
-    for pattern in secret_patterns:
-        if re.search(pattern, code, re.IGNORECASE):
-            return False
-
-    return True
+    return all(not re.search(pattern, code, re.IGNORECASE) for pattern in secret_patterns)
 
 
 def uses_secure_random(code: str) -> bool:
@@ -217,16 +211,15 @@ def no_hallucinated_imports(code: str) -> bool:
                     return False
 
         # Check from ... import statements
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                try:
-                    mod = importlib.import_module(node.module)
-                    # Check that imported names exist
-                    for alias in node.names:
-                        if alias.name != "*" and not hasattr(mod, alias.name):
-                            return False
-                except ImportError:
-                    return False
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            try:
+                mod = importlib.import_module(node.module)
+                # Check that imported names exist
+                for alias in node.names:
+                    if alias.name != "*" and not hasattr(mod, alias.name):
+                        return False
+            except ImportError:
+                return False
 
     return True
 
@@ -324,15 +317,14 @@ def follows_naming_convention(code: str) -> bool:
                 return False
 
         # Check variable names
-        elif isinstance(node, ast.Name):
-            if isinstance(node.ctx, ast.Store):
-                name = node.id
-                # Allow CONSTANTS in UPPER_CASE
-                if name.isupper():
-                    continue
-                # Otherwise must be snake_case
-                if not re.match(r"^[a-z_][a-z0-9_]*$", name):
-                    return False
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            name = node.id
+            # Allow CONSTANTS in UPPER_CASE
+            if name.isupper():
+                continue
+            # Otherwise must be snake_case
+            if not re.match(r"^[a-z_][a-z0-9_]*$", name):
+                return False
 
     return True
 
@@ -390,7 +382,7 @@ def max_function_length(code: str, max_lines: int = 50) -> bool:
 # ==============================================================================
 
 
-def has_test_coverage(code: str, test_code: Optional[str] = None) -> bool:
+def has_test_coverage(code: str, test_code: str | None = None) -> bool:
     """All public functions must have corresponding tests.
 
     Effect: IMPOSSIBLE to generate untested code.
@@ -496,11 +488,11 @@ def login_user(username: str, password: str) -> Optional[dict]:
 '''
 
     # Example: Invalid code (SQL injection)
-    invalid_code = '''
+    invalid_code = """
 def login(username, password):
     query = f"SELECT * FROM users WHERE username='{username}'"
     return db.execute(query)
-'''
+"""
 
     print("Testing constraints on VALID code:")
     print(f"  syntax_valid: {syntax_valid(valid_code)}")

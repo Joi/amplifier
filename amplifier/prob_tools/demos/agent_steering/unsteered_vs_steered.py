@@ -9,14 +9,13 @@ conceptual demonstration showing what WOULD happen.
 """
 
 import time
-from constraint_examples import (
-    has_docstrings,
-    has_error_handling,
-    has_type_hints,
-    no_sql_injection,
-    syntax_valid,
-    validates_input,
-)
+
+from constraint_examples import has_docstrings
+from constraint_examples import has_error_handling
+from constraint_examples import has_type_hints
+from constraint_examples import no_sql_injection
+from constraint_examples import syntax_valid
+from constraint_examples import validates_input
 
 
 class UnsteeredAgent:
@@ -29,12 +28,12 @@ class UnsteeredAgent:
         time.sleep(0.2)  # Simulate fast generation
 
         # Simulate typical AI-generated code with common mistakes
-        code = '''
+        code = """
 def login(username, password):
     query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
     result = db.execute(query)
     return result.fetchone()
-'''
+"""
         return code
 
 
@@ -52,7 +51,7 @@ class SteeredAgent:
         time.sleep(0.1)
 
         for i in range(5):
-            print(f"   🔄 Step {i+1}: Sampling and checking constraints...")
+            print(f"   🔄 Step {i + 1}: Sampling and checking constraints...")
 
             # Simulate particle rejection
             if i == 1:
@@ -128,7 +127,7 @@ def analyze_code(code: str, label: str):
         status = "✅" if satisfied else "❌"
         print(f"  {status} {name}")
 
-    print(f"\n Result: {passed}/{total} constraints satisfied ({(passed/total)*100:.0f}%)")
+    print(f"\n Result: {passed}/{total} constraints satisfied ({(passed / total) * 100:.0f}%)")
 
     return passed == total
 
@@ -154,7 +153,7 @@ def run_comparison():
     unsteered_time = (time.time() - start) * 1000
 
     print(f"\n✅ Generated in {unsteered_time:.0f}ms")
-    unsteered_valid = analyze_code(unsteered_code, "UNSTEERED Agent")
+    analyze_code(unsteered_code, "UNSTEERED Agent")
 
     input("\n\nPress Enter to see STEERED agent...")
 
@@ -180,7 +179,7 @@ def run_comparison():
     steered_time = (time.time() - start) * 1000
 
     print(f"\n✅ Generated in {steered_time:.0f}ms")
-    steered_valid = analyze_code(steered_code, "STEERED Agent")
+    analyze_code(steered_code, "STEERED Agent")
 
     # Comparison summary
     print("\n")

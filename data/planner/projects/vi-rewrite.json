@@ -1,0 +1,107 @@
+{
+  "id": "vi-rewrite",
+  "name": "Vi Editor Rewrite in Python",
+  "created_at": "2025-10-07T15:54:49.801147",
+  "updated_at": "2025-10-13T00:00:00.000000",
+  "tasks": {
+    "phase-1": {
+      "id": "phase-1",
+      "title": "Phase 1: Architecture & Foundation",
+      "description": "Define overall architecture, data structures, and interfaces",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [],
+      "assigned_to": null,
+      "subproject": "vi-phase-1-foundation",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "phase-2": {
+      "id": "phase-2",
+      "title": "Phase 2: Core Engine & Buffer Management",
+      "description": "Text buffer management, cursor handling, basic operations",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "phase-1"
+      ],
+      "assigned_to": null,
+      "subproject": "vi-phase-2-core-engine",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "phase-3": {
+      "id": "phase-3",
+      "title": "Phase 3: Command System & Movement",
+      "description": "Vi command parsing, execution, and modal interface",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "phase-1"
+      ],
+      "assigned_to": null,
+      "subproject": "vi-phase-3-command-system",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "phase-4": {
+      "id": "phase-4",
+      "title": "Phase 4: User Interface & Display",
+      "description": "Terminal handling, screen rendering, input processing",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "phase-1"
+      ],
+      "assigned_to": null,
+      "subproject": "vi-phase-4-ui-display",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "phase-5": {
+      "id": "phase-5",
+      "title": "Phase 5: File Operations",
+      "description": "File I/O, backup, recovery, file type detection",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "phase-1"
+      ],
+      "assigned_to": null,
+      "subproject": "vi-phase-5-file-ops",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "phase-6": {
+      "id": "phase-6",
+      "title": "Phase 6: Integration",
+      "description": "Integrate core editing, commands, UI, and files",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "phase-2",
+        "phase-3",
+        "phase-4",
+        "phase-5"
+      ],
+      "assigned_to": null,
+      "subproject": "vi-phase-6-integration",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    },
+    "phase-7": {
+      "id": "phase-7",
+      "title": "Phase 7: Testing & Polish",
+      "description": "Comprehensive testing, documentation, packaging, and release",
+      "state": "pending",
+      "parent_id": null,
+      "depends_on": [
+        "phase-6"
+      ],
+      "assigned_to": null,
+      "subproject": "vi-phase-7-testing-polish",
+      "created_at": "2025-10-13T00:00:00.000000",
+      "updated_at": "2025-10-13T00:00:00.000000"
+    }
+  }
+}

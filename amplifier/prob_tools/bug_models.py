@@ -63,7 +63,7 @@ def bug_prediction_model(
     bug_prob = jnp.clip(bug_prob, 0.01, 0.99)
 
     # Sample whether bug exists
-    has_bug = flip(bug_prob) @ "has_bug"
+    flip(bug_prob) @ "has_bug"
 
     return bug_prob
 
@@ -107,7 +107,7 @@ def refactoring_success_model(
     success_prob = base_success * approach_factor * size_factor * test_factor
     success_prob = jnp.clip(success_prob, 0.05, 0.95)
 
-    will_succeed = flip(success_prob) @ "success"
+    flip(success_prob) @ "success"
 
     return success_prob
 

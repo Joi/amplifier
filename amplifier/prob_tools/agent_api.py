@@ -50,26 +50,21 @@ class CodeAnalyzer:
     def _has_null_checks(func_node: ast.FunctionDef) -> bool:
         """Check if function has null/None checks"""
         for node in ast.walk(func_node):
-            if isinstance(node, ast.Compare):
-                # Look for comparisons with None
-                if any(isinstance(comp, ast.Is) or isinstance(comp, ast.IsNot) for comp in node.ops):
-                    return True
+            if isinstance(node, ast.Compare) and any(isinstance(comp, ast.Is | ast.IsNot) for comp in node.ops):
+                return True
         return False
 
     @staticmethod
     def _has_error_handling(func_node: ast.FunctionDef) -> bool:
         """Check if function has try/except"""
-        for node in ast.walk(func_node):
-            if isinstance(node, ast.Try):
-                return True
-        return False
+        return any(isinstance(node, ast.Try) for node in ast.walk(func_node))
 
     @staticmethod
     def _calculate_complexity(func_node: ast.FunctionDef) -> int:
         """Calculate cyclomatic complexity"""
         complexity = 1
         for node in ast.walk(func_node):
-            if isinstance(node, (ast.If, ast.For, ast.While, ast.ExceptHandler)):
+            if isinstance(node, ast.If | ast.For | ast.While | ast.ExceptHandler):
                 complexity += 1
         return complexity
 

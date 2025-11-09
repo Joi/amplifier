@@ -11,22 +11,20 @@ Requirements:
 
 import json
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import ValidationError
-
-from schemas import (
-    AnalyzerMessage,
-    CoordinatorDecision,
-    FindingType,
-    ReviewerMessage,
-    ReviewStatus,
-    Severity,
-)
+from schemas import AnalyzerMessage
+from schemas import CoordinatorDecision
+from schemas import FindingType
+from schemas import ReviewerMessage
+from schemas import Severity
 
 # Note: LLaMPPL import will fail if not installed
 try:
-    from llamppl import Model, Transformer, smc_steer
+    from llamppl import Model
+    from llamppl import Transformer
+    from llamppl import smc_steer
 except ImportError:
     print("⚠️  LLaMPPL not installed. This is a conceptual demo.")
     print("   Install with: pip install llamppl")
@@ -65,13 +63,11 @@ class LLaMPPLAgentCommunicator:
         except (json.JSONDecodeError, ValidationError, ValueError):
             return False
 
-    def _extract_enum_values(self, enum_class) -> List[str]:
+    def _extract_enum_values(self, enum_class) -> list[str]:
         """Extract valid values from an enum."""
         return [e.value for e in enum_class]
 
-    def generate_analyzer_message_constrained(
-        self, code_snippet: str, file_paths: List[str]
-    ) -> AnalyzerMessage:
+    def generate_analyzer_message_constrained(self, code_snippet: str, file_paths: list[str]) -> AnalyzerMessage:
         """Generate AnalyzerMessage with hard constraints via SMC steering.
 
         Args:
@@ -83,9 +79,9 @@ class LLaMPPLAgentCommunicator:
         """
         start_time = time.time()
 
-        prompt = f"""You are a code analyzer agent. Analyze this code and generate a JSON analysis report.
+        f"""You are a code analyzer agent. Analyze this code and generate a JSON analysis report.
 
-Files: {', '.join(file_paths)}
+Files: {", ".join(file_paths)}
 
 Code:
 {code_snippet}
@@ -97,8 +93,8 @@ Generate valid JSON matching this schema:
 - total_lines_analyzed: positive integer
 - analysis_duration_ms: positive integer
 
-Valid finding_types: {', '.join(self._extract_enum_values(FindingType))}
-Valid severities: {', '.join(self._extract_enum_values(Severity))}
+Valid finding_types: {", ".join(self._extract_enum_values(FindingType))}
+Valid severities: {", ".join(self._extract_enum_values(Severity))}
 
 Output only valid JSON:
 """
@@ -130,7 +126,7 @@ Output only valid JSON:
                         self.finish()
                         return
                     # If contains closing brace, validate partial structure
-                    elif "}" in candidate:
+                    if "}" in candidate:
                         # Allow partial JSON by checking if it could become valid
                         # This is a simplified check - production would be more sophisticated
                         try:
@@ -193,13 +189,11 @@ Output only valid JSON:
         )
 
         print(f"  ✅ Generated with HARD constraints in {elapsed_ms}ms")
-        print(f"     Guaranteed: valid JSON, valid schema, valid enums")
+        print("     Guaranteed: valid JSON, valid schema, valid enums")
 
         return message
 
-    def generate_with_constraints_conceptual(
-        self, prompt: str, schema_class, description: str
-    ) -> Dict[str, Any]:
+    def generate_with_constraints_conceptual(self, prompt: str, schema_class, description: str) -> dict[str, Any]:
         """Conceptual demonstration of LLaMPPL constraint-guided generation.
 
         This shows the IDEA of how constraints work, without requiring
@@ -266,7 +260,7 @@ def get_user_posts(user_id):
             code_snippet=code_snippet, file_paths=["src/auth.py", "src/posts.py"]
         )
 
-        print(f"\n   Generated AnalyzerMessage:")
+        print("\n   Generated AnalyzerMessage:")
         print(f"   Agent: {analyzer_msg.agent_id}")
         print(f"   Files: {analyzer_msg.analyzed_files}")
         print(f"   Findings: {len(analyzer_msg.findings)}")
@@ -328,7 +322,7 @@ def get_user_posts(user_id):
         with open("/tmp/llamppl_agent_messages.json", "w") as f:
             json.dump(output, f, indent=2)
 
-        print(f"💾 Output saved to: /tmp/llamppl_agent_messages.json")
+        print("💾 Output saved to: /tmp/llamppl_agent_messages.json")
 
     except ImportError as e:
         print("\n⚠️  LLaMPPL not installed - showing conceptual demo")
@@ -337,6 +331,7 @@ def get_user_posts(user_id):
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
 
 

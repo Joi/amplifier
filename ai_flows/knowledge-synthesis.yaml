@@ -1,0 +1,28 @@
+workflow:
+  name: knowledge-synthesis
+  description: Multi-step knowledge synthesis from articles
+  version: 1.0.0
+
+nodes:
+  - id: extract
+    name: Extract Concepts
+    prompt: Extract key concepts and ideas from {articles}
+    agent: concept-extractor
+    outputs:
+      - concepts
+    next: synthesize
+
+  - id: synthesize
+    name: Synthesize Insights
+    prompt: Synthesize insights from extracted concepts in {concepts}
+    agent: insight-synthesizer
+    outputs:
+      - insights
+    next: validate
+
+  - id: validate
+    name: Validate Quality
+    prompt: Review synthesis quality and check for gaps in {insights}
+    agent: analysis-engine
+    outputs:
+      - validation_report

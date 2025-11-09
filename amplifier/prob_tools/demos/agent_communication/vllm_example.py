@@ -10,19 +10,12 @@ Requirements:
 
 import json
 import time
-from typing import List
 
 from openai import OpenAI
-
-from schemas import (
-    AnalyzerMessage,
-    CodeFinding,
-    CoordinatorDecision,
-    FindingType,
-    ReviewerMessage,
-    ReviewStatus,
-    Severity,
-)
+from schemas import AnalyzerMessage
+from schemas import CoordinatorDecision
+from schemas import ReviewerMessage
+from schemas import Severity
 
 
 class VLLMAgentCommunicator:
@@ -41,7 +34,7 @@ class VLLMAgentCommunicator:
         )
         self.model = model
 
-    def generate_analyzer_message(self, code_snippet: str, file_paths: List[str]) -> AnalyzerMessage:
+    def generate_analyzer_message(self, code_snippet: str, file_paths: list[str]) -> AnalyzerMessage:
         """Generate an AnalyzerMessage using vLLM structured outputs.
 
         Args:
@@ -56,7 +49,7 @@ class VLLMAgentCommunicator:
         # Create the prompt for the analyzer agent
         prompt = f"""You are a code analyzer agent. Analyze the following code and generate a structured analysis report.
 
-Files being analyzed: {', '.join(file_paths)}
+Files being analyzed: {", ".join(file_paths)}
 
 Code:
 {code_snippet}
@@ -109,7 +102,7 @@ Focus on: security issues, performance problems, style violations, and maintaina
         prompt = f"""You are a code reviewer agent. Review the following findings from the analyzer agent:
 
 Analyzer ID: {analyzer_msg.agent_id}
-Files analyzed: {', '.join(analyzer_msg.analyzed_files)}
+Files analyzed: {", ".join(analyzer_msg.analyzed_files)}
 
 Findings:
 {findings_summary}
@@ -144,7 +137,7 @@ Decide which findings should block the PR and provide rationale.
         return message
 
     def generate_coordinator_decision(
-        self, analyzer_msgs: List[AnalyzerMessage], reviewer_msgs: List[ReviewerMessage]
+        self, analyzer_msgs: list[AnalyzerMessage], reviewer_msgs: list[ReviewerMessage]
     ) -> CoordinatorDecision:
         """Generate final coordinator decision based on all reviews.
 
@@ -160,10 +153,7 @@ Decide which findings should block the PR and provide rationale.
         # Summarize all findings
         total_findings = sum(len(msg.findings) for msg in analyzer_msgs)
         critical_count = sum(
-            1
-            for msg in analyzer_msgs
-            for f in msg.findings
-            if f.severity in [Severity.CRITICAL, Severity.HIGH]
+            1 for msg in analyzer_msgs for f in msg.findings if f.severity in [Severity.CRITICAL, Severity.HIGH]
         )
 
         review_statuses = [msg.review_status.value for msg in reviewer_msgs]
@@ -174,7 +164,7 @@ Decide which findings should block the PR and provide rationale.
 Summary:
 - Total findings: {total_findings}
 - Critical/High severity: {critical_count}
-- Review statuses: {', '.join(review_statuses)}
+- Review statuses: {", ".join(review_statuses)}
 - Blocking issues: {blocking_count}
 
 Based on this information, make a final decision on whether to approve, request changes, or reject the PR.
@@ -262,7 +252,7 @@ def get_user_posts(user_id):
         print(f"  Final Status: {coordinator_msg.final_status.value}")
         print(f"  Critical Issues: {coordinator_msg.critical_issues}")
         print(f"  Must Fix: {coordinator_msg.must_fix_before_merge}")
-        print(f"  Next Steps:")
+        print("  Next Steps:")
         for step in coordinator_msg.next_steps[:3]:
             print(f"    - {step}")
 
@@ -282,7 +272,7 @@ def get_user_posts(user_id):
         with open("/tmp/vllm_agent_messages.json", "w") as f:
             json.dump(output, f, indent=2)
 
-        print(f"\n💾 Full messages saved to: /tmp/vllm_agent_messages.json")
+        print("\n💾 Full messages saved to: /tmp/vllm_agent_messages.json")
 
     except Exception as e:
         print(f"\n❌ Error: {e}")

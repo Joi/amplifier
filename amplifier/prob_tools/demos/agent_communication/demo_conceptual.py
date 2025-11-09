@@ -6,16 +6,11 @@ It shows the key differences through simulated outputs and explanations.
 
 import json
 import time
-from schemas import (
-    AnalyzerMessage,
-    CodeFinding,
-    CoordinatorDecision,
-    FindingType,
-    ReviewerMessage,
-    ReviewRecommendation,
-    ReviewStatus,
-    Severity,
-)
+
+from schemas import AnalyzerMessage
+from schemas import CodeFinding
+from schemas import FindingType
+from schemas import Severity
 
 
 def simulate_vllm_generation():
@@ -261,13 +256,13 @@ def main():
     print()
 
     # Run vLLM simulation
-    vllm_msg = simulate_vllm_generation()
+    simulate_vllm_generation()
 
     input("Press Enter to continue to LLaMPPL demo...")
     print()
 
     # Run LLaMPPL simulation
-    llamppl_msg = simulate_llamppl_generation()
+    simulate_llamppl_generation()
 
     input("Press Enter to see comparison...")
     print()

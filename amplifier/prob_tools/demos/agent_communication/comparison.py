@@ -7,13 +7,10 @@ This script runs both approaches and compares:
 - Resource usage
 """
 
-import json
 import time
-from typing import Dict, List, Tuple
 
 from pydantic import ValidationError
-
-from schemas import AnalyzerMessage, ReviewerMessage, CoordinatorDecision
+from schemas import AnalyzerMessage
 
 
 class ComparisonRunner:
@@ -38,10 +35,10 @@ class ComparisonRunner:
         try:
             schema_class(**message_dict)
             return True
-        except (ValidationError, TypeError, ValueError) as e:
+        except (ValidationError, TypeError, ValueError):
             return False
 
-    def run_vllm_trial(self, trial_num: int) -> Tuple[float, bool, str]:
+    def run_vllm_trial(self, trial_num: int) -> tuple[float, bool, str]:
         """Run a single vLLM trial.
 
         Args:
@@ -59,9 +56,7 @@ class ComparisonRunner:
             communicator = VLLMAgentCommunicator()
 
             # Generate analyzer message
-            msg = communicator.generate_analyzer_message(
-                code_snippet="def test(): pass", file_paths=["test.py"]
-            )
+            msg = communicator.generate_analyzer_message(code_snippet="def test(): pass", file_paths=["test.py"])
 
             elapsed_ms = (time.time() - start) * 1000
 
@@ -73,7 +68,7 @@ class ComparisonRunner:
         except Exception as e:
             return 0, False, str(e)
 
-    def run_llamppl_trial(self, trial_num: int) -> Tuple[float, bool, str]:
+    def run_llamppl_trial(self, trial_num: int) -> tuple[float, bool, str]:
         """Run a single LLaMPPL trial.
 
         Args:
@@ -124,15 +119,15 @@ class ComparisonRunner:
             if error:
                 self.results["vllm"]["errors"].append(error)
                 self.results["vllm"]["invalid"] += 1
-                print(f"  Trial {i+1}: ERROR - {error[:60]}")
+                print(f"  Trial {i + 1}: ERROR - {error[:60]}")
             else:
                 self.results["vllm"]["times"].append(elapsed)
                 if valid:
                     self.results["vllm"]["valid"] += 1
-                    print(f"  Trial {i+1}: ✅ {elapsed:.0f}ms (valid)")
+                    print(f"  Trial {i + 1}: ✅ {elapsed:.0f}ms (valid)")
                 else:
                     self.results["vllm"]["invalid"] += 1
-                    print(f"  Trial {i+1}: ❌ {elapsed:.0f}ms (invalid)")
+                    print(f"  Trial {i + 1}: ❌ {elapsed:.0f}ms (invalid)")
 
         print()
 
@@ -144,15 +139,15 @@ class ComparisonRunner:
             if error:
                 self.results["llamppl"]["errors"].append(error)
                 self.results["llamppl"]["invalid"] += 1
-                print(f"  Trial {i+1}: ERROR - {error[:60]}")
+                print(f"  Trial {i + 1}: ERROR - {error[:60]}")
             else:
                 self.results["llamppl"]["times"].append(elapsed)
                 if valid:
                     self.results["llamppl"]["valid"] += 1
-                    print(f"  Trial {i+1}: ✅ {elapsed:.0f}ms (valid)")
+                    print(f"  Trial {i + 1}: ✅ {elapsed:.0f}ms (valid)")
                 else:
                     self.results["llamppl"]["invalid"] += 1
-                    print(f"  Trial {i+1}: ❌ {elapsed:.0f}ms (invalid)")
+                    print(f"  Trial {i + 1}: ❌ {elapsed:.0f}ms (invalid)")
 
         print()
         self.print_summary()
@@ -206,7 +201,7 @@ class ComparisonRunner:
             llamppl_avg = sum(llamppl_times) / len(llamppl_times)
             speedup = llamppl_avg / vllm_avg if vllm_avg > 0 else 0
 
-            print(f"Speed:")
+            print("Speed:")
             print(f"  vLLM:    {vllm_avg:.0f}ms (baseline)")
             print(f"  LLaMPPL: {llamppl_avg:.0f}ms ({speedup:.1f}x slower)")
             print()
@@ -218,7 +213,7 @@ class ComparisonRunner:
             vllm_validity = (self.results["vllm"]["valid"] / vllm_total) * 100
             llamppl_validity = (self.results["llamppl"]["valid"] / llamppl_total) * 100
 
-            print(f"Validity:")
+            print("Validity:")
             print(f"  vLLM:    {vllm_validity:.1f}% schema compliance")
             print(f"  LLaMPPL: {llamppl_validity:.1f}% schema compliance")
             print()
