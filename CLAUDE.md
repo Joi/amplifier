@@ -17,6 +17,43 @@ This file is reserved for Claude Code-specific instructions.
 - @ai_context/design/DESIGN-FRAMEWORK.md
 - @ai_context/design/DESIGN-VISION.md
 
+# Documentation Guidelines
+
+## Rule: User Documentation Goes in Switchboard
+
+**CRITICAL**: When creating tools, features, or systems in Amplifier, user-facing documentation MUST be created in `~/switchboard/amplifier/`.
+
+**The principle**: Switchboard is the user's knowledge vault. It should contain a web of interconnected documentation pages explaining how to use everything you create in Amplifier.
+
+**What goes in switchboard/amplifier/:**
+- Usage guides and how-tos
+- Command references
+- Workflow documentation
+- Integration guides
+- Dashboard pages (like REPOS-DASHBOARD.md)
+- Any documentation the user needs to understand and use what you built
+
+**What stays in amplifier repo:**
+- Technical implementation details
+- Developer documentation
+- Code comments
+- API documentation for developers
+- Architecture decisions (in ai_working/decisions/)
+
+**Examples:**
+- ✅ `~/switchboard/amplifier/REPO-SYNC-GUIDE.md` - How to use the repo sync system
+- ✅ `~/switchboard/amplifier/REPOS-DASHBOARD.md` - Visual dashboard of all repos
+- ❌ `~/amplifier/README.md` - Technical project info (stays in repo)
+- ❌ `~/amplifier/lib/repoSync.js` - Code documentation via comments (stays in repo)
+
+**When creating new features:**
+1. Build the feature in `~/amplifier/`
+2. Create user documentation in `~/switchboard/amplifier/`
+3. Link the documentation from daily notes or other switchboard pages
+4. Build a web of interconnected knowledge
+
+**Obsidian linking**: Use `[[amplifier/PAGE-NAME]]` format for internal links within switchboard documentation to create a navigable knowledge web.
+
 # Claude's Working Philosophy and Memory System
 
 ## Critical Operating Principles
