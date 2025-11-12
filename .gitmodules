@@ -1,0 +1,3 @@
+[submodule "ai_working/ai_coding_thoughts"]
+	path = ai_working/ai_coding_thoughts
+	url = https://github.com/Joi/ai_coding_thoughts.git
