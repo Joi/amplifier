@@ -4,9 +4,6 @@ End-to-end integration tests for Phase 1.
 Tests the entire flow: CLI → YAML generation → DotRunner validation
 """
 
-import subprocess
-from pathlib import Path
-
 import yaml
 
 from ai_working.dotrunner.workflow import Workflow

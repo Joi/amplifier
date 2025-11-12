@@ -10,11 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from amplifier.flow_builder.ai_analysis import (
-    AgentAnalysis,
-    analyze_agent,
-    recommend_agent,
-)
+from amplifier.flow_builder.ai_analysis import AgentAnalysis
+from amplifier.flow_builder.ai_analysis import analyze_agent
+from amplifier.flow_builder.ai_analysis import recommend_agent
 from amplifier.flow_builder.discovery import Agent
 
 
@@ -157,9 +155,7 @@ class TestAgentAnalysisDataclass:
         """AgentAnalysis can be converted to dict for caching."""
         from dataclasses import asdict
 
-        analysis = AgentAnalysis(
-            agent_name="test-agent", capabilities=["Capability 1", "Capability 2"]
-        )
+        analysis = AgentAnalysis(agent_name="test-agent", capabilities=["Capability 1", "Capability 2"])
 
         data = asdict(analysis)
 

@@ -5,10 +5,6 @@ Following TEST-FIRST discipline: These tests define the contract (studs)
 for the validation module before implementation.
 """
 
-from pathlib import Path
-
-import pytest
-
 from amplifier.flow_builder.validation import WorkflowSpec
 from amplifier.flow_builder.validation import validate_workflow
 
@@ -142,7 +138,9 @@ class TestWorkflowSpecDataClass:
     def test_workflow_spec_has_required_fields(self):
         """WorkflowSpec has name, description, and nodes fields."""
         spec = WorkflowSpec(
-            name="test-workflow", description="Test description", nodes=[{"id": "step1", "name": "Step", "prompt": "Do"}]
+            name="test-workflow",
+            description="Test description",
+            nodes=[{"id": "step1", "name": "Step", "prompt": "Do"}],
         )
 
         assert spec.name == "test-workflow"

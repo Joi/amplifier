@@ -25,7 +25,7 @@ async def parse_context(user_input: str, required_fields: list[str]) -> dict[str
 
     prompt = f"""Extract these fields from the user's input:
 
-Required fields: {', '.join(required_fields)}
+Required fields: {", ".join(required_fields)}
 
 User input: {user_input}
 

@@ -60,7 +60,7 @@ def scan_flows(flows_dir: Path) -> list[FlowInfo]:
 
         try:
             # Read YAML
-            with open(yaml_file, "r", encoding="utf-8") as f:
+            with open(yaml_file, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             # Extract workflow metadata

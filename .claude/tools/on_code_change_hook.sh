@@ -4,8 +4,8 @@
 # Intelligently finds and runs 'make check' from the appropriate directory
 # Handles virtual environment issues in git worktrees
 
-# Ensure proper environment for make to find /bin/sh
-export PATH="/bin:/usr/bin:$PATH"
+# Ensure proper environment for make to find /bin/sh, uv, and rust
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:/bin:/usr/bin:$PATH"
 export SHELL="/bin/bash"
 
 # Expected JSON input format from stdin:

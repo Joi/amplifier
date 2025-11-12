@@ -48,9 +48,18 @@ class TestMultiNodeInterrogation:
             "Test",
             "10",  # invalid (too many)
             "3",  # valid
-            "Node 1", "Prompt 1", "", "",
-            "Node 2", "Prompt 2", "", "",
-            "Node 3", "Prompt 3", "", "",
+            "Node 1",
+            "Prompt 1",
+            "",
+            "",
+            "Node 2",
+            "Prompt 2",
+            "",
+            "",
+            "Node 3",
+            "Prompt 3",
+            "",
+            "",
         ]
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
 
@@ -65,9 +74,18 @@ class TestMultiNodeInterrogation:
             "test",
             "Test",
             "3",
-            "A", "Do A", "", "",
-            "B", "Do B", "", "",
-            "C", "Do C", "", "",
+            "A",
+            "Do A",
+            "",
+            "",
+            "B",
+            "Do B",
+            "",
+            "",
+            "C",
+            "Do C",
+            "",
+            "",
         ]
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
 
@@ -84,8 +102,14 @@ class TestMultiNodeInterrogation:
             "test",
             "Test",
             "2",
-            "Step 1", "Prompt 1", "", "data, status",
-            "Step 2", "Prompt 2", "", "",
+            "Step 1",
+            "Prompt 1",
+            "",
+            "data, status",
+            "Step 2",
+            "Prompt 2",
+            "",
+            "",
         ]
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
 
@@ -99,8 +123,14 @@ class TestMultiNodeInterrogation:
             "test",
             "Test",
             "2",
-            "Step 1", "Prompt 1", "zen-architect", "",
-            "Step 2", "Prompt 2", "", "",
+            "Step 1",
+            "Prompt 1",
+            "zen-architect",
+            "",
+            "Step 2",
+            "Prompt 2",
+            "",
+            "",
         ]
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
 

@@ -38,9 +38,7 @@ class TestBasicContextParsing:
 
         with patch("amplifier.flow_builder.nl_parser.ClaudeSession") as mock_session:
             mock_instance = mock_session.return_value.__aenter__.return_value
-            mock_instance.query.return_value.content = (
-                '{"project": "my-app", "files": "token"}'
-            )
+            mock_instance.query.return_value.content = '{"project": "my-app", "files": "token"}'
 
             result = await parse_context(user_input, required_fields)
 

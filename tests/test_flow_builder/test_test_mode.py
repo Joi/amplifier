@@ -4,15 +4,9 @@ Tests for interactive test mode - Phase 7.
 TEST-FIRST: Define contract for workflow testing without execution.
 """
 
-from pathlib import Path
-
-import pytest
-
-from amplifier.flow_builder.test_mode import (
-    TestSession,
-    save_test_recording,
-    start_test_session,
-)
+from amplifier.flow_builder.test_mode import TestSession
+from amplifier.flow_builder.test_mode import save_test_recording
+from amplifier.flow_builder.test_mode import start_test_session
 
 
 class TestSessionInitialization:
@@ -103,6 +97,7 @@ class TestSessionAdvancement:
         session = TestSession(workflow_name="test", nodes=nodes)
 
         session.advance({"result": "success", "data": "value1"})
+        assert session.mock_outputs is not None
         assert "node1" in session.mock_outputs
         assert session.mock_outputs["node1"] == {"result": "success", "data": "value1"}
 
@@ -128,6 +123,7 @@ class TestSessionAdvancement:
         session = TestSession(workflow_name="test", nodes=nodes)
 
         session.advance({})
+        assert session.mock_outputs is not None
         assert session.mock_outputs["node1"] == {}
 
 

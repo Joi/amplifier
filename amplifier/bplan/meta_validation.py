@@ -405,7 +405,7 @@ def main() -> None:
     print("INDIVIDUAL CRITERIA:")
     print()
 
-    for criterion_id, result in report["criteria_results"].items():
+    for _criterion_id, result in report["criteria_results"].items():
         status = "✅" if result["met"] else "❌"
         print(f"{status} {result['name']}")
         print(f"   {result['description']}")

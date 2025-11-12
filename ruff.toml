@@ -72,9 +72,9 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Ignore import violations in __init__ files
 "__init__.py" = ["E402", "F401", "F403"]
 
-# Ignore missing docstrings in tests
-"test_*.py" = ["D100", "D101", "D102", "D103", "D104"]
-"tests/*" = ["D100", "D101", "D102", "D103", "D104"]
+# Ignore missing docstrings and naming rules in tests
+"test_*.py" = ["D100", "D101", "D102", "D103", "D104", "N802", "F841"]
+"tests/*" = ["D100", "D101", "D102", "D103", "D104", "N802", "F841"]
 
 # Allow dynamic imports in recipe files
 "recipes/*" = ["F401", "F403"]

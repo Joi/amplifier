@@ -94,7 +94,7 @@ class SafeExpressionEvaluator:
         if isinstance(node, ast.Compare):
             # Handle comparisons: a > b, a == b, etc.
             left = self._eval_node(node.left, context)
-            for op, comparator in zip(node.ops, node.comparators):
+            for op, comparator in zip(node.ops, node.comparators, strict=False):
                 right = self._eval_node(comparator, context)
                 if type(op) not in self.OPERATORS:
                     raise ValueError(f"Unsupported operator: {type(op).__name__}")
@@ -103,7 +103,7 @@ class SafeExpressionEvaluator:
                 left = right
             return True
 
-        elif isinstance(node, ast.BoolOp):
+        if isinstance(node, ast.BoolOp):
             # Handle and/or
             if type(node.op) not in self.OPERATORS:
                 raise ValueError(f"Unsupported boolean operator: {type(node.op).__name__}")
@@ -111,10 +111,10 @@ class SafeExpressionEvaluator:
             values = [self._eval_node(n, context) for n in node.values]
             if isinstance(node.op, ast.And):
                 return all(values)
-            else:  # Or
-                return any(values)
+            # Or
+            return any(values)
 
-        elif isinstance(node, ast.Name):
+        if isinstance(node, ast.Name):
             # Variable lookup
             var_name = node.id
             if var_name not in context:
@@ -122,23 +122,23 @@ class SafeExpressionEvaluator:
                 return None
             return context[var_name]
 
-        elif isinstance(node, ast.Constant):
+        if isinstance(node, ast.Constant):
             # Literal value (Python 3.8+)
             return node.value
 
-        elif isinstance(node, ast.Num):
+        if isinstance(node, ast.Num):
             # Numeric literal (Python 3.7 compatibility)
             return node.n
 
-        elif isinstance(node, ast.Str):
+        if isinstance(node, ast.Str):
             # String literal (Python 3.7 compatibility)
             return node.s
 
-        elif isinstance(node, ast.NameConstant):
+        if isinstance(node, ast.NameConstant):
             # True, False, None (Python 3.7 compatibility)
             return node.value
 
-        elif isinstance(node, ast.Call):
+        if isinstance(node, ast.Call):
             # Handle function calls (limited set)
             if isinstance(node.func, ast.Name):
                 func_name = node.func.id
@@ -147,13 +147,10 @@ class SafeExpressionEvaluator:
                         raise ValueError("len() requires exactly 1 argument")
                     arg = self._eval_node(node.args[0], context)
                     return len(arg) if arg is not None else 0
-                else:
-                    raise ValueError(f"Unsupported function: {func_name}")
-            else:
-                raise ValueError("Only simple function calls are supported")
+                raise ValueError(f"Unsupported function: {func_name}")
+            raise ValueError("Only simple function calls are supported")
 
-        else:
-            raise ValueError(f"Unsupported expression type: {type(node).__name__}")
+        raise ValueError(f"Unsupported expression type: {type(node).__name__}")
 
 
 def evaluate_condition(condition: str, context: dict[str, Any]) -> bool:

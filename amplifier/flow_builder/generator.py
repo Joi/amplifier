@@ -41,7 +41,7 @@ def generate_yaml(spec: WorkflowSpec, output_path: Path) -> None:
 
     # Add context if present
     if spec.context:
-        workflow_info["context"] = spec.context
+        workflow_info["context"] = spec.context  # type: ignore[typeddict-item]
 
     # Convert nodes (clean up optional fields)
     nodes_list = []

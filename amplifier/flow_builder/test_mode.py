@@ -18,7 +18,7 @@ class TestSession:
     workflow_name: str
     nodes: list[dict[str, Any]]
     current_index: int = 0
-    mock_outputs: dict[str, dict[str, Any]] = None
+    mock_outputs: dict[str, dict[str, Any]] | None = None
 
     def __post_init__(self):
         if self.mock_outputs is None:
@@ -38,7 +38,8 @@ class TestSession:
         """Record outputs and move to next node."""
         if not self.is_complete():
             node_id = self.nodes[self.current_index]["id"]
-            self.mock_outputs[node_id] = outputs
+            if self.mock_outputs is not None:
+                self.mock_outputs[node_id] = outputs
             self.current_index += 1
 
 

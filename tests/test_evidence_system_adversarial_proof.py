@@ -36,7 +36,7 @@ class TestAdversarialEvidenceProof:
     @pytest.fixture
     def agent_api(self, temp_evidence_dir: Path) -> AgentAPI:
         """Create AgentAPI with temporary evidence directory."""
-        return AgentAPI(evidence_dir=str(temp_evidence_dir))
+        return AgentAPI(evidence_dir=temp_evidence_dir)  # type: ignore[arg-type]
 
     @pytest.fixture
     def evidence_store(self, temp_evidence_dir: Path) -> EvidenceStore:
@@ -88,8 +88,8 @@ class TestAdversarialEvidenceProof:
 
         # Create orchestrator
         orchestrator = WorkflowOrchestrator(
-            evidence_dir=temp_evidence_dir,
-            golden_dir=golden_dir,
+            evidence_dir=temp_evidence_dir,  # type: ignore[arg-type]
+            golden_dir=golden_dir,  # type: ignore[arg-type]
         )
 
         # Coder agent tries to implement a function that needs output "42"
@@ -124,7 +124,7 @@ def calculate_answer():
 """
 
         # Execute workflow
-        result = orchestrator.execute(
+        result = orchestrator.execute(  # type: ignore[attr-defined]
             spec=spec,
             test_code=test_code,
             golden_content="Expected output: 42",
@@ -218,8 +218,8 @@ def calculate_answer():
         golden_dir = temp_evidence_dir / "golden"
 
         orchestrator = WorkflowOrchestrator(
-            evidence_dir=temp_evidence_dir,
-            golden_dir=golden_dir,
+            evidence_dir=temp_evidence_dir,  # type: ignore[arg-type]
+            golden_dir=golden_dir,  # type: ignore[arg-type]
         )
 
         # Real task: Implement a factorial function
@@ -241,7 +241,7 @@ factorial(5) = 120
 factorial(10) = 3628800"""
 
         # Execute workflow
-        result = orchestrator.execute(
+        result = orchestrator.execute(  # type: ignore[attr-defined]
             spec=spec,
             test_code=test_code,
             golden_content=golden_content,
@@ -251,7 +251,7 @@ factorial(10) = 3628800"""
         assert "evidence_id" in result
 
         # Verify evidence was created
-        evidence = orchestrator.evidence_store.get_evidence(result["evidence_id"])
+        evidence = orchestrator.evidence_store.get_evidence(result["evidence_id"])  # type: ignore[attr-defined]
         assert evidence is not None
         assert evidence.type == "test_output"
 

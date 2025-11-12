@@ -7,8 +7,6 @@ for the discovery module before implementation.
 
 from pathlib import Path
 
-import pytest
-
 from amplifier.flow_builder.discovery import Agent
 from amplifier.flow_builder.discovery import scan_agents
 
@@ -135,9 +133,7 @@ class TestAgentDataClass:
 
     def test_agent_has_required_fields(self):
         """Agent has name, description, and toml_path fields."""
-        agent = Agent(
-            name="test-agent", description="Test description", toml_path=Path("/fake/path.toml")
-        )
+        agent = Agent(name="test-agent", description="Test description", toml_path=Path("/fake/path.toml"))
 
         assert agent.name == "test-agent"
         assert agent.description == "Test description"

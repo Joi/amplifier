@@ -9,7 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from amplifier.flow_builder.flow_discovery import FlowInfo, scan_flows
+from amplifier.flow_builder.flow_discovery import FlowInfo
+from amplifier.flow_builder.flow_discovery import scan_flows
 
 
 class TestFlowScanning:

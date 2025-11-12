@@ -5,16 +5,14 @@ TEST-FIRST: Define contract before implementation.
 """
 
 import json
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 
-from amplifier.flow_builder.flow_executor import (
-    ExecutionResult,
-    execute_workflow,
-    list_flows,
-)
+from amplifier.flow_builder.flow_executor import ExecutionResult
+from amplifier.flow_builder.flow_executor import execute_workflow
+from amplifier.flow_builder.flow_executor import list_flows
 
 
 class TestFlowListing:
@@ -86,9 +84,7 @@ class TestWorkflowExecution:
         flow = tmp_path / "test.yaml"
         flow.write_text("workflow:\n  name: test")
 
-        mock_run.return_value = Mock(
-            returncode=1, stdout="partial output", stderr="Error: node failed"
-        )
+        mock_run.return_value = Mock(returncode=1, stdout="partial output", stderr="Error: node failed")
 
         result = execute_workflow(flow)
 
@@ -108,7 +104,7 @@ class TestWorkflowExecution:
         result = execute_workflow(flow)
 
         assert result.status == "failed"
-        assert "timed out" in result.error.lower()
+        assert result.error and "timed out" in result.error.lower()
 
 
 class TestExecutionResult:
@@ -123,9 +119,7 @@ class TestExecutionResult:
 
     def test_execution_result_failure(self):
         """Should represent failed execution."""
-        result = ExecutionResult(
-            status="failed", output="partial", error="validation failed"
-        )
+        result = ExecutionResult(status="failed", output="partial", error="validation failed")
         assert result.status == "failed"
         assert result.error == "validation failed"
 

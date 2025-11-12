@@ -57,16 +57,11 @@ def execute_workflow(workflow_path: Path, context: dict[str, Any] | None = None)
         cmd.extend(["--context", json.dumps(context)])
 
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=300, check=False
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
 
         if result.returncode == 0:
             return ExecutionResult(status="completed", output=result.stdout)
-        else:
-            return ExecutionResult(
-                status="failed", output=result.stdout, error=result.stderr
-            )
+        return ExecutionResult(status="failed", output=result.stdout, error=result.stderr)
 
     except subprocess.TimeoutExpired:
         return ExecutionResult(

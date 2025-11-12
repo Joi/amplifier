@@ -6,13 +6,11 @@ TEST-FIRST: Define contract for custom exceptions and error formatting.
 
 import pytest
 
-from amplifier.flow_builder.errors import (
-    AgentNotFoundError,
-    FlowBuilderError,
-    InvalidWorkflowError,
-    WorkflowNotFoundError,
-    format_error_message,
-)
+from amplifier.flow_builder.errors import AgentNotFoundError
+from amplifier.flow_builder.errors import FlowBuilderError
+from amplifier.flow_builder.errors import InvalidWorkflowError
+from amplifier.flow_builder.errors import WorkflowNotFoundError
+from amplifier.flow_builder.errors import format_error_message
 
 
 class TestExceptionHierarchy:
@@ -146,9 +144,7 @@ class TestErrorContext:
 
     def test_error_with_detailed_context(self):
         """Should allow detailed context in error messages."""
-        error = InvalidWorkflowError(
-            "Node 'validate' missing required field 'prompt' at line 15"
-        )
+        error = InvalidWorkflowError("Node 'validate' missing required field 'prompt' at line 15")
         message = format_error_message(error)
 
         assert "Node 'validate'" in message
@@ -157,8 +153,7 @@ class TestErrorContext:
     def test_format_error_does_not_lose_details(self):
         """Should not truncate or lose error details."""
         long_error = AgentNotFoundError(
-            "Agent 'super-long-agent-name-that-does-not-exist' "
-            "not found in available agents list"
+            "Agent 'super-long-agent-name-that-does-not-exist' not found in available agents list"
         )
         message = format_error_message(long_error)
 

@@ -6,13 +6,12 @@ Phase 3.2: Integrate AI recommendations into interrogation flow
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from amplifier.flow_builder.discovery import Agent
 from amplifier.flow_builder.interrogation import interrogate_with_ai_recommendations
-from amplifier.flow_builder.validation import WorkflowSpec
 
 
 class TestInterrogationWithAI:
