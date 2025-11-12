@@ -49,10 +49,45 @@ This file is reserved for Claude Code-specific instructions.
 **When creating new features:**
 1. Build the feature in `~/amplifier/`
 2. Create user documentation in `~/switchboard/amplifier/`
-3. Link the documentation from daily notes or other switchboard pages
-4. Build a web of interconnected knowledge
+3. **Add project to `~/switchboard/amplifier/project-status.json`** with:
+   - Unique ID (kebab-case)
+   - Title and file reference
+   - Status (not-started/started/completed)
+   - Priority level
+   - Next actions
+   - repoId linking to repository
+4. Link the documentation from daily notes or other switchboard pages
+5. Build a web of interconnected knowledge
 
 **Obsidian linking**: Use `[[amplifier/PAGE-NAME]]` format for internal links within switchboard documentation to create a navigable knowledge web.
+
+## Rule: New Amplifier Projects Go in project-status.json
+
+**CRITICAL**: Whenever you start a new Amplifier project, ALWAYS add it to `~/switchboard/amplifier/project-status.json`.
+
+**Format:**
+```json
+{
+  "id": "project-name-kebab-case",
+  "title": "Human Readable Project Name",
+  "file": "project-documentation.md",
+  "repoId": "amplifier",
+  "status": "started",
+  "priority": "high",
+  "tags": ["relevant", "tags"],
+  "createdDate": "2025-11-12",
+  "nextActions": [
+    "First thing to do",
+    "Second thing to do"
+  ]
+}
+```
+
+**This ensures:**
+- Project appears in daily notes
+- Progress is tracked
+- Documentation is linked
+- Status is visible at a glance
 
 # Claude's Working Philosophy and Memory System
 
