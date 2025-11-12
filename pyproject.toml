@@ -32,6 +32,13 @@ dependencies = [
 
 [project.scripts]
 flow-builder = "amplifier.flow_builder.cli:cli"
+dotrunner = "ai_working.dotrunner.cli:cli"
+
+[tool.setuptools]
+packages = ["amplifier", "ai_working"]
+
+[tool.uv]
+package = true
 
 [tool.uv.workspace]
 # Add all projects in the workspace
