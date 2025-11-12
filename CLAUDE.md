@@ -48,29 +48,71 @@ This file is reserved for Claude Code-specific instructions.
 
 **When creating new features:**
 1. Build the feature in `~/amplifier/`
-2. Create user documentation in `~/switchboard/amplifier/`
+2. **Create project documentation file** in `~/switchboard/amplifier/PROJECT-NAME.md` with:
+   - Project overview and purpose
+   - Key features
+   - Links to relevant code files in the repo
+   - Usage instructions
+   - Status and progress
+   - Related documentation links
 3. **Add project to `~/switchboard/amplifier/project-status.json`** with:
    - Unique ID (kebab-case)
-   - Title and file reference
+   - Title and file reference (must match the .md file created in step 2)
    - Status (not-started/started/completed)
    - Priority level
    - Next actions
    - repoId linking to repository
-4. Link the documentation from daily notes or other switchboard pages
-5. Build a web of interconnected knowledge
+4. **Update `~/switchboard/amplifier/README.md`** to add the new project to the documentation index
+5. Link the documentation from daily notes or other switchboard pages
+6. Build a web of interconnected knowledge
 
 **Obsidian linking**: Use `[[amplifier/PAGE-NAME]]` format for internal links within switchboard documentation to create a navigable knowledge web.
 
-## Rule: New Amplifier Projects Go in project-status.json
+## Rule: New Amplifier Projects Require Documentation File + JSON Entry
 
-**CRITICAL**: Whenever you start a new Amplifier project, ALWAYS add it to `~/switchboard/amplifier/project-status.json`.
+**CRITICAL**: Whenever you start a new Amplifier project, you MUST:
 
-**Format:**
+### Step 1: Create the Project Documentation File
+Create `~/switchboard/amplifier/PROJECT-NAME.md` with:
+```markdown
+# Project Name
+
+**Status:** Started/Completed
+**Priority:** High/Medium/Low
+**Repository:** repo-name
+**Created:** 2025-11-12
+
+## Overview
+[What this project is about]
+
+## Purpose
+[Why this project exists]
+
+## Key Features
+- Feature 1
+- Feature 2
+
+## Key Files
+- `path/to/main/file.py` - Description
+- `path/to/another/file.js` - Description
+
+## Usage
+[How to use what was built]
+
+## Status
+[Current progress]
+
+## Related Documentation
+- [[amplifier/OTHER-DOC|Related Project]]
+```
+
+### Step 2: Add to project-status.json
+Add entry to `~/switchboard/amplifier/project-status.json`:
 ```json
 {
   "id": "project-name-kebab-case",
   "title": "Human Readable Project Name",
-  "file": "project-documentation.md",
+  "file": "PROJECT-NAME.md",  // MUST match the file created in Step 1
   "repoId": "amplifier",
   "status": "started",
   "priority": "high",
@@ -83,11 +125,15 @@ This file is reserved for Claude Code-specific instructions.
 }
 ```
 
+### Step 3: Update README.md
+Add the new project to `~/switchboard/amplifier/README.md` documentation index under appropriate section.
+
 **This ensures:**
-- Project appears in daily notes
+- Project appears in daily notes with working link
 - Progress is tracked
-- Documentation is linked
+- Documentation is accessible
 - Status is visible at a glance
+- No broken links in Obsidian vault
 
 # Claude's Working Philosophy and Memory System
 
