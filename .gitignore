@@ -72,3 +72,7 @@ ai_working/tmp
 .beads/*.db
 # DotRunner sessions
 .dotrunner/
+
+# MCP servers (external repos managed separately)
+mcp-servers/*/
+!mcp-servers/README.md
