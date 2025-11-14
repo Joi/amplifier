@@ -49,7 +49,40 @@ This directory contains Model Context Protocol (MCP) servers that provide Claude
 
 ---
 
-## Claude Desktop Configuration
+## Configuration
+
+### For Claude Code (Recommended)
+
+Add MCP servers using the CLI:
+
+```bash
+# Academic Search MCP
+claude mcp add --transport stdio academic-search -- \
+  /Users/joi/amplifier/mcp-servers/academic-search/.venv/bin/python \
+  /Users/joi/amplifier/mcp-servers/academic-search/server.py
+
+# Paper Search MCP
+claude mcp add --transport stdio paper-search -- \
+  /Users/joi/amplifier/mcp-servers/paper-search/.venv/bin/python \
+  -m paper_search_mcp.server
+```
+
+**Verify connection:**
+```bash
+claude mcp list
+```
+
+You should see:
+```
+academic-search: ... - ✓ Connected
+paper-search: ... - ✓ Connected
+```
+
+**Configuration Location:** `~/.claude.json` (per project)
+
+---
+
+### For Claude Desktop (Alternative)
 
 Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
@@ -78,6 +111,8 @@ Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
 ```
 
 **Important:** Restart Claude Desktop after editing the config file.
+
+**Note:** Claude Code and Claude Desktop are separate environments with different configurations.
 
 ---
 
@@ -166,7 +201,32 @@ uv pip install -e .
 
 ## Troubleshooting
 
-### MCP Server Not Appearing
+### Claude Code: MCP Servers Connected But Tools Not Accessible
+
+**Symptom:** `claude mcp list` shows servers as "✓ Connected" but tools cannot be called directly in conversations.
+
+**Status:** Known limitation (as of 2025-11-14). MCP servers are configured correctly but tool access from AI assistant is not yet working.
+
+**Workarounds:**
+
+1. **Use natural language** - Try describing what you want instead of direct tool calls:
+   ```
+   "Search for papers by Alexander Lew on probabilistic programming"
+   ```
+
+2. **Manual CLI invocation** - Call MCP server Python scripts directly:
+   ```bash
+   cd ~/amplifier/mcp-servers/academic-search
+   # Construct JSON-RPC request and pipe to server
+   ```
+
+3. **Hybrid approach** - Use WebSearch/WebFetch for now, transition to MCP when access resolved
+
+**Investigation ongoing:** See `~/term-sheet-value/MCP-STATUS.md` for details.
+
+---
+
+### Claude Desktop: MCP Server Not Appearing
 - Ensure Claude Desktop was restarted after config changes
 - Check `claude_desktop_config.json` for valid JSON syntax
 - Verify file paths are absolute and correct
