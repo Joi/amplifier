@@ -1,0 +1,44 @@
+{
+  "tea-journey": {
+    "name": "Joi's Tea Journey",
+    "description": "Tea ceremony blog at tea.ito.com",
+    "data_source": "collection://1af86e03-7cf8-43f9-adba-de2c86c437fa",
+    "database_id": "9831cd3d87614f45a4f3108de890c35b",
+    "main_page": "587bb344cb9b4e7788fba1d260630801",
+    "schema": {
+      "title": "Title",
+      "date": "Publish Date",
+      "photographer": "Photographer",
+      "writer": "Writer",
+      "language": "Select"
+    },
+    "languages": ["English", "Japanese"],
+    "defaults": {
+      "photographer": "Joichi Ito",
+      "writer": "Joichi Ito",
+      "language": "English"
+    },
+    "navigation_synced_block": "260687d619d94dae83e680d7e673aedc"
+  },
+  "tea-journey-jp": {
+    "name": "Joi Itoの茶の湯",
+    "description": "Japanese tea ceremony blog",
+    "data_source": "collection://7ca749eb-4b3a-46ae-8d8b-4512da1947dc",
+    "database_id": "8059234b4bed4ed0b13ce04fe99e9665",
+    "main_page": "8e48020e8fc841cdb9d355b53f64b4d7",
+    "schema": {
+      "title": "Title",
+      "date": "Publish Date",
+      "photographer": "Photographer",
+      "writer": "Writer",
+      "language": "Select"
+    },
+    "languages": ["English", "Japanese"],
+    "defaults": {
+      "photographer": "Joichi Ito",
+      "writer": "Joichi Ito",
+      "language": "Japanese"
+    },
+    "navigation_synced_block": "c24f6c7989934a29bba0b4c64cc51e81"
+  }
+}

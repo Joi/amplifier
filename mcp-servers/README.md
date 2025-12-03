@@ -201,28 +201,39 @@ uv pip install -e .
 
 ## Troubleshooting
 
-### Claude Code: MCP Servers Connected But Tools Not Accessible
+### Claude Code: MCP Tools Status (Updated 2025-11-28)
 
-**Symptom:** `claude mcp list` shows servers as "✓ Connected" but tools cannot be called directly in conversations.
+**Current Status:** ✅ **WORKING** in main session | ❌ **Subagents still broken**
 
-**Status:** Known limitation (as of 2025-11-14). MCP servers are configured correctly but tool access from AI assistant is not yet working.
+**Main Session:** MCP tools are now fully accessible! You can use all tools directly:
+```
+# These all work in the main Claude Code session:
+mcp__academic-search__search_papers
+mcp__paper-search__search_arxiv
+mcp__paper-search__search_semantic
+# etc.
+```
 
-**Workarounds:**
+**Subagents (Task tool):** MCP tools are NOT inherited by subagents launched via Task tool.
+- GitHub Issue #7296 remains open
+- Workaround: Perform MCP searches in main session, not via delegated agents
 
-1. **Use natural language** - Try describing what you want instead of direct tool calls:
-   ```
-   "Search for papers by Alexander Lew on probabilistic programming"
-   ```
+### If MCP Tools Still Don't Work
 
-2. **Manual CLI invocation** - Call MCP server Python scripts directly:
-   ```bash
-   cd ~/amplifier/mcp-servers/academic-search
-   # Construct JSON-RPC request and pipe to server
-   ```
+1. **Check configuration location:** Must be in `~/.claude.json` or project `.mcp.json` (NOT `~/.claude/settings.json`)
+2. **Verify connection:** Run `claude mcp list` - servers should show "✓ Connected"
+3. **Restart Claude Code:** Sometimes needed after config changes
+4. **Check tool names:** Use exact format `mcp__server-name__tool_name`
 
-3. **Hybrid approach** - Use WebSearch/WebFetch for now, transition to MCP when access resolved
+### Subagent MCP Access (Known Issue)
 
-**Investigation ongoing:** See `~/term-sheet-value/MCP-STATUS.md` for details.
+**Symptom:** Subagents report "I cannot see or access the MCP tools" despite main session having access.
+
+**Status:** Known bug (GitHub #7296), no fix yet.
+
+**Workaround:** Use MCP tools in main session only. For delegated research tasks, subagents will fall back to WebSearch/WebFetch.
+
+**Investigation details:** See `~/term-sheet-value/MCP-STATUS.md` for full analysis.
 
 ---
 
@@ -253,5 +264,5 @@ uv pip install -e .
 
 ---
 
-**Last Updated:** 2025-11-14
+**Last Updated:** 2025-11-28
 **Maintained By:** Amplifier team

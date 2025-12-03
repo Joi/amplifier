@@ -76,3 +76,6 @@ ai_working/tmp
 # MCP servers (external repos managed separately)
 mcp-servers/*/
 !mcp-servers/README.md
+
+# Private repos nested inside amplifier
+notion-blog-post/
