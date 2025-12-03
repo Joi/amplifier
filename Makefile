@@ -61,6 +61,9 @@ default: ## Show essential commands
 	@echo "Web to Markdown:"
 	@echo "  make web-to-md       Convert web pages to markdown"
 	@echo ""
+	@echo "Crypto Pricing:"
+	@echo "  make crypto COINS=bitcoin,ethereum [CURRENCY=jpy]  Get crypto prices"
+	@echo ""
 	@echo "Other:"
 	@echo "  make clean          Clean build artifacts"
 	@echo "  make help           Show ALL available commands"
@@ -138,6 +141,9 @@ help: ## Show ALL available commands
 	@echo ""
 	@echo "WEB TO MARKDOWN:"
 	@echo "  make web-to-md URL=<url> [URL2=<url>] [OUTPUT=<path>]  Convert web pages to markdown (saves to content_dirs[0]/sites/)"
+	@echo ""
+	@echo "CRYPTO PRICING:"
+	@echo "  make crypto COINS=bitcoin,ethereum,sui [CURRENCY=jpy] [JSON=true]  Get crypto prices"
 	@echo ""
 	@echo "UTILITIES:"
 	@echo "  make clean           Clean build artifacts"
@@ -729,6 +735,14 @@ workspace-info: ## Show workspace information
 	@echo ""
 	$(call list_projects)
 	@echo ""
+
+# Cryptocurrency Pricing
+crypto: ## Get crypto prices. Usage: make crypto COINS=bitcoin,ethereum,sui [CURRENCY=jpy] [JSON=true]
+	@COINS_LIST=$$(echo "$(COINS)" | tr ',' ' '); \
+	ARGS=""; \
+	if [ -n "$(CURRENCY)" ]; then ARGS="$$ARGS --currency $(CURRENCY)"; fi; \
+	if [ "$(JSON)" = "true" ]; then ARGS="$$ARGS --json"; fi; \
+	uv run python -m amplifier.crypto $$COINS_LIST $$ARGS
 
 # DOT to Mermaid Converter
 dot-to-mermaid: ## Convert DOT files to Mermaid format. Usage: make dot-to-mermaid INPUT="path/to/dot/files"
