@@ -79,3 +79,4 @@ mcp-servers/*/
 
 # Private repos nested inside amplifier
 notion-blog-post/
+.playwright-mcp/
