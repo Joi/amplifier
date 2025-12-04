@@ -1,7 +1,7 @@
 """Draft workspace management for blog posts."""
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
 
@@ -67,13 +67,13 @@ class DraftWorkspace:
     def to_prompt_context(self) -> str:
         """Generate context string for AI draft generation."""
         lines = [
-            f"# Blog Post Draft Context",
-            f"",
+            "# Blog Post Draft Context",
+            "",
             f"**Blog:** {self.blog_slug}",
             f"**Working Title:** {self.working_title}",
             f"**Event Date:** {self.event_date}",
             f"**Language:** {self.language}",
-            f"",
+            "",
         ]
 
         if self.event_type or self.occasion:

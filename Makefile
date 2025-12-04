@@ -64,6 +64,9 @@ default: ## Show essential commands
 	@echo "Crypto Pricing:"
 	@echo "  make crypto COINS=bitcoin,ethereum [CURRENCY=jpy]  Get crypto prices"
 	@echo ""
+	@echo "Knowledge Curation:"
+	@echo "  make knowledge-curate        Curate vault like a Wikipedia editor"
+	@echo ""
 	@echo "Other:"
 	@echo "  make clean          Clean build artifacts"
 	@echo "  make help           Show ALL available commands"
@@ -144,6 +147,10 @@ help: ## Show ALL available commands
 	@echo ""
 	@echo "CRYPTO PRICING:"
 	@echo "  make crypto COINS=bitcoin,ethereum,sui [CURRENCY=jpy] [JSON=true]  Get crypto prices"
+	@echo ""
+	@echo "KNOWLEDGE CURATION:"
+	@echo "  make knowledge-curate VAULT=~/switchboard [DOMAIN=...] [RESUME=true] [REPORT_ONLY=true]"
+	@echo "                       Curate vault like a Wikipedia editor"
 	@echo ""
 	@echo "UTILITIES:"
 	@echo "  make clean           Clean build artifacts"
@@ -743,6 +750,16 @@ crypto: ## Get crypto prices. Usage: make crypto COINS=bitcoin,ethereum,sui [CUR
 	if [ -n "$(CURRENCY)" ]; then ARGS="$$ARGS --currency $(CURRENCY)"; fi; \
 	if [ "$(JSON)" = "true" ]; then ARGS="$$ARGS --json"; fi; \
 	uv run python -m amplifier.crypto $$COINS_LIST $$ARGS
+
+# Knowledge Curation
+knowledge-curate: ## Curate knowledge vault like a Wikipedia editor. Usage: make knowledge-curate VAULT=~/switchboard [DOMAIN=chanoyu/] [RESUME=true] [REPORT_ONLY=true]
+	@echo "📚 Starting knowledge curation..."
+	@ARGS="--vault \"$${VAULT:-$$HOME/switchboard}\""; \
+	if [ -n "$(DOMAIN)" ]; then ARGS="$$ARGS --domain \"$(DOMAIN)\""; fi; \
+	if [ "$(RESUME)" = "true" ]; then ARGS="$$ARGS --resume"; fi; \
+	if [ "$(REPORT_ONLY)" = "true" ]; then ARGS="$$ARGS --report-only"; fi; \
+	if [ "$(VERBOSE)" = "true" ]; then ARGS="$$ARGS --verbose"; fi; \
+	eval uv run python -m scenarios.knowledge_curator $$ARGS
 
 # DOT to Mermaid Converter
 dot-to-mermaid: ## Convert DOT files to Mermaid format. Usage: make dot-to-mermaid INPUT="path/to/dot/files"

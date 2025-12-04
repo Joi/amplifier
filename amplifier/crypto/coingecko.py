@@ -22,7 +22,7 @@ Environment Variables:
 import os
 import time
 from dataclasses import dataclass
-from typing import Optional
+
 import httpx
 
 
@@ -36,8 +36,8 @@ class CoinPrice:
     current_price: float
     price_change_24h: float
     price_change_percentage_24h: float
-    market_cap: Optional[float] = None
-    volume_24h: Optional[float] = None
+    market_cap: float | None = None
+    volume_24h: float | None = None
 
 
 class CoinGeckoClient:
@@ -50,7 +50,7 @@ class CoinGeckoClient:
     _cache: dict[str, tuple[float, any]] = {}
     CACHE_TTL = 300  # 5 minutes
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """Initialize client with optional API key.
 
         Args:
@@ -59,11 +59,9 @@ class CoinGeckoClient:
         """
         self.api_key = api_key or os.environ.get("COINGECKO_API_KEY")
         self.base_url = self.PRO_API if self.api_key else self.PUBLIC_API
-        self.headers = (
-            {"x-cg-pro-api-key": self.api_key} if self.api_key else {}
-        )
+        self.headers = {"x-cg-pro-api-key": self.api_key} if self.api_key else {}
 
-    def _get_cached(self, key: str) -> Optional[any]:
+    def _get_cached(self, key: str) -> any | None:
         """Get cached value if not expired."""
         if key in self._cache:
             timestamp, data = self._cache[key]
@@ -75,11 +73,7 @@ class CoinGeckoClient:
         """Cache a value with timestamp."""
         self._cache[key] = (time.time(), data)
 
-    def get_prices(
-        self,
-        coin_ids: list[str],
-        currency: str = "usd"
-    ) -> list[CoinPrice]:
+    def get_prices(self, coin_ids: list[str], currency: str = "usd") -> list[CoinPrice]:
         """Get current prices for multiple coins.
 
         Args:
@@ -148,11 +142,7 @@ class CoinGeckoClient:
         return prices[0]
 
     def get_historical_prices(
-        self,
-        coin_id: str,
-        from_date: str,
-        to_date: Optional[str] = None,
-        currency: str = "usd"
+        self, coin_id: str, from_date: str, to_date: str | None = None, currency: str = "usd"
     ) -> list[dict]:
         """Get historical prices for a coin.
 
@@ -168,9 +158,7 @@ class CoinGeckoClient:
         from datetime import datetime
 
         from_ts = int(datetime.fromisoformat(from_date).timestamp())
-        to_ts = int(datetime.now().timestamp()) if not to_date else int(
-            datetime.fromisoformat(to_date).timestamp()
-        )
+        to_ts = int(datetime.now().timestamp()) if not to_date else int(datetime.fromisoformat(to_date).timestamp())
 
         cache_key = f"history:{coin_id}:{from_date}:{to_date}:{currency}"
         cached = self._get_cached(cache_key)
@@ -195,17 +183,14 @@ class CoinGeckoClient:
             date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
             prices_by_date[date] = price
 
-        result = [
-            {"date": date, "price": price}
-            for date, price in sorted(prices_by_date.items())
-        ]
+        result = [{"date": date, "price": price} for date, price in sorted(prices_by_date.items())]
 
         self._set_cache(cache_key, result)
         return result
 
 
 # Module-level convenience functions using default client
-_default_client: Optional[CoinGeckoClient] = None
+_default_client: CoinGeckoClient | None = None
 
 
 def _get_client() -> CoinGeckoClient:

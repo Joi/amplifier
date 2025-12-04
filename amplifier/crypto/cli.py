@@ -9,7 +9,9 @@ Usage:
 """
 
 import click
-from .coingecko import CoinGeckoClient, CoinPrice
+
+from .coingecko import CoinGeckoClient
+from .coingecko import CoinPrice
 
 
 def format_price(price: CoinPrice, currency: str) -> str:
@@ -27,16 +29,8 @@ def format_price(price: CoinPrice, currency: str) -> str:
 
 @click.command()
 @click.argument("coins", nargs=-1, required=True)
-@click.option(
-    "--currency", "-c",
-    default="usd",
-    help="Target currency (usd, jpy, eur, etc.)"
-)
-@click.option(
-    "--json", "-j", "as_json",
-    is_flag=True,
-    help="Output as JSON"
-)
+@click.option("--currency", "-c", default="usd", help="Target currency (usd, jpy, eur, etc.)")
+@click.option("--json", "-j", "as_json", is_flag=True, help="Output as JSON")
 def main(coins: tuple[str, ...], currency: str, as_json: bool) -> None:
     """Get cryptocurrency prices from CoinGecko.
 
@@ -57,6 +51,7 @@ def main(coins: tuple[str, ...], currency: str, as_json: bool) -> None:
 
     if as_json:
         import json
+
         output = [
             {
                 "id": p.id,

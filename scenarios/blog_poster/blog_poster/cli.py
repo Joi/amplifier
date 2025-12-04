@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from blog_poster.config import get_blog, load_blogs
-from blog_poster.drafts import DraftWorkspace, PhotoNote, create_workspace_template
+from blog_poster.drafts import DraftWorkspace, create_workspace_template
 from blog_poster.formatter import parse_content_file
 
 
@@ -149,7 +149,7 @@ def prepare_post(
 
     click.echo()
     click.echo("To create this post, run in Claude Code:")
-    click.echo(f"  Use notion-create-pages with the above parameters")
+    click.echo("  Use notion-create-pages with the above parameters")
 
 
 @main.command("template")
@@ -407,9 +407,9 @@ def draft_photos(directory: str, output: str | None):
 
     lines = [
         "# Photo Inventory",
-        f"",
+        "",
         f"Found {len(photos)} photos in {directory}",
-        f"",
+        "",
         "Edit this list to add captions and context:",
         "",
         "| # | Filename | Caption | Context |",
