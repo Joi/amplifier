@@ -3,6 +3,7 @@
 **/certs/config.json
 **/certs/mkcert
 .env
+.mcp.json
 *.local
 *.user
 *__local__*
