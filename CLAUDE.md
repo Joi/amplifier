@@ -17,6 +17,10 @@ This file is reserved for Claude Code-specific instructions.
 - @ai_context/design/DESIGN-FRAMEWORK.md
 - @ai_context/design/DESIGN-VISION.md
 
+# IMPORTANT: Knowledge Vault Triggers
+
+**When working with `~/switchboard/chanoyu/`**: ALWAYS read `~/switchboard/chanoyu/_STRUCTURE.md` FIRST before adding or modifying content. This file contains templates, conventions, and checklists for consistent formatting.
+
 # Documentation Guidelines
 
 ## Rule: User Documentation Goes in Switchboard
