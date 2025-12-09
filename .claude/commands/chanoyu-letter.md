@@ -86,6 +86,12 @@ Follow the structure from generator.md exactly:
 4. Apply appropriate health wish for the season
 5. Format signature: 令和[年]年[月]月吉日 / [sender name]
 
+**CRITICAL - Traditional Formatting:**
+- **NO PUNCTUATION** in the letter body - this is traditional Japanese letter etiquette
+- Do NOT use 、(touten/comma) or 。(maru/period)
+- Use line breaks instead of punctuation to indicate pauses and sentence endings
+- Each phrase or clause should be on its own line for readability
+
 ## Step 6: Save the Letter
 
 After generating, offer to save following CONVENTIONS.md:
@@ -115,12 +121,14 @@ sender: [Sender name]
 ## Quality Checklist
 
 Before presenting the letter, verify:
+- [ ] **NO punctuation** (、or 。) anywhere in the letter body
 - [ ] 頭語 and 結語 are correctly paired
 - [ ] 時候の挨拶 matches the sending date's month and 旬
 - [ ] 健康祈願 matches the current season
 - [ ] Personal details are incorporated naturally
 - [ ] Formality level is appropriate for relationship
 - [ ] Structure follows the template exactly
+- [ ] Line breaks used appropriately instead of punctuation
 
 ## Example Letters
 

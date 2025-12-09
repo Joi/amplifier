@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/Users/joi/amplifier/.venv/bin/python3
 """
 Claude Code hook for PostToolUse events - minimal wrapper for claim validation.
 Reads JSON from stdin, calls amplifier modules, writes JSON to stdout.
