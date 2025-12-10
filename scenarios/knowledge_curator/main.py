@@ -25,6 +25,10 @@ from amplifier.utils.logger import get_logger
 from .citation_adder import CitationAdder
 from .citation_rules import load_rules
 from .claim_extractor import ClaimExtractor
+from .expansion_suggester import ExpansionSuggester
+from .expansion_suggester import SuggestionStatus
+from .expansion_suggester import SuggestionStore
+from .gap_detector import GapDetector
 from .gap_reporter import GapReporter
 from .learning import CuratorLearning
 from .source_searcher import SourceSearcher
@@ -383,6 +387,478 @@ def reset_learning() -> None:
         click.echo("Learning data reset.")
     else:
         click.echo("No learning data to reset.")
+
+
+@main.command("gaps")
+@click.pass_context
+@click.option(
+    "--stale-months",
+    type=int,
+    default=6,
+    help="Months before content is considered stale",
+)
+@click.option(
+    "--min-words",
+    type=int,
+    default=100,
+    help="Minimum words for a section to be 'complete'",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output JSON file for gap report",
+)
+@click.option(
+    "--type",
+    "-t",
+    "gap_types",
+    multiple=True,
+    type=click.Choice(["undefined_concept", "stale_content", "orphan_page", "thin_section"]),
+    help="Filter by gap type (can specify multiple)",
+)
+def gaps(
+    ctx: click.Context,
+    stale_months: int,
+    min_words: int,
+    output: Path | None,
+    gap_types: tuple[str, ...],
+) -> None:
+    """Detect knowledge gaps in the vault.
+
+    Tier 1 Detection: Automated gap detection that runs quickly and generates
+    reports without modifying files. Designed to run weekly.
+
+    Gap types detected:
+    - undefined_concept: Terms mentioned but never explained (P1)
+    - stale_content: Files not updated in N months (P1)
+    - orphan_page: Files not linked from anywhere (P2)
+    - thin_section: Topics with < 100 words (P2)
+
+    Examples:
+
+        # Detect all gaps in chanoyu domain
+        python -m scenarios.knowledge_curator gaps --vault ~/switchboard --domain chanoyu/
+
+        # Only show undefined concepts and stale content
+        python -m scenarios.knowledge_curator gaps -t undefined_concept -t stale_content
+
+        # Save report to JSON
+        python -m scenarios.knowledge_curator gaps --output gaps.json
+    """
+    import json
+
+    vault = ctx.obj["vault"]
+    domain = ctx.obj["domain"]
+
+    click.echo(f"\n{'=' * 60}")
+    click.echo("  KNOWLEDGE GAP DETECTION")
+    click.echo(f"{'=' * 60}\n")
+
+    target_path = vault / domain if domain else vault
+    click.echo(f"Scanning: {target_path}\n")
+
+    # Run detection
+    detector = GapDetector(stale_months=stale_months, min_section_words=min_words)
+    report = detector.detect_gaps(vault, domain)
+
+    # Filter by type if specified
+    if gap_types:
+        report.gaps = [g for g in report.gaps if g.type.value in gap_types]
+
+    # Display results
+    summary = report.summary
+    click.echo(f"Total gaps found: {summary['total']}\n")
+
+    if summary["by_type"]:
+        click.echo("By Type:")
+        type_icons = {
+            "undefined_concept": "🔴",
+            "stale_content": "🟡",
+            "orphan_page": "🟠",
+            "thin_section": "⚪",
+        }
+        for gap_type, count in sorted(summary["by_type"].items()):
+            icon = type_icons.get(gap_type, "•")
+            click.echo(f"  {icon} {gap_type}: {count}")
+
+    if summary["by_severity"]:
+        click.echo("\nBy Severity:")
+        for severity, count in summary["by_severity"].items():
+            click.echo(f"  {severity}: {count}")
+
+    # Show top priority gaps
+    if report.gaps:
+        click.echo(f"\n{'─' * 60}")
+        click.echo("Top Priority Gaps:")
+        click.echo(f"{'─' * 60}\n")
+
+        # Sort by severity (high first) then by type
+        severity_order = {"high": 0, "medium": 1, "low": 2}
+        sorted_gaps = sorted(
+            report.gaps,
+            key=lambda g: (severity_order.get(g.severity.value, 3), g.type.value),
+        )
+
+        for gap in sorted_gaps[:15]:
+            severity_icon = {"high": "🔴", "medium": "🟡", "low": "⚪"}.get(gap.severity.value, "•")
+            click.echo(f"{severity_icon} [{gap.type.value}] {gap.location.file}")
+            click.echo(f"   {gap.description}")
+            if gap.location.context:
+                click.echo(f'   Context: "{gap.location.context[:60]}..."')
+            click.echo()
+
+        if len(report.gaps) > 15:
+            click.echo(f"... and {len(report.gaps) - 15} more gaps")
+
+    # Save to JSON if requested
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(report.to_dict(), f, indent=2, ensure_ascii=False)
+        click.echo(f"\n📁 Gap report saved to: {output}")
+
+    click.echo(f"\n_Last analysis: {report.generated_at.strftime('%Y-%m-%d %H:%M')}_")
+
+
+@main.command("suggest")
+@click.pass_context
+@click.option(
+    "--limit",
+    "-n",
+    type=int,
+    default=5,
+    help="Maximum number of suggestions to generate",
+)
+@click.option(
+    "--gap-type",
+    "-t",
+    type=click.Choice(["undefined_concept", "stale_content", "orphan_page", "thin_section"]),
+    help="Only suggest for specific gap type",
+)
+@click.option(
+    "--gap-id",
+    type=str,
+    help="Generate suggestion for specific gap ID",
+)
+def suggest(
+    ctx: click.Context,
+    limit: int,
+    gap_type: str | None,
+    gap_id: str | None,
+) -> None:
+    """Generate expansion suggestions for detected gaps.
+
+    Researches topics via Tavily and generates actionable suggestions.
+    Suggestions are staged for review before application.
+
+    Examples:
+
+        # Generate suggestions for top 5 gaps
+        python -m scenarios.knowledge_curator suggest
+
+        # Only suggest for undefined concepts
+        python -m scenarios.knowledge_curator suggest -t undefined_concept
+
+        # Generate more suggestions
+        python -m scenarios.knowledge_curator suggest -n 10
+    """
+    vault = ctx.obj["vault"]
+    domain = ctx.obj["domain"]
+
+    click.echo(f"\n{'=' * 60}")
+    click.echo("  EXPANSION SUGGESTION GENERATION")
+    click.echo(f"{'=' * 60}\n")
+
+    # First, detect gaps
+    detector = GapDetector()
+    report = detector.detect_gaps(vault, domain)
+
+    if not report.gaps:
+        click.echo("No gaps found to suggest expansions for.")
+        return
+
+    # Filter gaps if specified
+    gaps = report.gaps
+    if gap_type:
+        gaps = [g for g in gaps if g.type.value == gap_type]
+    if gap_id:
+        gaps = [g for g in gaps if g.id == gap_id]
+
+    if not gaps:
+        click.echo("No matching gaps found.")
+        return
+
+    click.echo(f"Found {len(gaps)} gaps, generating up to {limit} suggestions...\n")
+
+    # Generate suggestions
+    suggester = ExpansionSuggester(vault, domain)
+    suggestions = asyncio.run(suggester.suggest_batch(gaps, limit))
+
+    if not suggestions:
+        click.echo("Could not generate any suggestions.")
+        return
+
+    click.echo(f"\n{'─' * 60}")
+    click.echo(f"Generated {len(suggestions)} suggestions:")
+    click.echo(f"{'─' * 60}\n")
+
+    for i, s in enumerate(suggestions, 1):
+        type_icon = {
+            "create_page": "📄",
+            "add_section": "📝",
+            "update_content": "🔄",
+            "add_links": "🔗",
+        }.get(s.suggestion_type.value, "•")
+
+        click.echo(f"{i}. {type_icon} {s.title}")
+        click.echo(f"   Target: {s.target_file}")
+        click.echo(f"   Confidence: {s.confidence:.0%}")
+        if s.research_sources:
+            click.echo(f"   Sources: {len(s.research_sources)} found")
+        click.echo()
+
+    click.echo("✓ Suggestions staged for review. Run 'review' to approve/reject.")
+
+
+@main.command("review")
+@click.pass_context
+@click.option(
+    "--all",
+    "show_all",
+    is_flag=True,
+    help="Show all suggestions including approved/rejected",
+)
+def review(ctx: click.Context, show_all: bool) -> None:
+    """Review staged expansion suggestions.
+
+    Interactive review of pending suggestions. For each suggestion you can:
+    - [a]pprove: Mark for application
+    - [r]eject: Discard suggestion
+    - [s]kip: Decide later
+    - [v]iew: Show full content
+    - [q]uit: Exit review
+
+    Examples:
+
+        # Review pending suggestions
+        python -m scenarios.knowledge_curator review
+
+        # Show all suggestions including already reviewed
+        python -m scenarios.knowledge_curator review --all
+    """
+    store = SuggestionStore()
+
+    if show_all:
+        suggestions = store.load_all()
+    else:
+        suggestions = store.load_pending()
+
+    if not suggestions:
+        click.echo("\nNo suggestions to review.")
+        click.echo("Run 'suggest' command first to generate suggestions.")
+        return
+
+    click.echo(f"\n{'=' * 60}")
+    click.echo(f"  REVIEW SUGGESTIONS ({len(suggestions)} total)")
+    click.echo(f"{'=' * 60}\n")
+
+    for i, s in enumerate(suggestions, 1):
+        status_icon = {
+            "pending": "⏳",
+            "approved": "✅",
+            "rejected": "❌",
+            "modified": "📝",
+            "applied": "✓",
+        }.get(s.status.value, "•")
+
+        type_icon = {
+            "create_page": "📄",
+            "add_section": "📝",
+            "update_content": "🔄",
+            "add_links": "🔗",
+        }.get(s.suggestion_type.value, "•")
+
+        click.echo(f"{'─' * 60}")
+        click.echo(f"SUGGESTION {i}/{len(suggestions)} | {status_icon} {s.status.value}")
+        click.echo(f"{'─' * 60}")
+        click.echo(f"{type_icon} {s.title}")
+        click.echo(f"Target: {s.target_file}")
+        click.echo(f"Confidence: {s.confidence:.0%}")
+        click.echo(f"\nDescription: {s.description}")
+        if s.research_sources:
+            click.echo("\nSources:")
+            for src in s.research_sources[:3]:
+                click.echo(f"  - {src[:60]}...")
+
+        click.echo("\nPreview (first 300 chars):")
+        click.echo(f"{'─' * 40}")
+        click.echo(s.content[:300] + "..." if len(s.content) > 300 else s.content)
+        click.echo(f"{'─' * 40}")
+
+        if s.status == SuggestionStatus.PENDING:
+            while True:
+                action = click.prompt(
+                    "\n[a]pprove [r]eject [s]kip [v]iew full [q]uit",
+                    type=str,
+                    default="s",
+                ).lower()
+
+                if action == "a":
+                    store.update_status(s.id, SuggestionStatus.APPROVED)
+                    click.echo("✅ Approved")
+                    break
+                if action == "r":
+                    store.update_status(s.id, SuggestionStatus.REJECTED)
+                    click.echo("❌ Rejected")
+                    break
+                if action == "s":
+                    click.echo("⏭️ Skipped")
+                    break
+                if action == "v":
+                    click.echo(f"\n{'=' * 60}")
+                    click.echo("FULL CONTENT:")
+                    click.echo(f"{'=' * 60}")
+                    click.echo(s.content)
+                    click.echo(f"{'=' * 60}\n")
+                elif action == "q":
+                    click.echo("\nReview session ended.")
+                    return
+                else:
+                    click.echo("Invalid option. Use a/r/s/v/q")
+        else:
+            click.echo(f"\n(Already {s.status.value})")
+
+        click.echo()
+
+    # Summary
+    all_suggestions = store.load_all()
+    approved = len([s for s in all_suggestions if s.status == SuggestionStatus.APPROVED])
+    rejected = len([s for s in all_suggestions if s.status == SuggestionStatus.REJECTED])
+    pending = len([s for s in all_suggestions if s.status == SuggestionStatus.PENDING])
+
+    click.echo(f"\n{'=' * 60}")
+    click.echo("REVIEW SUMMARY")
+    click.echo(f"{'=' * 60}")
+    click.echo(f"✅ Approved: {approved}")
+    click.echo(f"❌ Rejected: {rejected}")
+    click.echo(f"⏳ Pending: {pending}")
+
+    if approved > 0:
+        click.echo(f"\nRun 'apply' to apply {approved} approved suggestions.")
+
+
+@main.command("apply")
+@click.pass_context
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Preview changes without applying",
+)
+def apply(ctx: click.Context, dry_run: bool) -> None:
+    """Apply approved expansion suggestions to vault.
+
+    Applies all approved suggestions:
+    - Creates new pages for undefined concepts
+    - Adds sections to thin pages
+    - Updates stale content
+    - Adds link suggestions
+
+    Examples:
+
+        # Preview what would be applied
+        python -m scenarios.knowledge_curator apply --dry-run
+
+        # Apply all approved suggestions
+        python -m scenarios.knowledge_curator apply
+    """
+    vault = ctx.obj["vault"]
+    store = SuggestionStore()
+    approved = store.load_approved()
+
+    if not approved:
+        click.echo("\nNo approved suggestions to apply.")
+        click.echo("Run 'review' to approve suggestions first.")
+        return
+
+    click.echo(f"\n{'=' * 60}")
+    click.echo(f"  APPLYING {len(approved)} SUGGESTIONS")
+    if dry_run:
+        click.echo("  (DRY RUN - no changes will be made)")
+    click.echo(f"{'=' * 60}\n")
+
+    applied = 0
+    errors = 0
+
+    for s in approved:
+        target_path = vault / s.target_file
+        click.echo(f"{'─' * 60}")
+
+        try:
+            if s.suggestion_type.value == "create_page":
+                click.echo(f"📄 Creating: {s.target_file}")
+                if not dry_run:
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    target_path.write_text(s.content, encoding="utf-8")
+                    store.update_status(s.id, SuggestionStatus.APPLIED)
+                applied += 1
+
+            elif s.suggestion_type.value == "add_section":
+                click.echo(f"📝 Appending to: {s.target_file}")
+                if target_path.exists():
+                    if not dry_run:
+                        existing = target_path.read_text(encoding="utf-8")
+                        target_path.write_text(existing + "\n\n" + s.content, encoding="utf-8")
+                        store.update_status(s.id, SuggestionStatus.APPLIED)
+                    applied += 1
+                else:
+                    click.echo("   ⚠️ File not found, creating instead")
+                    if not dry_run:
+                        target_path.parent.mkdir(parents=True, exist_ok=True)
+                        target_path.write_text(s.content, encoding="utf-8")
+                        store.update_status(s.id, SuggestionStatus.APPLIED)
+                    applied += 1
+
+            elif s.suggestion_type.value == "update_content":
+                click.echo(f"🔄 Appending update to: {s.target_file}")
+                if target_path.exists():
+                    if not dry_run:
+                        existing = target_path.read_text(encoding="utf-8")
+                        target_path.write_text(existing + "\n\n" + s.content, encoding="utf-8")
+                        store.update_status(s.id, SuggestionStatus.APPLIED)
+                    applied += 1
+                else:
+                    click.echo("   ⚠️ File not found, skipping")
+                    errors += 1
+
+            elif s.suggestion_type.value == "add_links":
+                click.echo(f"🔗 Link suggestions for: {s.target_file}")
+                click.echo("   (Manual action required - see suggestion content)")
+                click.echo(s.content)
+                if not dry_run:
+                    store.update_status(s.id, SuggestionStatus.APPLIED)
+                applied += 1
+
+            if not dry_run:
+                click.echo("   ✓ Applied")
+            else:
+                click.echo("   (would apply)")
+
+        except Exception as e:
+            click.echo(f"   ❌ Error: {e}")
+            errors += 1
+
+    click.echo(f"\n{'=' * 60}")
+    click.echo("APPLY SUMMARY")
+    click.echo(f"{'=' * 60}")
+    click.echo(f"✓ Applied: {applied}")
+    if errors > 0:
+        click.echo(f"❌ Errors: {errors}")
+
+    if dry_run:
+        click.echo("\n(Dry run - no changes were made)")
+        click.echo("Run without --dry-run to apply changes.")
 
 
 @main.command("verify-existing")

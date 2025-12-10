@@ -10,6 +10,7 @@ Basic Usage:
     ...     response = await session.query("Hello!")
 """
 
+from .models import DEFAULT_MODEL
 from .models import SessionOptions
 from .models import SessionResponse
 from .session import ClaudeSession
@@ -22,6 +23,7 @@ from .utils import query_with_retry
 __all__ = [
     "CCSDKSession",
     "ClaudeSession",
+    "DEFAULT_MODEL",
     "SessionError",
     "SDKNotAvailableError",
     "SessionResponse",

@@ -345,7 +345,9 @@ class SourceSearcher:
                 break
 
             if rejected_sources:
-                logger.info(f"  Refinement pass {current_pass}: {len(rejected_sources)} sources rejected, refining search...")
+                logger.info(
+                    f"  Refinement pass {current_pass}: {len(rejected_sources)} sources rejected, refining search..."
+                )
 
                 # Get refined search terms
                 refined_terms = self._verifier.suggest_search_refinement(claim_text, rejected_sources)

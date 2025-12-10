@@ -66,6 +66,10 @@ default: ## Show essential commands
 	@echo ""
 	@echo "Knowledge Curation:"
 	@echo "  make knowledge-curate        Curate vault like a Wikipedia editor"
+	@echo "  make knowledge-gaps          Detect knowledge gaps in vault"
+	@echo "  make knowledge-suggest       Generate expansion suggestions"
+	@echo "  make knowledge-review        Review pending suggestions"
+	@echo "  make knowledge-apply         Apply approved suggestions"
 	@echo ""
 	@echo "Other:"
 	@echo "  make clean          Clean build artifacts"
@@ -151,6 +155,14 @@ help: ## Show ALL available commands
 	@echo "KNOWLEDGE CURATION:"
 	@echo "  make knowledge-curate VAULT=~/switchboard [DOMAIN=...] [RESUME=true] [REPORT_ONLY=true]"
 	@echo "                       Curate vault like a Wikipedia editor"
+	@echo "  make knowledge-gaps VAULT=~/switchboard [DOMAIN=...] [TYPE=...] [OUTPUT=...]"
+	@echo "                       Detect knowledge gaps in vault"
+	@echo "  make knowledge-suggest VAULT=~/switchboard [DOMAIN=...] [LIMIT=5] [TYPE=...]"
+	@echo "                       Generate expansion suggestions for gaps"
+	@echo "  make knowledge-review VAULT=~/switchboard [DOMAIN=...]"
+	@echo "                       Review pending suggestions interactively"
+	@echo "  make knowledge-apply VAULT=~/switchboard [DOMAIN=...] [DRY_RUN=true]"
+	@echo "                       Apply approved suggestions to vault"
 	@echo ""
 	@echo "UTILITIES:"
 	@echo "  make clean           Clean build artifacts"
@@ -760,6 +772,36 @@ knowledge-curate: ## Curate knowledge vault like a Wikipedia editor. Usage: make
 	if [ "$(REPORT_ONLY)" = "true" ]; then ARGS="$$ARGS --report-only"; fi; \
 	if [ "$(VERBOSE)" = "true" ]; then ARGS="$$ARGS --verbose"; fi; \
 	eval uv run python -m scenarios.knowledge_curator $$ARGS
+
+knowledge-gaps: ## Detect knowledge gaps in vault. Usage: make knowledge-gaps VAULT=~/switchboard [DOMAIN=chanoyu/] [TYPE=undefined_concept] [OUTPUT=gaps.json]
+	@echo "🔍 Detecting knowledge gaps..."
+	@ARGS="--vault \"$${VAULT:-$$HOME/switchboard}\""; \
+	if [ -n "$(DOMAIN)" ]; then ARGS="$$ARGS --domain \"$(DOMAIN)\""; fi; \
+	if [ -n "$(TYPE)" ]; then ARGS="$$ARGS --type \"$(TYPE)\""; fi; \
+	if [ -n "$(STALE_MONTHS)" ]; then ARGS="$$ARGS --stale-months \"$(STALE_MONTHS)\""; fi; \
+	if [ -n "$(OUTPUT)" ]; then ARGS="$$ARGS --output \"$(OUTPUT)\""; fi; \
+	eval uv run python -m scenarios.knowledge_curator $$ARGS gaps
+
+knowledge-suggest: ## Generate expansion suggestions for gaps. Usage: make knowledge-suggest VAULT=~/switchboard [DOMAIN=chanoyu/] [LIMIT=5] [TYPE=undefined_concept]
+	@echo "💡 Generating expansion suggestions..."
+	@ARGS="--vault \"$${VAULT:-$$HOME/switchboard}\""; \
+	if [ -n "$(DOMAIN)" ]; then ARGS="$$ARGS --domain \"$(DOMAIN)\""; fi; \
+	if [ -n "$(LIMIT)" ]; then ARGS="$$ARGS suggest --limit \"$(LIMIT)\""; else ARGS="$$ARGS suggest"; fi; \
+	if [ -n "$(TYPE)" ]; then ARGS="$$ARGS --gap-type \"$(TYPE)\""; fi; \
+	eval uv run python -m scenarios.knowledge_curator $$ARGS
+
+knowledge-review: ## Review pending suggestions interactively. Usage: make knowledge-review VAULT=~/switchboard [DOMAIN=chanoyu/]
+	@echo "📋 Reviewing pending suggestions..."
+	@ARGS="--vault \"$${VAULT:-$$HOME/switchboard}\""; \
+	if [ -n "$(DOMAIN)" ]; then ARGS="$$ARGS --domain \"$(DOMAIN)\""; fi; \
+	eval uv run python -m scenarios.knowledge_curator $$ARGS review
+
+knowledge-apply: ## Apply approved suggestions to vault. Usage: make knowledge-apply VAULT=~/switchboard [DOMAIN=chanoyu/] [DRY_RUN=true]
+	@echo "✅ Applying approved suggestions..."
+	@ARGS="--vault \"$${VAULT:-$$HOME/switchboard}\""; \
+	if [ -n "$(DOMAIN)" ]; then ARGS="$$ARGS --domain \"$(DOMAIN)\""; fi; \
+	if [ "$(DRY_RUN)" = "true" ]; then ARGS="$$ARGS --dry-run"; fi; \
+	eval uv run python -m scenarios.knowledge_curator $$ARGS apply
 
 # DOT to Mermaid Converter
 dot-to-mermaid: ## Convert DOT files to Mermaid format. Usage: make dot-to-mermaid INPUT="path/to/dot/files"

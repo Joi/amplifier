@@ -6,12 +6,17 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
+# Default model to use for Claude sessions.
+# Update this when a better model becomes available.
+DEFAULT_MODEL = "claude-opus-4-5-20251101"
+
 
 class SessionOptions(BaseModel):
     """Configuration options for Claude sessions.
 
     Attributes:
         system_prompt: System prompt for the session
+        model: Model to use (default: claude-opus-4-5-20251101)
         max_turns: Maximum conversation turns (default: unlimited)
         retry_attempts: Number of retry attempts on failure (default: 3)
         retry_delay: Initial retry delay in seconds (default: 1.0)
@@ -20,6 +25,7 @@ class SessionOptions(BaseModel):
     """
 
     system_prompt: str = Field(default="You are a helpful assistant")
+    model: str = Field(default=DEFAULT_MODEL, description="Model to use")
     max_turns: int = Field(default=1, gt=0)
     retry_attempts: int = Field(default=3, gt=0, le=10)
     retry_delay: float = Field(default=1.0, gt=0, le=10.0)
@@ -34,6 +40,7 @@ class SessionOptions(BaseModel):
         json_schema_extra = {
             "example": {
                 "system_prompt": "You are a code review assistant",
+                "model": "claude-opus-4-5-20251101",
                 "max_turns": 1,
                 "retry_attempts": 3,
                 "retry_delay": 1.0,

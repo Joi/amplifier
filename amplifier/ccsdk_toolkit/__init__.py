@@ -33,6 +33,7 @@ from .config import MCPServerConfig
 from .config import ToolConfig
 from .config import ToolkitConfig
 from .config import ToolPermissions
+from .core import DEFAULT_MODEL
 from .core import CCSDKSession
 from .core import ClaudeSession
 from .core import SDKNotAvailableError
@@ -58,6 +59,7 @@ __all__ = [
     # Core
     "CCSDKSession",
     "ClaudeSession",
+    "DEFAULT_MODEL",
     "SessionOptions",
     "SessionResponse",
     "SessionError",

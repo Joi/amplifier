@@ -263,9 +263,9 @@ class CuratorLearning:
                 insights["total_searches"] += counts["total"]
 
         # Get refinements for this domain
-        insights["successful_refinements"] = [
-            r for r in self.data.successful_refinements if r.get("domain") == domain
-        ][-5:]  # Last 5
+        insights["successful_refinements"] = [r for r in self.data.successful_refinements if r.get("domain") == domain][
+            -5:
+        ]  # Last 5
 
         return insights
 

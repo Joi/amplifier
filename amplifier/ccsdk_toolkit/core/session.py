@@ -71,6 +71,7 @@ class ClaudeSession:
             self.client = ClaudeSDKClient(
                 options=ClaudeCodeOptions(
                     system_prompt=self.options.system_prompt,
+                    model=self.options.model,
                     max_turns=self.options.max_turns,
                 )
             )
