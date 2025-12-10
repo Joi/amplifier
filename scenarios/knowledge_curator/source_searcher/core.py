@@ -2,11 +2,18 @@
 """
 Source Searcher - Searches for authoritative sources for claims.
 
-Uses academic search APIs (Semantic Scholar, CrossRef, arXiv, CiNii) to find citations.
-Supports domain-specific configuration via CitationRules for customized search behavior.
+Uses academic search APIs (Semantic Scholar, CrossRef, arXiv, CiNii) and web search (Tavily)
+to find citations. Supports domain-specific configuration via CitationRules.
+
+Enhanced with metacognitive feedback loops:
+- Citation verification to ensure sources actually support claims
+- Learning from past runs to optimize search strategies
+- Progressive refinement when initial searches fail
+- Tavily web search with content extraction for verification
 """
 
 import asyncio
+import os
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -17,6 +24,18 @@ from pydantic import BaseModel
 from amplifier.utils.logger import get_logger
 from scenarios.knowledge_curator.citation_rules import DEFAULT_RULES
 from scenarios.knowledge_curator.citation_rules import CitationRules
+from scenarios.knowledge_curator.citation_verifier import CitationVerifier
+from scenarios.knowledge_curator.citation_verifier import VerificationOutcome
+from scenarios.knowledge_curator.learning import CuratorLearning
+
+# Tavily import with graceful fallback
+try:
+    from tavily import AsyncTavilyClient
+
+    TAVILY_AVAILABLE = True
+except ImportError:
+    TAVILY_AVAILABLE = False
+    AsyncTavilyClient = None  # type: ignore[misc, assignment]
 
 logger = get_logger(__name__)
 
@@ -49,6 +68,11 @@ class SourceSearcher:
     - Irrelevant keyword filtering with configurable penalties
     - Configurable relevance thresholds
     - Customizable search source selection
+
+    Enhanced with metacognitive feedback loops:
+    - Citation verification ensures sources actually support claims
+    - Learning store tracks which sources work for which domains
+    - Progressive refinement retries failed searches with improved queries
     """
 
     def __init__(
@@ -56,14 +80,42 @@ class SourceSearcher:
         rules: CitationRules | None = None,
         timeout: float = 30.0,
         max_results_per_claim: int = 3,
+        verify_citations: bool = True,
+        enable_learning: bool = True,
+        max_refinement_passes: int = 2,
     ):
         self.rules = rules or DEFAULT_RULES
         self.timeout = timeout
         self.max_results_per_claim = max_results_per_claim
+        self.verify_citations = verify_citations
+        self.enable_learning = enable_learning
+        self.max_refinement_passes = max_refinement_passes
         self._client: httpx.AsyncClient | None = None
+
+        # Initialize Tavily client if available and API key is set
+        self._tavily_client: AsyncTavilyClient | None = None
+        tavily_api_key = os.environ.get("TAVILY_API_KEY")
+        if TAVILY_AVAILABLE and tavily_api_key:
+            self._tavily_client = AsyncTavilyClient(api_key=tavily_api_key)
+            logger.info("Tavily web search enabled")
+        elif "tavily" in self.rules.search_sources:
+            logger.warning("Tavily requested but TAVILY_API_KEY not set or tavily-python not installed")
+
+        # Initialize metacognitive components
+        self._verifier: CitationVerifier | None = None
+        self._learning: CuratorLearning | None = None
+
+        if verify_citations:
+            self._verifier = CitationVerifier()
+        if enable_learning:
+            self._learning = CuratorLearning()
 
         if self.rules.domain_name:
             logger.info(f"SourceSearcher initialized for domain: {self.rules.domain_name}")
+            if enable_learning and self._learning:
+                insights = self._learning.get_domain_insights(self.rules.domain_name)
+                if insights["source_rankings"]:
+                    logger.info(f"  Learned source ranking: {insights['source_rankings']}")
 
     async def __aenter__(self):
         self._client = httpx.AsyncClient(timeout=self.timeout)
@@ -86,6 +138,11 @@ class SourceSearcher:
         - Whether to apply domain-specific search strategies
         - Which search sources to query
         - How to translate terms for bilingual search
+
+        Enhanced with metacognitive loops:
+        - Verifies that found sources actually support claims
+        - Refines searches when initial results don't fit
+        - Learns from outcomes to improve future searches
         """
         sources = []
 
@@ -133,6 +190,8 @@ class SourceSearcher:
                                 search_tasks.append(self._search_crossref(search_terms))
                             elif source_name == "arxiv":
                                 search_tasks.append(self._search_arxiv(search_terms))
+                            elif source_name == "tavily":
+                                search_tasks.append(self._search_tavily(search_terms, claim_text))
                     else:
                         logger.info(
                             f"Claim {i}: Domain content but no translation, searching: '{search_terms[:50]}...'"
@@ -146,6 +205,8 @@ class SourceSearcher:
                                 search_tasks.append(self._search_crossref(search_terms))
                             elif source_name == "arxiv":
                                 search_tasks.append(self._search_arxiv(search_terms))
+                            elif source_name == "tavily":
+                                search_tasks.append(self._search_tavily(search_terms, claim_text))
                 else:
                     logger.info(f"Searching for claim {i}: '{search_terms[:50]}...'")
                     # Standard search using configured sources (default: semantic_scholar, crossref, arxiv)
@@ -158,6 +219,8 @@ class SourceSearcher:
                             search_tasks.append(self._search_crossref(search_terms))
                         elif source_name == "arxiv":
                             search_tasks.append(self._search_arxiv(search_terms))
+                        elif source_name == "tavily":
+                            search_tasks.append(self._search_tavily(search_terms, claim_text))
 
                 # Search multiple sources in parallel
                 results = await asyncio.gather(*search_tasks, return_exceptions=True)
@@ -174,17 +237,183 @@ class SourceSearcher:
                 # Score and deduplicate
                 scored_sources = self._score_and_dedupe(found_sources, claim_text)
 
-                # Take top N results
-                for source in scored_sources[: self.max_results_per_claim]:
+                # METACOGNITIVE ENHANCEMENT: Verify and refine
+                verified_sources = await self._verify_and_refine(
+                    claim_text=claim_text,
+                    claim_index=i,
+                    scored_sources=scored_sources,
+                    original_search_terms=search_terms,
+                )
+
+                # Take top N verified results
+                for source in verified_sources[: self.max_results_per_claim]:
                     source.claim_index = i
                     sources.append(source)
 
-                logger.info(f"Found {len(scored_sources)} sources for claim {i}")
+                logger.info(f"Found {len(verified_sources)} verified sources for claim {i}")
 
             except Exception as e:
                 logger.warning(f"Error searching for claim {i}: {e}")
 
         return sources
+
+    async def _verify_and_refine(
+        self,
+        claim_text: str,
+        claim_index: int,
+        scored_sources: list[Source],
+        original_search_terms: str,
+    ) -> list[Source]:
+        """Verify sources and refine search if needed.
+
+        This is the core metacognitive loop:
+        1. Verify each source actually supports the claim
+        2. If too many rejections, refine the search and try again
+        3. Learn from outcomes to improve future searches
+        """
+        if not self._verifier or not self.verify_citations:
+            return scored_sources
+
+        domain = self.rules.domain_name or "general"
+        verified_sources: list[Source] = []
+        rejected_sources: list[dict[str, Any]] = []
+        current_pass = 0
+
+        sources_to_verify = scored_sources
+
+        while current_pass <= self.max_refinement_passes:
+            for source in sources_to_verify:
+                # Get web content if available (from Tavily)
+                web_content = getattr(source, "_web_content", None)
+
+                # Verify the source fits the claim
+                result = self._verifier.verify_citation_fit(
+                    claim_text=claim_text,
+                    source_title=source.title,
+                    source_abstract=web_content,  # Use web content for verification
+                    source_authors=source.authors,
+                    source_year=source.year,
+                )
+
+                # Record verification outcome for learning
+                if self._learning:
+                    self._learning.record_verification(
+                        claim_text=claim_text,
+                        source_title=source.title,
+                        outcome=result.outcome.value,
+                        confidence=result.confidence,
+                        domain=domain,
+                    )
+
+                if result.outcome in (VerificationOutcome.STRONG_FIT, VerificationOutcome.WEAK_FIT):
+                    # Boost relevance score for verified sources
+                    if result.outcome == VerificationOutcome.STRONG_FIT:
+                        source.relevance_score = min(source.relevance_score + 0.2, 1.0)
+                    verified_sources.append(source)
+
+                    # Record success in learning store
+                    if self._learning:
+                        self._learning.record_search_outcome(
+                            domain=domain,
+                            source_api=self._guess_source_api(source),
+                            success=True,
+                            verified_fit=True,
+                        )
+
+                    logger.debug(f"  ✓ Verified: '{source.title[:40]}...' ({result.outcome.value})")
+                else:
+                    rejected_sources.append({"title": source.title, "reason": result.explanation})
+
+                    # Record failure in learning store
+                    if self._learning:
+                        self._learning.record_search_outcome(
+                            domain=domain,
+                            source_api=self._guess_source_api(source),
+                            success=False,
+                            verified_fit=False,
+                        )
+
+                    logger.debug(f"  ✗ Rejected: '{source.title[:40]}...' - {result.explanation[:50]}")
+
+            # Check if we have enough verified sources
+            if len(verified_sources) >= self.max_results_per_claim:
+                break
+
+            # If we have too few verified sources, try to refine the search
+            current_pass += 1
+            if current_pass > self.max_refinement_passes:
+                break
+
+            if rejected_sources:
+                logger.info(f"  Refinement pass {current_pass}: {len(rejected_sources)} sources rejected, refining search...")
+
+                # Get refined search terms
+                refined_terms = self._verifier.suggest_search_refinement(claim_text, rejected_sources)
+                if refined_terms and refined_terms != original_search_terms:
+                    logger.info(f"  Refined query: '{refined_terms}'")
+
+                    # Search again with refined terms
+                    new_results = await self._search_with_terms(refined_terms)
+                    if new_results:
+                        sources_to_verify = self._score_and_dedupe(new_results, claim_text)
+                        # Filter out sources we've already seen
+                        seen_titles = {s.title.lower() for s in verified_sources}
+                        seen_titles.update(r["title"].lower() for r in rejected_sources)
+                        sources_to_verify = [s for s in sources_to_verify if s.title.lower() not in seen_titles]
+
+                        if sources_to_verify and self._learning:
+                            self._learning.record_successful_refinement(
+                                original_query=original_search_terms,
+                                refined_query=refined_terms,
+                                domain=domain,
+                            )
+                    else:
+                        break
+                else:
+                    break
+
+        return verified_sources
+
+    async def _search_with_terms(self, search_terms: str, claim_text: str = "") -> list[Source]:
+        """Execute search across all configured sources with given terms."""
+        search_tasks = []
+        for source_name in self.rules.search_sources:
+            if source_name == "cinii":
+                search_tasks.append(self._search_cinii(search_terms))
+            elif source_name == "semantic_scholar":
+                search_tasks.append(self._search_semantic_scholar(search_terms))
+            elif source_name == "crossref":
+                search_tasks.append(self._search_crossref(search_terms))
+            elif source_name == "arxiv":
+                search_tasks.append(self._search_arxiv(search_terms))
+            elif source_name == "tavily":
+                search_tasks.append(self._search_tavily(search_terms, claim_text))
+
+        results = await asyncio.gather(*search_tasks, return_exceptions=True)
+
+        found_sources: list[Source] = []
+        for result in results:
+            if isinstance(result, BaseException):
+                continue
+            if isinstance(result, list):
+                found_sources.extend(result)
+
+        return found_sources
+
+    def _guess_source_api(self, source: Source) -> str:
+        """Guess which API a source came from based on its properties."""
+        if source.url:
+            if "arxiv.org" in source.url:
+                return "arxiv"
+            if "cir.nii.ac.jp" in source.url:
+                return "cinii"
+            if "semanticscholar.org" in source.url:
+                return "semantic_scholar"
+        if source.doi:
+            if source.doi.startswith("arXiv:"):
+                return "arxiv"
+            return "crossref"
+        return "unknown"
 
     def _extract_search_terms(self, claim_text: str) -> str:
         """Extract key search terms from a claim."""
@@ -575,6 +804,85 @@ class SourceSearcher:
             logger.debug(f"CiNii XML parse error: {e}")
         except Exception as e:
             logger.debug(f"CiNii error: {e}")
+
+        return sources
+
+    async def _search_tavily(self, query: str, claim_text: str = "") -> list[Source]:
+        """Search Tavily for web sources with content extraction.
+
+        Tavily provides:
+        - General web search (not just academic)
+        - Content extraction from pages
+        - Domain filtering for authoritative sources
+        - AI-generated answers for verification
+
+        This is especially useful for:
+        - Cultural/historical domains where best sources are museum/institution websites
+        - Verifying claims against actual page content
+        - Finding primary sources not in academic databases
+        """
+        sources = []
+
+        if not self._tavily_client:
+            logger.debug("Tavily client not available")
+            return []
+
+        try:
+            # Build search with domain qualifier if available
+            search_query = query
+            if self.rules.domain_qualifier:
+                search_query = f"{query} {self.rules.domain_qualifier}"
+
+            # Configure search parameters
+            search_params: dict[str, Any] = {
+                "query": search_query,
+                "max_results": 5,
+                "include_raw_content": True,  # Get page content for verification
+                "include_answer": False,  # Skip AI answer generation
+                "search_depth": "advanced",  # Deeper search for niche topics
+            }
+
+            # Apply domain filtering if configured
+            if self.rules.tavily_include_domains:
+                search_params["include_domains"] = self.rules.tavily_include_domains
+            if self.rules.tavily_exclude_domains:
+                search_params["exclude_domains"] = self.rules.tavily_exclude_domains
+
+            response = await self._tavily_client.search(**search_params)
+
+            results = response.get("results", [])
+            for result in results:
+                title = result.get("title", "Unknown")
+                url = result.get("url", "")
+                content = result.get("content", "")
+                raw_content = result.get("raw_content", "")
+                score = result.get("score", 0.0)
+
+                # Use raw_content for verification if available
+                full_content = raw_content if raw_content else content
+
+                # Store content for later verification
+                source = Source(
+                    title=title,
+                    authors=[],  # Web sources usually don't have structured author info
+                    year=None,  # Could extract from content if needed
+                    doi=None,
+                    url=url,
+                    source_type="website",
+                    relevance_score=score,  # Tavily provides a relevance score
+                    claim_index=0,
+                )
+
+                # Store content in a way the verifier can access it
+                # We attach it as a temporary attribute for verification
+                source._web_content = full_content[:5000] if full_content else ""  # type: ignore[attr-defined]
+
+                sources.append(source)
+
+            logger.debug(f"Tavily found {len(sources)} sources for query: {query[:30]}...")
+
+        except Exception as e:
+            logger.debug(f"Tavily error: {e}")
 
         return sources
 

@@ -35,6 +35,9 @@ class CitationRules:
     generic_patterns: list[str] = field(default_factory=list)
     relevance_threshold: float = 0.3
     search_sources: list[str] = field(default_factory=lambda: ["semantic_scholar", "crossref", "arxiv"])
+    # Tavily-specific settings for web search
+    tavily_include_domains: list[str] = field(default_factory=list)
+    tavily_exclude_domains: list[str] = field(default_factory=list)
 
     def has_domain_content(self, text: str) -> bool:
         """Check if text contains domain-specific content based on term_mappings."""
@@ -110,6 +113,7 @@ def load_rules(directory: Path) -> CitationRules:
 def _parse_rules(data: dict[str, Any], config_path: Path) -> CitationRules:
     """Parse YAML data into CitationRules."""
     domain = data.get("domain", {})
+    tavily_config = data.get("tavily", {})
 
     rules = CitationRules(
         domain_name=domain.get("name"),
@@ -119,6 +123,8 @@ def _parse_rules(data: dict[str, Any], config_path: Path) -> CitationRules:
         generic_patterns=data.get("generic_patterns", []),
         relevance_threshold=data.get("relevance_threshold", 0.3),
         search_sources=data.get("search_sources", ["semantic_scholar", "crossref", "arxiv"]),
+        tavily_include_domains=tavily_config.get("include_domains", []),
+        tavily_exclude_domains=tavily_config.get("exclude_domains", []),
     )
 
     logger.info(

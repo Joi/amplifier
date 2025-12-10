@@ -2908,6 +2908,20 @@ wheels = [
 ]
 
 [[package]]
+name = "tavily-python"
+version = "0.7.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "requests" },
+    { name = "tiktoken" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/cb/c9df2f11b06a2336d449ba48b45f013133d8da7af7b0d9414d2055796734/tavily_python-0.7.14.tar.gz", hash = "sha256:3d7421fcd12609a7d8afe1d0ba27bc968cd44aa916667f7e8b46f8cdf9c6f784", size = 21023, upload-time = "2025-12-04T23:27:00.739Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/1b/d3735f8af5a9be370e8ecf660eca31230c20018fa7216eb3568e9761be0e/tavily_python-0.7.14-py3-none-any.whl", hash = "sha256:496d40785d620d820aaa6dc449fdcacebb05f1410a17b278891e717ac97e1ec9", size = 17950, upload-time = "2025-12-04T23:26:59.465Z" },
+]
+
+[[package]]
 name = "temporalio"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3211,6 +3225,7 @@ dependencies = [
     { name = "rapidfuzz" },
     { name = "requests" },
     { name = "rich" },
+    { name = "tavily-python" },
     { name = "tiktoken" },
     { name = "tqdm" },
     { name = "yt-dlp" },
@@ -3252,6 +3267,7 @@ requires-dist = [
     { name = "rapidfuzz", specifier = ">=3.13.0" },
     { name = "requests", specifier = ">=2.32.4" },
     { name = "rich", specifier = ">=14.1.0" },
+    { name = "tavily-python", specifier = ">=0.7.14" },
     { name = "tiktoken", specifier = ">=0.11.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "yt-dlp", specifier = ">=2025.9.26" },

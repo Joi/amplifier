@@ -1,6 +1,6 @@
 # Knowledge Curator
 
-**Wikipedia-editor style agent for knowledge vaults.**
+**Wikipedia-editor style agent for knowledge vaults with metacognitive feedback loops.**
 
 Transform your Switchboard vault from a personal note collection into a well-sourced, verified knowledge base.
 
@@ -11,19 +11,53 @@ You have markdown files full of claims, facts, and ideas - but:
 - You don't know which claims need verification
 - Finding and adding sources is tedious manual work
 - There's no visibility into knowledge quality
+- **Search results often don't actually support the claims** (false positives from keyword matching)
 
 ## The Solution
 
 Knowledge Curator acts like a Wikipedia editor for your vault:
 1. **Scans** files to identify claims needing citations
 2. **Searches** academic databases for authoritative sources
-3. **Adds** citations in Obsidian-compatible format
-4. **Reports** status in your daily notes
+3. **Verifies** that found sources actually support the claims (metacognitive loop)
+4. **Learns** which sources work best for different domains
+5. **Adds** citations in Obsidian-compatible format
+6. **Reports** status in your daily notes
+
+## Metacognitive Enhancements (NEW)
+
+The curator now includes feedback loops that improve quality over time:
+
+### Citation Verification
+Instead of blindly accepting keyword matches, the curator verifies each source:
+- "Does this paper about 'tea' actually discuss Japanese tea ceremony?"
+- Rejects false positives that don't support the specific claim
+- Suggests refined search terms when initial results miss the mark
+
+### Progressive Refinement
+When verification fails, the curator doesn't give up:
+- Analyzes why sources didn't fit
+- Generates refined search queries
+- Tries again with better terms
+- Up to 2 refinement passes per claim
+
+### Learning from Experience
+The curator remembers what works:
+- Tracks which sources (Semantic Scholar, CiNii, arXiv) work best for each domain
+- Records successful search refinements for future use
+- Builds domain-specific insights over time
+
+```bash
+# View learning insights
+python -m scenarios.knowledge_curator learning
+
+# View domain-specific insights
+python -m scenarios.knowledge_curator learning --domain chanoyu
+```
 
 ## Quick Start
 
 ```bash
-# Process entire vault
+# Process entire vault (with verification enabled by default)
 make knowledge-curate VAULT=~/switchboard
 
 # Process specific domain
@@ -34,6 +68,12 @@ make knowledge-curate VAULT=~/switchboard --resume
 
 # Report only (no modifications)
 make knowledge-curate VAULT=~/switchboard --report-only
+
+# Fast mode (skip verification for speed)
+python -m scenarios.knowledge_curator --no-verify
+
+# Disable learning (for testing)
+python -m scenarios.knowledge_curator --no-learning
 ```
 
 ## Features
@@ -113,10 +153,25 @@ knowledge_curator/
 ├── main.py              # CLI entry point
 ├── state.py             # State management for resume
 ├── claim_extractor/     # Stage 1: Find claims
-├── source_searcher/     # Stage 2: Search sources
+├── source_searcher/     # Stage 2: Search sources (with verification)
+├── citation_verifier/   # Metacognitive: Verify source-claim fit
+├── learning/            # Metacognitive: Persistent learning store
 ├── citation_adder/      # Stage 3: Add citations
 └── gap_reporter/        # Stage 4: Generate report
 ```
+
+### Metacognitive Components
+
+**Citation Verifier** (`citation_verifier/core.py`):
+- Uses AI to verify source-claim fit
+- Returns: STRONG_FIT, WEAK_FIT, NO_FIT, UNCERTAIN
+- Suggests refined search terms for failures
+
+**Learning Store** (`learning/store.py`):
+- Persists to `~/.data/knowledge_curator/learning.json`
+- Tracks domain→source success rates
+- Records verification statistics
+- Stores successful search refinements
 
 ## How It Was Built
 
@@ -139,4 +194,4 @@ The recipe:
 
 ## Status
 
-**Experimental** - Core pipeline working, academic search integration in progress.
+**Active** - Core pipeline working with metacognitive enhancements. Citation verification and learning feedback loops enabled by default.
