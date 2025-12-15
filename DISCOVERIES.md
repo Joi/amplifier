@@ -2,6 +2,56 @@
 
 This file documents non-obvious problems, solutions, and patterns discovered during development. Make sure these are regularly reviewed and updated, removing outdated entries or those replaced by better practices or code or tools, updating those where the best practice has evolved.
 
+## Notion API Breaking Change: database → data_source (2025-12-15)
+
+### Issue
+
+Notion integrations using the search API to find databases started returning 0 results, despite valid tokens and page access working correctly.
+
+### Root Cause
+
+Notion API version `2025-09-03` introduced breaking changes for multi-source database support:
+
+1. **Search filter changed**: `filter["value"] = "database"` is no longer valid
+2. **New value required**: Must use `filter["value"] = "data_source"` instead
+3. **New API namespace**: `/v1/data_sources/` for database operations
+4. **Parent type changed**: Page creation may need `data_source_id` instead of `database_id`
+
+Error message when using old filter:
+```
+body.filter.value should be "page" or "data_source", instead was "database"
+```
+
+### Solution
+
+Update search calls to use the new filter value:
+
+```python
+# OLD (broken):
+response = client.search(filter={"property": "object", "value": "database"})
+
+# NEW (working):
+response = client.search(filter={"property": "object", "value": "data_source"})
+```
+
+### Affected Code
+
+- `~/micro-blog/notion_blog/client.py` - `list_databases()` method updated
+- Any code filtering search results for `object == "database"` may also need updates
+
+### Key Learnings
+
+1. **MCP servers may hide the issue** - The Notion MCP server worked fine because it's been updated
+2. **Direct API calls reveal the problem** - Testing with curl and the Python client exposed the error
+3. **Error messages are informative** - The API clearly states what values are valid
+4. **Library version isn't always the fix** - notion-client 2.7.0 supports the new API, but app code needed updating
+
+### Prevention
+
+- When Notion API calls fail, check the [upgrade guide](https://developers.notion.com/docs/upgrade-guide-2025-09-03)
+- Test API changes with direct curl calls to isolate MCP vs client issues
+- Subscribe to Notion API changelog for breaking changes
+
 ## DevContainer Setup: Using Official Features Instead of Custom Scripts (2025-10-22)
 
 ### Issue
