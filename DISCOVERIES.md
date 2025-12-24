@@ -2,6 +2,43 @@
 
 This file documents non-obvious problems, solutions, and patterns discovered during development. Make sure these are regularly reviewed and updated, removing outdated entries or those replaced by better practices or code or tools, updating those where the best practice has evolved.
 
+## MCP Server Submodules Are Read-Only (2025-12-25)
+
+### Issue
+
+Attempting to push commits to MCP server submodules fails with permission denied errors.
+
+### Root Cause
+
+The submodules in `mcp-servers/` are **third-party repositories** we don't own:
+- `mcp-servers/academic-search` → `afrise/academic-search-mcp-server`
+- `mcp-servers/paper-search` → `openags/paper-search-mcp`
+
+We have read access (clone/pull) but not write access (push).
+
+### Solution
+
+**Never attempt to push to these submodules.** Any local changes made to submodules:
+- Will be committed locally
+- Cannot be pushed upstream
+- Should be treated as local customizations only
+
+If changes are needed upstream, submit a PR to the original repository.
+
+### Prevention
+
+When committing changes that include submodule modifications:
+1. Commit the main repo (which updates the submodule reference)
+2. Push the main repo only
+3. Do NOT attempt to push submodules
+
+### Affected Submodules
+
+| Path | Remote | Owner |
+|------|--------|-------|
+| `mcp-servers/academic-search` | github.com/afrise/academic-search-mcp-server | afrise |
+| `mcp-servers/paper-search` | github.com/openags/paper-search-mcp | openags |
+
 ## Notion API Breaking Change: database → data_source (2025-12-15)
 
 ### Issue
