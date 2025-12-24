@@ -1,0 +1,60 @@
+# Principles of Awareness (PoA) Domain Configuration
+# Bundled default - can be overridden by ~/switchboard/poa/.extraction-config.yaml
+
+domain:
+  id: "poa"
+  name: "Principles of Awareness"
+
+extraction:
+  focus: |
+    Extract knowledge relevant to contemplative philosophy and awareness practices.
+    Look for insights about identity, perception, stillness, relational awareness,
+    and the nature of consciousness. This domain bridges Buddhist philosophy,
+    Western phenomenology, and modern contemplative science. Pay attention to
+    paradoxes, non-dual perspectives, and the relationship between awareness and action.
+
+  key_concepts:
+    # Core awareness concepts
+    - stillness - the ground from which awareness arises
+    - relational awareness - consciousness as fundamentally inter-subjective
+    - identity and self - constructed vs. essential nature
+    - non-duality - beyond subject/object division
+    - presence - being fully here now
+    - direct experience - unmediated perception
+    # Contemplative practice
+    - mindfulness - attention without grasping
+    - meditation - cultivation of awareness
+    - compassion - natural response to interconnection
+    - equanimity - balanced, non-reactive awareness
+    # Philosophical concepts
+    - resisting reductionism - honoring complexity
+    - paradox - holding contradictions
+    - emergence - arising from simple to complex
+    - impermanence - constant change
+    # Applied awareness
+    - emotional awareness - knowing emotions as they arise
+    - forgiveness - releasing attachment to grievance
+    - purpose - living with intention
+    - human-AI relationship - awareness in technological context
+
+  concept_categories:
+    - principle
+    - practice
+    - insight
+    - paradox
+    - philosophical framework
+    - contemplative tradition
+    - psychological concept
+    - ethical consideration
+
+  relationship_types:
+    - grounds
+    - arises_from
+    - contrasts_with
+    - complements
+    - challenges
+    - deepens
+    - applies_to
+    - transforms
+
+  output_path: "~/switchboard/poa/sources/"

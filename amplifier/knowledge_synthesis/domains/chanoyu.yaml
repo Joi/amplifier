@@ -1,0 +1,54 @@
+# Chanoyu (Japanese Tea Ceremony) Domain Configuration
+# Bundled default - can be overridden by ~/switchboard/chanoyu/.extraction-config.yaml
+
+domain:
+  id: "chanoyu"
+  name: "Japanese Tea Ceremony (茶道)"
+
+extraction:
+  focus: |
+    Extract knowledge relevant to the art and philosophy of Japanese tea ceremony (chanoyu/sadō).
+    Look for connections to aesthetic principles, mindfulness practices, Zen philosophy,
+    and traditional Japanese culture. Pay special attention to the spiritual and philosophical
+    dimensions of tea practice, not just procedural aspects.
+
+  key_concepts:
+    # Aesthetic principles
+    - wabi (侘び) - refined simplicity, rustic elegance
+    - sabi (寂び) - patina of age, serene acceptance
+    - wabi-sabi - beauty in imperfection
+    # Philosophical concepts
+    - mu-sakui (無作為) - non-intentionality, effortless action
+    - ichigo-ichie (一期一会) - one time, one meeting
+    - mujunteki-chōwa (矛盾的調和) - harmonious contradiction
+    - ma (間) - in-between space, pause
+    - sonzai-kan (存在感) - sense of presence
+    # Practice concepts
+    - omotenashi (おもてなし) - sincere hospitality
+    - keiko (稽古) - practice, training
+    - kata (型) - form, pattern
+    - kokoro (心) - heart, spirit
+    # Seasonal concepts
+    - shun (旬) - seasonal appropriateness
+    - kisetsu (季節) - season
+
+  concept_categories:
+    - aesthetic principle
+    - philosophical concept
+    - practice element
+    - utensil (chadōgu)
+    - tea master (chajin)
+    - school/tradition (ryū)
+    - seasonal element
+    - architectural element (chashitsu)
+
+  relationship_types:
+    - embodies
+    - contrasts_with
+    - influences
+    - requires
+    - enhances
+    - derives_from
+    - teaches
+
+  output_path: "~/switchboard/chanoyu/sources/"

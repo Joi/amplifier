@@ -87,7 +87,10 @@ help: ## Show ALL available commands
 	@echo ""
 	@echo "KNOWLEDGE BASE:"
 	@echo "  make knowledge-update        Full pipeline: extract & synthesize"
+	@echo "  make knowledge-domains       List available domain configurations"
+	@echo "  make knowledge-gemini-prompt DOMAINS=chanoyu,poa  Generate Gemini prompt for book extraction"
 	@echo "  make knowledge-sync          Extract knowledge from content"
+	@echo "  make knowledge-sync DOMAINS=chanoyu,poa  Extract with domain context"
 	@echo "  make knowledge-sync-batch N=5  Process next N articles"
 	@echo "  make knowledge-synthesize    Find patterns across knowledge"
 	@echo "  make knowledge-query Q=\"...\" Query your knowledge base"
@@ -307,18 +310,32 @@ content-status: ## Show content statistics
 	uv run python -m amplifier.content_loader status
 
 # Knowledge Synthesis (Simplified)
-knowledge-sync: ## Extract knowledge from all content files [NOTIFY=true]
+knowledge-domains: ## List available domain configurations for knowledge extraction
+	@uv run python -m amplifier.knowledge_synthesis.cli domains
+
+knowledge-gemini-prompt: ## Generate Gemini-ready extraction prompt [DOMAINS=chanoyu,poa]
+	@domains="$${DOMAINS:-chanoyu}"; \
+	echo "Generating Gemini extraction prompt for domains: $$domains" >&2; \
+	uv run python -m amplifier.knowledge_synthesis.cli gemini-prompt --domains "$$domains"
+
+knowledge-sync: ## Extract knowledge from all content files [NOTIFY=true] [DOMAINS=chanoyu,poa]
 	@notify_flag=""; \
 	if [ "$$NOTIFY" = "true" ]; then notify_flag="--notify"; fi; \
+	domains_flag=""; \
+	if [ -n "$$DOMAINS" ]; then domains_flag="--domains $$DOMAINS"; fi; \
 	echo "Syncing and extracting knowledge from content files..."; \
-	uv run python -m amplifier.knowledge_synthesis.cli sync $$notify_flag
+	if [ -n "$$DOMAINS" ]; then echo "Using domains: $$DOMAINS"; fi; \
+	uv run python -m amplifier.knowledge_synthesis.cli sync $$notify_flag $$domains_flag
 
-knowledge-sync-batch: ## Extract knowledge from next N articles. Usage: make knowledge-sync-batch N=5 [NOTIFY=true]
+knowledge-sync-batch: ## Extract knowledge from next N articles. Usage: make knowledge-sync-batch N=5 [NOTIFY=true] [DOMAINS=...]
 	@n="$${N:-5}"; \
 	notify_flag=""; \
 	if [ "$$NOTIFY" = "true" ]; then notify_flag="--notify"; fi; \
+	domains_flag=""; \
+	if [ -n "$$DOMAINS" ]; then domains_flag="--domains $$DOMAINS"; fi; \
 	echo "Processing next $$n articles..."; \
-	uv run python -m amplifier.knowledge_synthesis.cli sync --max-items $$n $$notify_flag
+	if [ -n "$$DOMAINS" ]; then echo "Using domains: $$DOMAINS"; fi; \
+	uv run python -m amplifier.knowledge_synthesis.cli sync --max-items $$n $$notify_flag $$domains_flag
 
 knowledge-search: ## Search extracted knowledge. Usage: make knowledge-search Q="AI agents"
 	@if [ -z "$(Q)" ]; then \

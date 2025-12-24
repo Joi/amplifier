@@ -39,6 +39,10 @@ class FocusedExtractionResult:
 class ConceptExtractor:
     """Focused extractor for concepts only"""
 
+    def __init__(self, domain_context: str = ""):
+        """Initialize concept extractor with optional domain context."""
+        self.domain_context = domain_context
+
     async def extract(self, text: str, title: str = "", document_type: str = "general") -> FocusedExtractionResult:
         """Extract ONLY concepts from text"""
         if not CLAUDE_SDK_AVAILABLE:
@@ -47,8 +51,17 @@ class ConceptExtractor:
             )
 
         start_time = time.time()
-        prompt = f"""Analyze this text and extract ONLY the key concepts.
 
+        # Build domain context section if available
+        domain_section = ""
+        if self.domain_context:
+            domain_section = f"""
+{self.domain_context}
+
+"""
+
+        prompt = f"""Analyze this text and extract ONLY the key concepts.
+{domain_section}
 Title: {title}
 
 Content:
@@ -135,6 +148,10 @@ Return ONLY valid JSON, no other text."""
 class RelationshipExtractor:
     """Focused extractor for relationships only"""
 
+    def __init__(self, domain_context: str = ""):
+        """Initialize relationship extractor with optional domain context."""
+        self.domain_context = domain_context
+
     async def extract(self, text: str, title: str = "", document_type: str = "general") -> FocusedExtractionResult:
         """Extract ONLY relationships from text"""
         if not CLAUDE_SDK_AVAILABLE:
@@ -143,8 +160,17 @@ class RelationshipExtractor:
             )
 
         start_time = time.time()
-        prompt = f"""Analyze this text and extract ONLY the relationships between entities.
 
+        # Build domain context section if available
+        domain_section = ""
+        if self.domain_context:
+            domain_section = f"""
+{self.domain_context}
+
+"""
+
+        prompt = f"""Analyze this text and extract ONLY the relationships between entities.
+{domain_section}
 Title: {title}
 
 Content:
@@ -237,6 +263,10 @@ Return ONLY valid JSON, no other text."""
 class InsightExtractor:
     """Focused extractor for insights only"""
 
+    def __init__(self, domain_context: str = ""):
+        """Initialize insight extractor with optional domain context."""
+        self.domain_context = domain_context
+
     async def extract(self, text: str, title: str = "", document_type: str = "general") -> FocusedExtractionResult:
         """Extract ONLY insights from text"""
         if not CLAUDE_SDK_AVAILABLE:
@@ -245,8 +275,17 @@ class InsightExtractor:
             )
 
         start_time = time.time()
-        prompt = f"""Analyze this text and extract ONLY actionable insights and learnings.
 
+        # Build domain context section if available
+        domain_section = ""
+        if self.domain_context:
+            domain_section = f"""
+{self.domain_context}
+
+"""
+
+        prompt = f"""Analyze this text and extract ONLY actionable insights and learnings.
+{domain_section}
 Title: {title}
 
 Content:
@@ -337,6 +376,10 @@ Return ONLY valid JSON, no other text."""
 class PatternExtractor:
     """Focused extractor for code patterns only"""
 
+    def __init__(self, domain_context: str = ""):
+        """Initialize pattern extractor with optional domain context."""
+        self.domain_context = domain_context
+
     async def extract(self, text: str, title: str = "", document_type: str = "general") -> FocusedExtractionResult:
         """Extract ONLY code patterns from text"""
         if not CLAUDE_SDK_AVAILABLE:
@@ -345,8 +388,17 @@ class PatternExtractor:
             )
 
         start_time = time.time()
-        prompt = f"""Analyze this text and extract ONLY code patterns and technical implementations.
 
+        # Build domain context section if available
+        domain_section = ""
+        if self.domain_context:
+            domain_section = f"""
+{self.domain_context}
+
+"""
+
+        prompt = f"""Analyze this text and extract ONLY code patterns and technical implementations.
+{domain_section}
 Title: {title}
 
 Content:
@@ -437,12 +489,49 @@ Return ONLY valid JSON, no other text."""
 class FocusedKnowledgeExtractor:
     """Orchestrates focused extractions for better quality results"""
 
-    def __init__(self):
-        """Initialize all focused extractors"""
-        self.concept_extractor = ConceptExtractor()
-        self.relationship_extractor = RelationshipExtractor()
-        self.insight_extractor = InsightExtractor()
-        self.pattern_extractor = PatternExtractor()
+    def __init__(self, domain_configs: list[dict[str, Any]] | None = None):
+        """Initialize all focused extractors with optional domain context.
+
+        Args:
+            domain_configs: List of domain configurations for focused extraction
+        """
+        # Build combined domain context from all configs
+        domain_context = self._build_combined_domain_context(domain_configs or [])
+
+        # Initialize extractors with domain context
+        self.concept_extractor = ConceptExtractor(domain_context=domain_context)
+        self.relationship_extractor = RelationshipExtractor(domain_context=domain_context)
+        self.insight_extractor = InsightExtractor(domain_context=domain_context)
+        self.pattern_extractor = PatternExtractor(domain_context=domain_context)
+
+    def _build_combined_domain_context(self, domain_configs: list[dict[str, Any]]) -> str:
+        """Build combined domain context from multiple domain configurations.
+
+        Args:
+            domain_configs: List of domain configuration dicts
+
+        Returns:
+            Combined domain context string for prompt injection
+        """
+        if not domain_configs:
+            return ""
+
+        from .domain_config import build_domain_context
+
+        parts = []
+        for config in domain_configs:
+            context = build_domain_context(config)
+            if context:
+                parts.append(context)
+
+        if not parts:
+            return ""
+
+        if len(parts) == 1:
+            return parts[0]
+
+        # Multiple domains - combine with separator
+        return "\n\n---\n\n".join(parts)
 
     async def extract_all(
         self, text: str, title: str = "", document_type: str = "general"

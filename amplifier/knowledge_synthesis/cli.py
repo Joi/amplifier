@@ -15,6 +15,8 @@ from amplifier.config.paths import paths
 from amplifier.knowledge_integration import UnifiedKnowledgeExtractor
 from amplifier.utils.notifications import send_notification
 
+from .domain_config import list_available_domains
+from .domain_config import load_domain_config
 from .events import EventEmitter
 from .store import KnowledgeStore
 
@@ -53,7 +55,12 @@ def cli():
     default=False,
     help="Send desktop notifications on completion",
 )
-def sync(max_items: int | None, resilient: bool, skip_partial_failures: bool, notify: bool):
+@click.option(
+    "--domains",
+    default=None,
+    help="Comma-separated domain IDs (e.g., 'chanoyu,poa'). Use 'list' to see available domains.",
+)
+def sync(max_items: int | None, resilient: bool, skip_partial_failures: bool, notify: bool, domains: str | None):
     """
     Sync and extract knowledge from content files.
 
@@ -65,15 +72,45 @@ def sync(max_items: int | None, resilient: bool, skip_partial_failures: bool, no
 
     By default, retries articles with partial failures. Use --skip-partial-failures
     to process only new articles.
+
+    Use --domains to specify which knowledge domains to extract for.
+    This customizes the extraction prompts with domain-specific context.
     """
     # By default, retry partial failures unless skip flag is set
     retry_partial_mode = not skip_partial_failures
 
+    # Handle --domains list command
+    if domains == "list":
+        available = list_available_domains()
+        if available:
+            logger.info("Available domains:")
+            for domain_id in available:
+                config = load_domain_config(domain_id)
+                domain_name = config.get("domain", {}).get("name", domain_id) if config else domain_id
+                logger.info(f"  • {domain_id}: {domain_name}")
+        else:
+            logger.info("No domain configurations found.")
+            logger.info("Add configs to ~/switchboard/{domain}/.extraction-config.yaml")
+        return
+
+    # Parse domain list
+    domain_configs: list[dict[str, Any]] = []
+    if domains:
+        domain_ids = [d.strip() for d in domains.split(",")]
+        for domain_id in domain_ids:
+            config = load_domain_config(domain_id)
+            if config:
+                domain_configs.append(config)
+                domain_name = config.get("domain", {}).get("name", domain_id)
+                logger.info(f"Loaded domain config: {domain_name}")
+            else:
+                logger.warning(f"Domain config not found: {domain_id}")
+
     try:
         if resilient:
-            asyncio.run(_sync_content_resilient(max_items, retry_partial_mode, notify))
+            asyncio.run(_sync_content_resilient(max_items, retry_partial_mode, notify, domain_configs))
         else:
-            asyncio.run(_sync_content(max_items, notify))
+            asyncio.run(_sync_content(max_items, notify, domain_configs))
     except KeyboardInterrupt:
         if notify:
             send_notification(
@@ -92,8 +129,16 @@ def sync(max_items: int | None, resilient: bool, skip_partial_failures: bool, no
         raise
 
 
-async def _sync_content(max_items: int | None, notify: bool = False):
-    """Sync and extract knowledge from content files."""
+async def _sync_content(
+    max_items: int | None, notify: bool = False, domain_configs: list[dict[str, Any]] | None = None
+):
+    """Sync and extract knowledge from content files.
+
+    Args:
+        max_items: Maximum items to process
+        notify: Whether to send notifications
+        domain_configs: List of domain configurations for focused extraction
+    """
     # Import the new content loader
     from amplifier.content_loader import ContentLoader
 
@@ -260,14 +305,26 @@ async def _sync_content(max_items: int | None, notify: bool = False):
         )
 
 
-async def _sync_content_resilient(max_items: int | None, retry_partial: bool = False, notify: bool = False):
-    """Sync content with resilient partial failure handling."""
+async def _sync_content_resilient(
+    max_items: int | None,
+    retry_partial: bool = False,
+    notify: bool = False,
+    domain_configs: list[dict[str, Any]] | None = None,
+):
+    """Sync content with resilient partial failure handling.
+
+    Args:
+        max_items: Maximum items to process
+        retry_partial: Whether to retry partial failures
+        notify: Whether to send notifications
+        domain_configs: List of domain configurations for focused extraction
+    """
     from amplifier.content_loader import ContentLoader
 
     from .article_processor import ArticleProcessor
 
-    # Initialize components
-    miner = ArticleProcessor()
+    # Initialize components with domain configs
+    miner = ArticleProcessor(domain_configs=domain_configs)
     loader = ContentLoader()
     emitter = EventEmitter()
 
@@ -870,6 +927,205 @@ def synthesize(notify: bool):
                 cwd=os.getcwd(),
             )
         raise
+
+
+@cli.command("gemini-prompt")
+@click.option(
+    "--domains",
+    default="chanoyu",
+    help="Comma-separated domain IDs (e.g., 'chanoyu,poa')",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Write prompt to file instead of stdout",
+)
+def gemini_prompt(domains: str, output: str | None):
+    """Generate a Gemini-ready extraction prompt with domain context.
+
+    This outputs a complete prompt that you can paste into Gemini
+    along with a book PDF for domain-aware knowledge extraction.
+
+    Examples:
+        make knowledge-gemini-prompt DOMAINS=chanoyu
+        make knowledge-gemini-prompt DOMAINS=chanoyu,poa
+    """
+    from .domain_config import build_domain_context
+
+    # Parse and load domain configs
+    domain_ids = [d.strip() for d in domains.split(",")]
+    domain_contexts = []
+
+    for domain_id in domain_ids:
+        config = load_domain_config(domain_id)
+        if config:
+            context = build_domain_context(config)
+            if context:
+                domain_contexts.append(context)
+                logger.info(f"Loaded domain: {domain_id}")
+        else:
+            logger.warning(f"Domain config not found: {domain_id}")
+
+    if not domain_contexts:
+        logger.error("No valid domain configs found. Use 'domains' command to list available.")
+        return
+
+    # Combine domain contexts
+    combined_context = "\n\n---\n\n".join(domain_contexts)
+
+    # Build the complete Gemini prompt
+    prompt = f'''You are a knowledge extraction specialist. Extract structured knowledge from this book for a personal knowledge vault.
+
+## Domain Context
+
+{combined_context}
+
+## Output Format
+
+Create markdown files with this structure:
+
+### File 1: _book-info.md (always create first)
+```yaml
+---
+title: [Book title in English]
+japanese: [日本語タイトル if applicable]
+category: source
+extracted_date: [Today's date]
+extraction_notes: [Any issues or gaps in extraction]
+domains: [{", ".join(domain_ids)}]
+
+citation:
+  authors:
+    - family: [Last name]
+      given: [First name/initials]
+      japanese: [日本語名 if applicable]
+  year: [Publication year]
+  title: [Full title including subtitle]
+  publisher: [Publisher name]
+  publisher_location: [City]
+  isbn: [if available]
+  pages_total: [total page count]
+
+apa_citation: |
+  [Auto-generate based on above fields]
+---
+```
+
+Include a brief summary of the book's contents, significance, and how it fits into the knowledge domains.
+
+### Content Files: [topic]-[number].md
+
+For each logical section or chapter:
+
+```yaml
+---
+title: [Section title]
+source: [Book title]
+category: source
+domains: [{", ".join(domain_ids)}]
+pages:
+  start: [first page number]
+  end: [last page number]
+page_markers: true
+---
+```
+
+## Extraction Guidelines
+
+0. **FIRST: Extract complete bibliographic metadata for APA citation**
+   - Check title page, copyright page, and colophon for all details
+
+1. **CRITICAL: Preserve page numbers throughout**
+   - Include page number for EVERY quote, fact, or significant claim
+   - Format: `[p.42]` inline or `(pp. 42-43)` for ranges
+   - For quotes: `> "Quote text here" [p.42]`
+
+2. **Preserve original language terms**: Keep original with romaji/translation
+   - Format: 茶碗 (chawan, tea bowl)
+
+3. **Focus on domain-relevant content**: Extract concepts, relationships, and insights
+   that are relevant to the specified domains above
+
+4. **Extract actionable knowledge**:
+   - Key concepts with definitions
+   - Relationships between concepts (subject → predicate → object)
+   - Philosophical insights and principles
+   - Practical techniques or approaches
+   - Historical context and lineages
+
+5. **Use tables for lists**: Terminology, concepts, etc. work well as tables:
+   | Term | Definition | Domain Relevance |
+   |------|------------|------------------|
+
+6. **Note uncertainties**: If meaning is unclear or OCR is ambiguous:
+   > [Extraction note: Original text unclear, possibly 〇〇]
+
+7. **Cross-reference across domains**: Note when content bridges multiple domains
+
+8. **Chunk appropriately**:
+   - Each file should be 500-1500 words
+   - Natural chapter breaks are ideal
+
+## Quality Checks
+
+Before finalizing, verify:
+- [ ] All original language characters extracted correctly
+- [ ] Frontmatter is valid YAML
+- [ ] Every quote has a page number
+- [ ] Every factual claim has a page number
+- [ ] Content is tagged with relevant domains
+- [ ] Major topics from table of contents are covered
+'''
+
+    if output:
+        from pathlib import Path
+
+        Path(output).write_text(prompt)
+        logger.info(f"Prompt written to: {output}")
+    else:
+        # Print to stdout for easy copying
+        print(prompt)
+
+
+@cli.command()
+def domains():
+    """List available domain configurations for knowledge extraction.
+
+    Shows both bundled domains (built into amplifier) and user-defined
+    domains from ~/switchboard/{domain}/.extraction-config.yaml
+    """
+    available = list_available_domains()
+
+    if not available:
+        logger.info("No domain configurations found.")
+        logger.info("")
+        logger.info("To create a domain configuration:")
+        logger.info("  1. Create ~/switchboard/{domain}/.extraction-config.yaml")
+        logger.info("  2. Or use bundled domains in amplifier/knowledge_synthesis/domains/")
+        return
+
+    logger.info("Available domain configurations:")
+    logger.info("")
+
+    for domain_id in available:
+        config = load_domain_config(domain_id)
+        if config:
+            domain_name = config.get("domain", {}).get("name", domain_id)
+            extraction = config.get("extraction", {})
+            key_concepts = extraction.get("key_concepts", [])
+            concept_count = len(key_concepts)
+
+            logger.info(f"  {domain_id}")
+            logger.info(f"    Name: {domain_name}")
+            logger.info(f"    Key concepts: {concept_count}")
+            if key_concepts:
+                preview = ", ".join(str(c).split(" - ")[0] for c in key_concepts[:3])
+                logger.info(f"    Preview: {preview}...")
+            logger.info("")
+
+    logger.info("Usage: uv run python -m amplifier.knowledge_synthesis.cli sync --domains chanoyu,poa")
 
 
 if __name__ == "__main__":

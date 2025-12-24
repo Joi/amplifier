@@ -162,6 +162,7 @@ class ArticleProcessor:
         extractor: "UnifiedKnowledgeExtractor | None" = None,
         status_store: ProcessingStatusStore | None = None,
         use_focused_extractors: bool = True,
+        domain_configs: list[dict[str, Any]] | None = None,
     ):
         """Initialize resilient miner.
 
@@ -169,19 +170,24 @@ class ArticleProcessor:
             extractor: Unified knowledge extractor (old method)
             status_store: Processing status store
             use_focused_extractors: Whether to use focused extractors (new method)
+            domain_configs: List of domain configurations for focused extraction
         """
         self.extractor = extractor
         self.status_store = status_store or ProcessingStatusStore()
         self.extraction_logger = ExtractionLogger()
         self.use_focused_extractors = use_focused_extractors
         self.focused_extractor = None
+        self.domain_configs = domain_configs or []
 
         if use_focused_extractors:
             try:
                 from amplifier.knowledge_synthesis.focused_extractors import FocusedKnowledgeExtractor
 
-                self.focused_extractor = FocusedKnowledgeExtractor()
+                self.focused_extractor = FocusedKnowledgeExtractor(domain_configs=self.domain_configs)
                 logger.info("Using focused extractors for knowledge mining")
+                if self.domain_configs:
+                    domain_names = [c.get("domain", {}).get("name", "unknown") for c in self.domain_configs]
+                    logger.info(f"Domain contexts: {', '.join(domain_names)}")
             except ImportError:
                 logger.warning("Focused extractors not available, falling back to unified extractor")
                 self.use_focused_extractors = False

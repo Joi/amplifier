@@ -33,7 +33,13 @@ class KnowledgeSynthesizer:
         """Initialize the knowledge synthesizer."""
         self.extraction_count = 0
 
-    async def extract(self, text: str, title: str = "", source_id: str = "") -> dict[str, Any]:
+    async def extract(
+        self,
+        text: str,
+        title: str = "",
+        source_id: str = "",
+        domain_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Extract all knowledge in one pass.
 
@@ -41,6 +47,7 @@ class KnowledgeSynthesizer:
             text: The text to extract from
             title: Optional title for context
             source_id: Optional source identifier
+            domain_config: Optional domain configuration for focused extraction
 
         Returns:
             Dict with concepts, relationships, insights, and patterns
@@ -54,7 +61,7 @@ class KnowledgeSynthesizer:
                 source_id, error_type="sdk_unavailable", error_detail="Claude Code SDK not installed or not available"
             )
 
-        prompt = self._build_prompt(text, title)
+        prompt = self._build_prompt(text, title, domain_config)
         response = ""  # Initialize to avoid unbound variable errors
 
         try:
@@ -77,6 +84,13 @@ class KnowledgeSynthesizer:
                 extraction["success"] = True
                 extraction["error_type"] = None
                 extraction["error_detail"] = None
+
+                # Add domain info if extracted with domain context
+                if domain_config:
+                    domain_id = domain_config.get("domain", {}).get("id", "")
+                    if domain_id:
+                        extraction["domain"] = domain_id
+
                 self.extraction_count += 1
 
                 return extraction
@@ -95,8 +109,10 @@ class KnowledgeSynthesizer:
             logger.error(f"Extraction failed: {error_msg}")
             return self._empty_extraction(source_id, error_type="unexpected_error", error_detail=error_msg)
 
-    def _build_prompt(self, text: str, title: str) -> str:
-        """Build extraction prompt."""
+    def _build_prompt(self, text: str, title: str, domain_config: dict[str, Any] | None = None) -> str:
+        """Build extraction prompt with optional domain context."""
+        from .domain_config import build_domain_context
+
         # Use token-based truncation (80K tokens as per spec)
         truncated_text, original_tokens, final_tokens = truncate_to_tokens(text, max_tokens=80000)
         if original_tokens > final_tokens:
@@ -105,8 +121,15 @@ class KnowledgeSynthesizer:
         else:
             text = truncated_text
 
-        prompt = f"""Extract structured knowledge from this text.
+        # Build domain context if provided
+        domain_context = ""
+        if domain_config:
+            domain_context = build_domain_context(domain_config)
+            if domain_context:
+                domain_context = f"\n{domain_context}\n"
 
+        prompt = f"""Extract structured knowledge from this text.
+{domain_context}
 Title: {title if title else "Untitled"}
 
 Analyze the text and extract:

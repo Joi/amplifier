@@ -8,7 +8,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class HookLogger:
@@ -91,7 +91,7 @@ class HookLogger:
                 structure[key] = type(value).__name__
         self.debug(f"{label}: {json.dumps(structure)}")
 
-    def exception(self, message: str, exc: Optional[Exception] = None):
+    def exception(self, message: str, exc: Exception | None = None):
         """Log exception with traceback"""
         import traceback
 
