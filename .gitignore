@@ -74,9 +74,9 @@ ai_working/tmp
 # DotRunner sessions
 .dotrunner/
 
-# MCP servers (external repos managed separately)
-mcp-servers/*/
-!mcp-servers/README.md
+# MCP servers (managed as git submodules)
+# Ignore venvs inside submodules
+mcp-servers/*/.venv/
 
 # Private repos nested inside amplifier
 notion-blog-post/

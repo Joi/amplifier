@@ -1,3 +1,9 @@
 [submodule "ai_working/ai_coding_thoughts"]
 	path = ai_working/ai_coding_thoughts
 	url = https://github.com/Joi/ai_coding_thoughts.git
+[submodule "mcp-servers/academic-search"]
+	path = mcp-servers/academic-search
+	url = https://github.com/afrise/academic-search-mcp-server.git
+[submodule "mcp-servers/paper-search"]
+	path = mcp-servers/paper-search
+	url = https://github.com/openags/paper-search-mcp.git
