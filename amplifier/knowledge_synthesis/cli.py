@@ -976,7 +976,7 @@ def gemini_prompt(domains: str, output: str | None):
     combined_context = "\n\n---\n\n".join(domain_contexts)
 
     # Build the complete Gemini prompt
-    prompt = f'''You are a knowledge extraction specialist. Extract structured knowledge from this book for a personal knowledge vault.
+    prompt = f"""You are a knowledge extraction specialist. Extract structured knowledge from this book for a personal knowledge vault.
 
 ## Domain Context
 
@@ -1077,7 +1077,7 @@ Before finalizing, verify:
 - [ ] Every factual claim has a page number
 - [ ] Content is tagged with relevant domains
 - [ ] Major topics from table of contents are covered
-'''
+"""
 
     if output:
         from pathlib import Path
@@ -1126,6 +1126,540 @@ def domains():
             logger.info("")
 
     logger.info("Usage: uv run python -m amplifier.knowledge_synthesis.cli sync --domains chanoyu,poa")
+
+
+@cli.command("gemini-fulltext-prompt")
+@click.option(
+    "--book",
+    default=None,
+    help="Book identifier for output template (e.g., 'suzuki-zen-japanese-culture')",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Write prompt to file instead of stdout",
+)
+def gemini_fulltext_prompt(book: str | None, output: str | None):
+    """Generate a Gemini-ready prompt for LOSSLESS full-text extraction.
+
+    Unlike gemini-prompt (which extracts learnings), this creates a complete
+    transcription of the book with page markers for later domain-specific extraction.
+
+    The full-text output can then be processed with 'extract-learnings' using
+    local Claude, enabling:
+    - Re-extraction with different domain focuses
+    - Perfect citation capability (full text always available)
+    - Cost efficiency (Gemini once, local extraction many times)
+
+    Examples:
+        make knowledge-gemini-fulltext-prompt
+        make knowledge-gemini-fulltext-prompt BOOK=rikyu-hyakushu
+    """
+    prompt = """You are a precise text transcription specialist. Your task is to create a
+complete, lossless markdown transcription of this PDF book.
+
+## CRITICAL REQUIREMENTS
+
+### 1. Page Markers (MOST IMPORTANT)
+- Insert `<!-- PAGE: n -->` marker at the START of each page's content
+- Every page boundary must be marked
+- Page numbers enable precise citations later
+- If page numbers restart (e.g., roman numerals for preface), note: `<!-- PAGE: xii (preface) -->`
+
+### 2. Complete Transcription
+- Transcribe ALL text, not just "key points"
+- This is a LOSSLESS extraction - nothing should be summarized or omitted
+- Preserve paragraph structure
+- Maintain heading hierarchy (use #, ##, ###)
+- Keep original punctuation and formatting
+
+### 3. Japanese/Original Language Text
+- Preserve ALL kanji, hiragana, katakana EXACTLY as written
+- Add romaji in parentheses for specialized terms on first occurrence
+- Format: 茶道 (chadō)
+- Keep original-language quotations intact
+
+### 4. Tables and Lists
+- Recreate tables in markdown format
+- Preserve numbered and bulleted lists
+- Maintain original ordering
+
+### 5. Quotations
+- Use blockquote (>) for quotations
+- Preserve quotation attribution
+- Note if translation vs original: > "Quote" [Author, p.X, translated]
+
+### 6. Figures and Images
+- Insert placeholder: `[Figure X.Y: brief description]`
+- Preserve captions exactly
+- Note if figure has Japanese labels
+
+### 7. Footnotes/Endnotes
+- Preserve using markdown footnote syntax: [^1]
+- Place footnote content at end of chapter or document
+- Keep original numbering
+
+## OUTPUT FORMAT
+
+Create TWO files:
+
+### File 1: _book-info.md
+
+```yaml
+---
+title: "[Full title in original language]"
+title_translated: "[English translation if different]"
+japanese: "[日本語タイトル if applicable]"
+category: source
+type: full-text-extraction
+extraction_date: "[Today's date: YYYY-MM-DD]"
+extraction_method: gemini-lossless-v1
+total_pages: [n]
+page_range: "[first readable page]-[last readable page]"
+language_primary: "[e.g., English, Japanese]"
+language_secondary: "[if bilingual]"
+has_japanese_text: [true/false]
+has_figures: [true/false]
+has_tables: [true/false]
+
+citation:
+  authors:
+    - family: "[Family name]"
+      given: "[Given name/initials]"
+      japanese: "[日本語名 if applicable]"
+  year: [YYYY]
+  title: "[Full title including subtitle]"
+  title_original: "[Original language title if translated work]"
+  publisher: "[Publisher name]"
+  publisher_location: "[City]"
+  edition: "[e.g., 2nd ed., if applicable]"
+  isbn: "[if available]"
+  pages_total: [n]
+  translator: "[if applicable]"
+
+apa_citation: |
+  [Generate proper APA 7th edition citation]
+---
+
+## About This Book
+
+[Write a 2-3 paragraph summary of:
+1. What this book is about
+2. Who the author is and their significance
+3. Why this book matters for the knowledge domains it covers]
+
+## Structure
+
+[List chapters/sections with page numbers in a table format]
+
+| Chapter | Title | Pages |
+|---------|-------|-------|
+| Preface | [title] | pp. i-x |
+| 1 | [title] | pp. 1-25 |
+| ... | ... | ... |
+
+## Extraction Notes
+
+[Note any issues encountered:
+- Unclear text or OCR problems
+- Missing pages
+- Image-heavy sections that couldn't be fully captured
+- Unusual formatting]
+```
+
+### File 2: _full-text.md
+
+```markdown
+---
+title: "[Book Title] - Full Text"
+source_type: lossless-extraction
+page_count: [n]
+---
+
+<!-- PAGE: i (front matter) -->
+# [Title Page Content]
+
+[Author name, publisher, year, etc.]
+
+<!-- PAGE: ii -->
+[Copyright page content]
+
+<!-- PAGE: iii -->
+# Contents
+
+[Full table of contents]
+
+<!-- PAGE: 1 -->
+# Preface
+
+[Complete preface text, preserving all paragraphs...]
+
+Lorem ipsum paragraph one...
+
+Lorem ipsum paragraph two...
+
+<!-- PAGE: 5 -->
+[Preface continues...]
+
+<!-- PAGE: 10 -->
+# Chapter I: [Full Chapter Title]
+
+## [Section heading if any]
+
+[Complete chapter text, every paragraph, every sentence...]
+
+> "Any quotations preserved exactly" [p. 10]
+
+[Continue transcribing EVERYTHING...]
+
+<!-- PAGE: 11 -->
+[Chapter continues with new page marker at each boundary...]
+
+[... continue for entire book ...]
+
+<!-- PAGE: 320 -->
+# Bibliography
+
+[Complete bibliography if present]
+
+<!-- PAGE: 325 -->
+# Index
+
+[Include index if present - can be in list format]
+```
+
+## QUALITY CHECKLIST
+
+Before completing, verify:
+- [ ] EVERY page has a `<!-- PAGE: n -->` marker at its start
+- [ ] NO content was summarized - this is FULL transcription
+- [ ] All Japanese/original characters preserved correctly (not romanized)
+- [ ] Paragraph structure maintained (blank lines between paragraphs)
+- [ ] All headings use proper markdown hierarchy
+- [ ] Tables formatted correctly
+- [ ] Quotations use > blockquote format
+- [ ] Frontmatter is valid YAML
+- [ ] Page numbers are sequential and complete
+- [ ] Footnotes preserved with [^n] syntax
+- [ ] Figure placeholders inserted for images
+
+## IMPORTANT
+
+This is a TRANSCRIPTION, not an extraction or summary. The goal is to have the
+complete text available for later processing. Domain-specific knowledge extraction
+will happen in a separate step using this full text.
+
+If the book is very long (500+ pages), you may split _full-text.md into multiple
+files by major section:
+- _full-text-part1.md (Preface + Chapters 1-5)
+- _full-text-part2.md (Chapters 6-10)
+- etc.
+
+Each part should start with a YAML header noting the page range.
+"""
+
+    if book:
+        prompt = f"# Full-Text Extraction: {book}\n\n" + prompt
+        logger.info(f"Generated prompt for book: {book}")
+
+    if output:
+        from pathlib import Path
+
+        Path(output).write_text(prompt)
+        logger.info(f"Prompt written to: {output}")
+    else:
+        print(prompt)
+
+
+@cli.command("extract-learnings")
+@click.option(
+    "--source",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to source directory containing _full-text.md",
+)
+@click.option(
+    "--domains",
+    default="chanoyu",
+    help="Comma-separated domain IDs for focused extraction",
+)
+@click.option(
+    "--pages-per-chunk",
+    default=15,
+    type=int,
+    help="Number of pages per processing chunk (default: 15)",
+)
+@click.option(
+    "--notify",
+    is_flag=True,
+    default=False,
+    help="Send desktop notifications on completion",
+)
+def extract_learnings(source: str, domains: str, pages_per_chunk: int, notify: bool):
+    """Extract domain-specific learnings from a full-text source.
+
+    This is Phase 2 of the lossless ingest workflow. It reads _full-text.md
+    and extracts domain-specific concepts, relationships, and insights using
+    local Claude (not Gemini), enabling:
+
+    - Re-extraction with different domain focuses (cheap!)
+    - Perfect citations (full text available)
+    - Incremental domain additions
+
+    Examples:
+        make knowledge-extract-learnings SOURCE=~/switchboard/chanoyu/sources/suzuki DOMAINS=chanoyu
+        make knowledge-extract-learnings SOURCE=~/switchboard/chanoyu/sources/suzuki DOMAINS=poa
+    """
+    from pathlib import Path
+
+    source_path = Path(source).expanduser()
+
+    # Find full-text file
+    full_text_file = source_path / "_full-text.md"
+    if not full_text_file.exists():
+        # Try finding parts
+        parts = list(source_path.glob("_full-text-part*.md"))
+        if not parts:
+            logger.error(f"No _full-text.md found in {source_path}")
+            logger.error("Run gemini-fulltext-prompt first and save output to _full-text.md")
+            return
+        logger.info(f"Found {len(parts)} full-text parts")
+    else:
+        logger.info(f"Found: {full_text_file}")
+
+    # Load book info
+    book_info_file = source_path / "_book-info.md"
+    book_title = source_path.name
+    if book_info_file.exists():
+        import yaml
+
+        content = book_info_file.read_text()
+        if "---" in content:
+            yaml_part = content.split("---")[1]
+            try:
+                meta = yaml.safe_load(yaml_part)
+                book_title = meta.get("title", book_title)
+            except Exception:
+                pass
+        logger.info(f"Book: {book_title}")
+
+    # Parse domains
+    domain_ids = [d.strip() for d in domains.split(",")]
+    logger.info(f"Domains: {', '.join(domain_ids)}")
+
+    # Load domain configs
+    from .domain_config import build_domain_context
+    from .domain_config import load_domain_config
+
+    domain_contexts = []
+    for domain_id in domain_ids:
+        config = load_domain_config(domain_id)
+        if config:
+            context = build_domain_context(config)
+            if context:
+                domain_contexts.append((domain_id, context, config))
+                logger.info(f"  ✓ Loaded: {domain_id}")
+        else:
+            logger.warning(f"  ✗ Not found: {domain_id}")
+
+    if not domain_contexts:
+        logger.error("No valid domain configs found")
+        return
+
+    # Read full text
+    if full_text_file.exists():
+        full_text = full_text_file.read_text()
+    else:
+        parts = sorted(source_path.glob("_full-text-part*.md"))
+        full_text = "\n\n".join(p.read_text() for p in parts)
+
+    # Chunk by pages
+    import re
+
+    page_pattern = re.compile(r"<!-- PAGE: (\d+|[ivxlc]+)(?:\s*\([^)]+\))? -->", re.IGNORECASE)
+    pages = page_pattern.split(full_text)
+
+    if len(pages) < 3:
+        logger.warning("No page markers found. Processing as single chunk.")
+        chunks = [(full_text, "1", "end")]
+    else:
+        # Reconstruct chunks with page info
+        chunks = []
+        for i in range(0, len(pages) - 1, pages_per_chunk * 2):
+            chunk_content = ""
+            start_page = None
+            end_page = None
+            for j in range(i, min(i + pages_per_chunk * 2, len(pages) - 1), 2):
+                page_num = pages[j + 1] if j + 1 < len(pages) else "?"
+                page_text = pages[j + 2] if j + 2 < len(pages) else ""
+                if start_page is None:
+                    start_page = page_num
+                end_page = page_num
+                chunk_content += f"<!-- PAGE: {page_num} -->\n{page_text}\n\n"
+            if chunk_content.strip():
+                chunks.append((chunk_content, start_page or "?", end_page or "?"))
+
+    logger.info(f"Split into {len(chunks)} chunks ({pages_per_chunk} pages each)")
+
+    # Create output directory
+    learnings_dir = source_path / "learnings"
+    learnings_dir.mkdir(exist_ok=True)
+
+    # Process each domain
+    asyncio.run(
+        _extract_learnings_async(
+            chunks=chunks,
+            domain_contexts=domain_contexts,
+            book_title=book_title,
+            learnings_dir=learnings_dir,
+            notify=notify,
+        )
+    )
+
+
+async def _extract_learnings_async(
+    chunks: list[tuple[str, str, str]],
+    domain_contexts: list[tuple[str, str, dict]],
+    book_title: str,
+    learnings_dir,
+    notify: bool,
+):
+    """Async extraction of learnings from chunks."""
+    from amplifier.knowledge_integration import UnifiedKnowledgeExtractor
+
+    extractor = UnifiedKnowledgeExtractor()
+
+    for domain_id, domain_context, _domain_config in domain_contexts:
+        logger.info(f"\n{'=' * 50}")
+        logger.info(f"Extracting for domain: {domain_id}")
+        logger.info(f"{'=' * 50}")
+
+        all_concepts = []
+        all_relationships = []
+        all_insights = []
+
+        for idx, (chunk_text, start_page, end_page) in enumerate(chunks):
+            logger.info(f"  Processing chunk {idx + 1}/{len(chunks)} (pp. {start_page}-{end_page})...")
+
+            try:
+                # Build extraction prompt with domain context
+                prompt_prefix = f"""You are extracting domain-specific knowledge from a book.
+
+## Domain Context
+{domain_context}
+
+## Source
+Book: {book_title}
+Pages: {start_page} - {end_page}
+
+## Instructions
+Extract concepts, relationships, and insights relevant to the domain above.
+Every extracted item MUST include the page reference [p.X] from the source text.
+Focus on what's most valuable for understanding and practicing in this domain.
+
+## Source Text
+"""
+                # Extract using existing extractor
+                result = await extractor.extract_from_text(
+                    text=prompt_prefix + chunk_text,
+                    title=f"{book_title} (pp. {start_page}-{end_page})",
+                    source=domain_id,
+                )
+
+                if result.concepts:
+                    all_concepts.extend(result.concepts)
+                if result.relationships:
+                    all_relationships.extend(result.relationships)
+                if result.key_insights:
+                    all_insights.extend(result.key_insights)
+
+                logger.info(f"    → {len(result.concepts)} concepts, {len(result.relationships)} relationships")
+
+            except Exception as e:
+                logger.error(f"    ✗ Error: {e}")
+                continue
+
+        # Save domain-specific outputs
+        domain_file = learnings_dir / f"{domain_id}-insights.md"
+
+        # Generate markdown summary
+        output_lines = [
+            "---",
+            f"title: {book_title} - {domain_id.title()} Insights",
+            f"domain: {domain_id}",
+            f"extracted_date: {__import__('datetime').date.today().isoformat()}",
+            f"concept_count: {len(all_concepts)}",
+            f"relationship_count: {len(all_relationships)}",
+            f"insight_count: {len(all_insights)}",
+            "---",
+            "",
+            f"# {book_title}",
+            f"## Domain: {domain_id.title()}",
+            "",
+            "---",
+            "",
+        ]
+
+        if all_concepts:
+            output_lines.append("## Key Concepts")
+            output_lines.append("")
+            for concept in all_concepts:
+                name = concept.get("name", "Unknown")
+                desc = concept.get("description", "")
+                output_lines.append(f"### {name}")
+                output_lines.append(f"{desc}")
+                output_lines.append("")
+
+        if all_insights:
+            output_lines.append("## Insights")
+            output_lines.append("")
+            for insight in all_insights:
+                output_lines.append(f"- {insight}")
+            output_lines.append("")
+
+        if all_relationships:
+            output_lines.append("## Relationships")
+            output_lines.append("")
+            output_lines.append("| Subject | Predicate | Object |")
+            output_lines.append("|---------|-----------|--------|")
+            for rel in all_relationships[:50]:  # Limit for readability
+                output_lines.append(f"| {rel.subject} | {rel.predicate} | {rel.object} |")
+            output_lines.append("")
+
+        domain_file.write_text("\n".join(output_lines))
+        logger.info(f"\n✓ Saved: {domain_file}")
+
+        # Also save as JSONL for knowledge graph
+        jsonl_file = learnings_dir / f"{domain_id}-extractions.jsonl"
+        import json
+
+        with open(jsonl_file, "w") as f:
+            extraction = {
+                "source": book_title,
+                "domain": domain_id,
+                "concepts": all_concepts,
+                "relationships": [
+                    {"subject": r.subject, "predicate": r.predicate, "object": r.object, "confidence": r.confidence}
+                    for r in all_relationships
+                ],
+                "insights": all_insights,
+            }
+            f.write(json.dumps(extraction, ensure_ascii=False) + "\n")
+        logger.info(f"✓ Saved: {jsonl_file}")
+
+    logger.info(f"\n{'=' * 50}")
+    logger.info("EXTRACTION COMPLETE")
+    logger.info(f"Output directory: {learnings_dir}")
+    logger.info(f"{'=' * 50}")
+
+    if notify:
+        send_notification(
+            title="Amplifier",
+            message=f"Learnings extraction complete for {book_title}",
+            cwd=os.getcwd(),
+        )
 
 
 if __name__ == "__main__":
