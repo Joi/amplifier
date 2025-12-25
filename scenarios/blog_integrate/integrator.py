@@ -246,6 +246,67 @@ class BlogIntegrator:
 
         return "\n".join(lines)
 
+    def _generate_blog_mentions_section(self, match: EntityMatch) -> str:
+        """Generate a Blog Mentions section for a vault file."""
+        # Sort posts by date descending
+        posts = sorted(match.blog_posts, key=lambda p: p.get("date", ""), reverse=True)
+        total = len(posts)
+
+        lines = [
+            "",
+            "## Blog Mentions",
+            "",
+            f"*{total} mention{'s' if total != 1 else ''} in Joi's blog*",
+            "",
+        ]
+
+        # Show up to 10 most recent posts
+        shown = posts[:10]
+        for post in shown:
+            title = post.get("title", "Untitled")
+            date = post.get("date", "")
+            permalink = post.get("permalink", "")
+            if permalink:
+                lines.append(f"- [{title}]({permalink}) ({date})")
+            else:
+                lines.append(f"- {title} ({date})")
+
+        if total > 10:
+            lines.append(f"- *...and {total - 10} more*")
+
+        lines.append("")
+        return "\n".join(lines)
+
+    def update_vault_files(self) -> int:
+        """Add blog mentions to vault files.
+
+        Returns:
+            Number of files updated
+        """
+        updated = 0
+        for match in self.entity_matches:
+            vault_file = match.vault_file
+            try:
+                content = vault_file.read_text(encoding="utf-8")
+
+                # Skip if already has blog mentions section
+                if "## Blog Mentions" in content:
+                    logger.debug(f"Skipping {vault_file.name} - already has blog mentions")
+                    continue
+
+                # Generate and append the section
+                section = self._generate_blog_mentions_section(match)
+                new_content = content.rstrip() + "\n" + section
+
+                vault_file.write_text(new_content, encoding="utf-8")
+                logger.info(f"Updated {vault_file.name} with {len(match.blog_posts)} blog mentions")
+                updated += 1
+
+            except Exception as e:
+                logger.error(f"Failed to update {vault_file.name}: {e}")
+
+        return updated
+
     def integrate(self, dry_run: bool = True) -> dict:
         """Run full integration.
 
@@ -267,9 +328,16 @@ class BlogIntegrator:
         report_path.write_text(report, encoding="utf-8")
         logger.info(f"Report saved to: {report_path}")
 
+        # Update vault files if not dry run
+        files_updated = 0
+        if not dry_run:
+            files_updated = self.update_vault_files()
+            logger.info(f"Updated {files_updated} vault files with blog mentions")
+
         return {
             "extractions": len(self.extractions),
             "entity_matches": len(self.entity_matches),
             "topic_matches": len(self.topic_matches),
+            "files_updated": files_updated,
             "dry_run": dry_run,
         }
