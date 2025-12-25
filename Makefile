@@ -51,6 +51,11 @@ default: ## Show essential commands
 	@echo "Blog Writing:"
 	@echo "  make blog-write      Create a blog post from your ideas"
 	@echo ""
+	@echo "Blog Scraper (joi.ito.com):"
+	@echo "  make blog-scrape     Scrape joi.ito.com to markdown"
+	@echo "  make blog-scrape-test  Test with 5 posts"
+	@echo "  make blog-index      Generate index.json"
+	@echo ""
 	@echo "Transcription:"
 	@echo "  make transcribe      Transcribe audio/video files or YouTube URLs"
 	@echo "  make transcribe-index Generate index of all transcripts"
@@ -88,7 +93,9 @@ help: ## Show ALL available commands
 	@echo "KNOWLEDGE BASE:"
 	@echo "  make knowledge-update        Full pipeline: extract & synthesize"
 	@echo "  make knowledge-domains       List available domain configurations"
-	@echo "  make knowledge-gemini-prompt DOMAINS=chanoyu,poa  Generate Gemini prompt for book extraction"
+	@echo "  make knowledge-gemini-prompt DOMAINS=chanoyu,poa  Generate Gemini learnings prompt"
+	@echo "  make knowledge-gemini-fulltext-prompt  Generate Gemini LOSSLESS full-text prompt"
+	@echo "  make knowledge-extract-learnings SOURCE=path  Extract learnings from full-text"
 	@echo "  make knowledge-sync          Extract knowledge from content"
 	@echo "  make knowledge-sync DOMAINS=chanoyu,poa  Extract with domain context"
 	@echo "  make knowledge-sync-batch N=5  Process next N articles"
@@ -317,6 +324,28 @@ knowledge-gemini-prompt: ## Generate Gemini-ready extraction prompt [DOMAINS=cha
 	@domains="$${DOMAINS:-chanoyu}"; \
 	echo "Generating Gemini extraction prompt for domains: $$domains" >&2; \
 	uv run python -m amplifier.knowledge_synthesis.cli gemini-prompt --domains "$$domains"
+
+knowledge-gemini-fulltext-prompt: ## Generate Gemini prompt for LOSSLESS full-text extraction [BOOK=name]
+	@echo "Generating Gemini FULL-TEXT extraction prompt..." >&2; \
+	if [ -n "$${BOOK:-}" ]; then \
+		uv run python -m amplifier.knowledge_synthesis.cli gemini-fulltext-prompt --book "$$BOOK"; \
+	else \
+		uv run python -m amplifier.knowledge_synthesis.cli gemini-fulltext-prompt; \
+	fi
+
+knowledge-extract-learnings: ## Extract domain learnings from full-text source [SOURCE=path DOMAINS=chanoyu]
+	@if [ -z "$${SOURCE:-}" ]; then \
+		echo "ERROR: SOURCE is required. Example:"; \
+		echo "  make knowledge-extract-learnings SOURCE=~/switchboard/chanoyu/sources/book-name DOMAINS=chanoyu"; \
+		exit 1; \
+	fi; \
+	domains="$${DOMAINS:-chanoyu}"; \
+	echo "Extracting learnings from: $$SOURCE" >&2; \
+	echo "Domains: $$domains" >&2; \
+	uv run python -m amplifier.knowledge_synthesis.cli extract-learnings \
+		--source "$$SOURCE" \
+		--domains "$$domains" \
+		$${NOTIFY:+--notify}
 
 knowledge-sync: ## Extract knowledge from all content files [NOTIFY=true] [DOMAINS=chanoyu,poa]
 	@notify_flag=""; \
@@ -635,6 +664,37 @@ blog-write-example: ## Run blog writer with example data
 	@uv run python -m scenarios.blog_writer \
 		--idea scenarios/blog_writer/tests/sample_brain_dump.md \
 		--writings-dir scenarios/blog_writer/tests/sample_writings/
+
+# Blog Scraper (joi.ito.com)
+blog-scrape: ## Scrape joi.ito.com blog to markdown. Usage: make blog-scrape [LANGUAGE=en|jp|both] [SINCE=2024-01-01] [MAX_POSTS=10]
+	@echo "🌐 Scraping joi.ito.com blog..."
+	@output="$${OUTPUT:-$(HOME)/repos/joi-ito-web-md}"; \
+	lang="$${LANGUAGE:-both}"; \
+	args="--output $$output --language $$lang"; \
+	if [ -n "$(SINCE)" ]; then args="$$args --since $(SINCE)"; fi; \
+	if [ -n "$(MAX_POSTS)" ]; then args="$$args --max-posts $(MAX_POSTS)"; fi; \
+	if [ -n "$(VERBOSE)" ]; then args="$$args --verbose"; fi; \
+	uv run python -m amplifier.blog_scraper.cli scrape $$args
+
+blog-scrape-test: ## Test scrape with 5 posts
+	@echo "🧪 Testing blog scraper with 5 posts..."
+	@uv run python -m amplifier.blog_scraper.cli scrape \
+		--output /tmp/blog-scrape-test \
+		--max-posts 5 \
+		--verbose
+
+blog-index: ## Generate index.json from scraped markdown files
+	@output="$${OUTPUT:-$(HOME)/repos/joi-ito-web-md}"; \
+	echo "📋 Generating index for $$output..."; \
+	uv run python -m amplifier.blog_scraper.cli index --dir "$$output"
+
+blog-sync: ## Sync scraped blog to GitHub
+	@output="$${OUTPUT:-$(HOME)/repos/joi-ito-web-md}"; \
+	echo "📤 Syncing to GitHub..."; \
+	cd "$$output" && \
+	git add -A && \
+	git commit -m "Blog update: $$(date +%Y-%m-%d)" && \
+	git push
 
 # Tips Synthesis
 tips-synthesizer: ## Synthesize tips from markdown files into cohesive document. Usage: make tips-synthesizer INPUT=tips_dir/ OUTPUT=guide.md [RESUME=true] [VERBOSE=true]
