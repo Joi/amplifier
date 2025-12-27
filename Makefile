@@ -93,6 +93,8 @@ help: ## Show ALL available commands
 	@echo "KNOWLEDGE BASE:"
 	@echo "  make knowledge-update        Full pipeline: extract & synthesize"
 	@echo "  make knowledge-domains       List available domain configurations"
+	@echo "  make knowledge-gemini-extract PDF=path  Extract via Gemini API (no copy/paste!)"
+	@echo "  make knowledge-gemini-fulltext PDF=path  Full-text via Gemini API"
 	@echo "  make knowledge-gemini-prompt DOMAINS=chanoyu,poa  Generate Gemini learnings prompt"
 	@echo "  make knowledge-gemini-fulltext-prompt  Generate Gemini LOSSLESS full-text prompt"
 	@echo "  make knowledge-extract-learnings SOURCE=path  Extract learnings from full-text"
@@ -324,6 +326,33 @@ knowledge-gemini-prompt: ## Generate Gemini-ready extraction prompt [DOMAINS=cha
 	@domains="$${DOMAINS:-chanoyu}"; \
 	echo "Generating Gemini extraction prompt for domains: $$domains" >&2; \
 	uv run python -m amplifier.knowledge_synthesis.cli gemini-prompt --domains "$$domains"
+
+knowledge-gemini-extract: ## Extract from PDF via Gemini API (no copy/paste) [PDF=path DOMAINS=chanoyu,poa]
+	@if [ -z "$${PDF:-}" ]; then \
+		echo "ERROR: PDF is required. Example:"; \
+		echo "  make knowledge-gemini-extract PDF=~/books/zen-tea.pdf DOMAINS=chanoyu"; \
+		exit 1; \
+	fi; \
+	domains="$${DOMAINS:-chanoyu}"; \
+	echo "Extracting from PDF via Gemini API..." >&2; \
+	uv run python -m amplifier.knowledge_synthesis.cli gemini-extract \
+		"$$PDF" \
+		--domains "$$domains" \
+		$${OUTPUT:+--output "$$OUTPUT"} \
+		$${NOTIFY:+--notify}
+
+knowledge-gemini-fulltext: ## Full-text extraction via Gemini API [PDF=path OUTPUT=dir]
+	@if [ -z "$${PDF:-}" ]; then \
+		echo "ERROR: PDF is required. Example:"; \
+		echo "  make knowledge-gemini-fulltext PDF=~/books/zen-tea.pdf"; \
+		echo "  make knowledge-gemini-fulltext PDF=~/books/zen-tea.pdf OUTPUT=~/switchboard/chanoyu/sources/zen-tea"; \
+		exit 1; \
+	fi; \
+	echo "Extracting full-text via Gemini API..." >&2; \
+	uv run python -m amplifier.knowledge_synthesis.cli gemini-fulltext \
+		"$$PDF" \
+		$${OUTPUT:+--output "$$OUTPUT"} \
+		$${NOTIFY:+--notify}
 
 knowledge-gemini-fulltext-prompt: ## Generate Gemini prompt for LOSSLESS full-text extraction [BOOK=name]
 	@echo "Generating Gemini FULL-TEXT extraction prompt..." >&2; \

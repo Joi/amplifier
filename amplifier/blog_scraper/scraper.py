@@ -45,10 +45,14 @@ def _fetch_url(url: str, timeout: int = 30) -> tuple[str, int]:
                 "curl",
                 "-s",
                 "-L",  # Follow redirects
-                "-w", "%{http_code}",  # Write status code at end
-                "-o", "-",  # Write body to stdout
-                "--max-time", str(timeout),
-                "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "-w",
+                "%{http_code}",  # Write status code at end
+                "-o",
+                "-",  # Write body to stdout
+                "--max-time",
+                str(timeout),
+                "-A",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
                 url,
             ],
             capture_output=True,
@@ -192,9 +196,7 @@ def scrape_post(url: str, language: str = "en") -> BlogPost | None:
 
     # Extract categories
     categories = []
-    category_links = soup.find_all("a", rel="category tag") or soup.find_all(
-        "a", class_="category"
-    )
+    category_links = soup.find_all("a", rel="category tag") or soup.find_all("a", class_="category")
     for cat in category_links:
         cat_text = cat.get_text(strip=True)
         if cat_text:

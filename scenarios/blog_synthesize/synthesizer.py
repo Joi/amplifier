@@ -199,13 +199,15 @@ class BlogSynthesizer:
             lines.append(f"| [[joi-blog/topics/{name}\\|{display_name}]] | {topic.post_count} | {topic.date_range} |")
 
         # Group by era
-        lines.extend([
-            "",
-            "---",
-            "",
-            "## By Era",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "---",
+                "",
+                "## By Era",
+                "",
+            ]
+        )
 
         # Define eras
         eras = {

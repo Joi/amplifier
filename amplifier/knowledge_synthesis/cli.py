@@ -802,6 +802,8 @@ def stats():
 
     if not extractions:
         logger.info("No extractions found. Run 'sync' command first.")
+        # Still show domain health check
+        _check_domain_health()
         return
 
     # Calculate statistics
@@ -823,6 +825,69 @@ def stats():
     logger.info(f"Avg concepts/item: {total_concepts / len(extractions):.1f}")
     logger.info(f"Avg relationships/item: {total_relationships / len(extractions):.1f}")
     logger.info(f"Avg insights/item: {total_insights / len(extractions):.1f}")
+
+    # Domain health check for ~/switchboard vault
+    _check_domain_health()
+
+
+def _check_domain_health():
+    """Check switchboard vault domains follow the exemplar pattern."""
+    from pathlib import Path
+
+    switchboard = Path.home() / "switchboard"
+    if not switchboard.exists():
+        return
+
+    logger.info("\n" + "-" * 50)
+    logger.info("Domain Health Check")
+    logger.info("-" * 50)
+
+    # Known domains that should follow the pattern
+    domain_candidates = ["chanoyu", "poa", "concepts", "organizations", "references", "places"]
+
+    healthy = []
+    needs_attention = []
+    not_domains = []
+
+    for name in domain_candidates:
+        domain_path = switchboard / name
+        if not domain_path.exists() or not domain_path.is_dir():
+            continue
+
+        has_structure = (domain_path / "_STRUCTURE.md").exists()
+        has_index = (domain_path / "INDEX.md").exists()
+
+        # Count files to determine if it's substantial enough
+        file_count = len(list(domain_path.glob("**/*.md")))
+
+        if has_structure and has_index:
+            healthy.append((name, file_count))
+        elif file_count >= 15:
+            # Substantial but missing structure
+            missing = []
+            if not has_structure:
+                missing.append("_STRUCTURE.md")
+            if not has_index:
+                missing.append("INDEX.md")
+            needs_attention.append((name, file_count, missing))
+        else:
+            # Too small to be a formal domain
+            not_domains.append((name, file_count))
+
+    if healthy:
+        logger.info("\n✓ Healthy domains (follow exemplar pattern):")
+        for name, count in healthy:
+            logger.info(f"  • {name}/ ({count} files)")
+
+    if needs_attention:
+        logger.info("\n⚠ Need attention (15+ files but missing structure):")
+        for name, count, missing in needs_attention:
+            logger.info(f"  • {name}/ ({count} files) - missing: {', '.join(missing)}")
+
+    if not_domains:
+        logger.info("\n○ Not formal domains yet (<15 files):")
+        for name, count in not_domains:
+            logger.info(f"  • {name}/ ({count} files)")
 
 
 @cli.command()
@@ -1126,6 +1191,404 @@ def domains():
             logger.info("")
 
     logger.info("Usage: uv run python -m amplifier.knowledge_synthesis.cli sync --domains chanoyu,poa")
+
+
+@cli.command("gemini-extract")
+@click.argument("pdf_path", type=click.Path(exists=True))
+@click.option(
+    "--domains",
+    default="chanoyu",
+    help="Comma-separated domain IDs (e.g., 'chanoyu,poa')",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output directory (default: same directory as PDF)",
+)
+@click.option(
+    "--model",
+    default=None,
+    help="Gemini model to use (default: gemini-2.5-flash)",
+)
+@click.option(
+    "--notify",
+    is_flag=True,
+    default=False,
+    help="Send desktop notifications on completion",
+)
+def gemini_extract(pdf_path: str, domains: str, output: str | None, model: str | None, notify: bool):
+    """Extract domain-specific knowledge from a PDF using Gemini API.
+
+    This automates the book extraction workflow - no copy/paste needed!
+    Uploads the PDF to Gemini and gets structured knowledge extraction.
+
+    Requires GOOGLE_API_KEY environment variable.
+
+    Examples:
+        make knowledge-gemini-extract PDF=~/books/zen-tea.pdf DOMAINS=chanoyu
+        make knowledge-gemini-extract PDF=~/books/philosophy.pdf DOMAINS=chanoyu,poa
+    """
+    from pathlib import Path
+
+    from .gemini_extractor import GeminiPdfExtractor
+
+    pdf = Path(pdf_path).expanduser()
+    domain_ids = [d.strip() for d in domains.split(",")]
+
+    # Determine output directory
+    if output:
+        output_dir = Path(output).expanduser()
+    else:
+        output_dir = pdf.parent / pdf.stem
+
+    logger.info(f"PDF: {pdf}")
+    logger.info(f"Domains: {', '.join(domain_ids)}")
+    logger.info(f"Output: {output_dir}")
+
+    try:
+        extractor = GeminiPdfExtractor()
+        output_file = asyncio.run(
+            extractor.extract_with_domains(
+                pdf_path=pdf,
+                domain_ids=domain_ids,
+                output_dir=output_dir,
+                model=model,
+            )
+        )
+
+        logger.info(f"\n✓ Extraction complete: {output_file}")
+
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Gemini extraction complete: {pdf.name}",
+                cwd=os.getcwd(),
+            )
+
+    except Exception as e:
+        logger.error(f"Extraction failed: {e}")
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Gemini extraction failed: {e}",
+                cwd=os.getcwd(),
+            )
+        raise click.Abort()
+
+
+@cli.command("gemini-fulltext")
+@click.argument("pdf_path", type=click.Path(exists=True))
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output directory (default: same directory as PDF)",
+)
+@click.option(
+    "--model",
+    default=None,
+    help="Gemini model to use (default: gemini-2.5-flash)",
+)
+@click.option(
+    "--notify",
+    is_flag=True,
+    default=False,
+    help="Send desktop notifications on completion",
+)
+def gemini_fulltext(pdf_path: str, output: str | None, model: str | None, notify: bool):
+    """Extract lossless full-text from a PDF using Gemini API.
+
+    Creates a complete transcription with page markers for later
+    domain-specific extraction using 'extract-learnings'.
+
+    This is Phase 1 of the two-phase workflow:
+    1. gemini-fulltext: Lossless extraction (Gemini, once)
+    2. extract-learnings: Domain extraction (Claude, many times)
+
+    Requires GOOGLE_API_KEY environment variable.
+
+    Examples:
+        make knowledge-gemini-fulltext PDF=~/books/zen-tea.pdf
+        make knowledge-gemini-fulltext PDF=~/books/zen-tea.pdf OUTPUT=~/switchboard/chanoyu/sources/zen-tea
+    """
+    from pathlib import Path
+
+    from .gemini_extractor import GeminiPdfExtractor
+
+    pdf = Path(pdf_path).expanduser()
+
+    # Determine output directory
+    if output:
+        output_dir = Path(output).expanduser()
+    else:
+        output_dir = pdf.parent / pdf.stem
+
+    logger.info(f"PDF: {pdf}")
+    logger.info(f"Output: {output_dir}")
+
+    try:
+        extractor = GeminiPdfExtractor()
+        book_info_path, fulltext_path = asyncio.run(
+            extractor.extract_fulltext(
+                pdf_path=pdf,
+                output_dir=output_dir,
+                model=model,
+            )
+        )
+
+        logger.info("\n✓ Full-text extraction complete!")
+        logger.info(f"  Book info: {book_info_path}")
+        logger.info(f"  Full text: {fulltext_path}")
+        logger.info("\nNext step: Run 'extract-learnings' to extract domain-specific knowledge:")
+        logger.info(f"  make knowledge-extract-learnings SOURCE={output_dir} DOMAINS=chanoyu")
+
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Full-text extraction complete: {pdf.name}",
+                cwd=os.getcwd(),
+            )
+
+    except Exception as e:
+        logger.error(f"Extraction failed: {e}")
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Full-text extraction failed: {e}",
+                cwd=os.getcwd(),
+            )
+        raise click.Abort()
+
+
+@cli.command("gemini-fulltext-chunked")
+@click.argument("pdf_path", type=click.Path(exists=True))
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output directory (default: same as PDF location)",
+)
+@click.option(
+    "--pages",
+    "-p",
+    type=int,
+    required=True,
+    help="Total number of pages in the PDF",
+)
+@click.option(
+    "--chunk-size",
+    "-c",
+    type=int,
+    default=25,
+    help="Pages per chunk (default: 25)",
+)
+@click.option(
+    "--model",
+    "-m",
+    default="gemini-2.5-flash",
+    help="Gemini model (default: gemini-2.5-flash for large output window)",
+)
+@click.option(
+    "--notify",
+    is_flag=True,
+    default=False,
+    help="Send desktop notifications on completion",
+)
+def gemini_fulltext_chunked(
+    pdf_path: str,
+    output: str | None,
+    pages: int,
+    chunk_size: int,
+    model: str,
+    notify: bool,
+):
+    """Extract lossless full-text from a large PDF using chunked extraction.
+
+    For books that exceed Gemini's output token limit (~65K tokens),
+    this extracts the PDF in smaller page-range chunks and combines them.
+
+    Requires GOOGLE_API_KEY environment variable.
+
+    Examples:
+        uv run knowledge gemini-fulltext-chunked ~/books/large-book.pdf --pages 230
+        uv run knowledge gemini-fulltext-chunked ~/books/large-book.pdf --pages 400 --chunk-size 20
+    """
+    from pathlib import Path
+
+    from .gemini_extractor import GeminiPdfExtractor
+
+    pdf = Path(pdf_path).expanduser()
+
+    # Determine output directory
+    if output:
+        output_dir = Path(output).expanduser()
+    else:
+        output_dir = pdf.parent / pdf.stem
+
+    logger.info(f"PDF: {pdf}")
+    logger.info(f"Output: {output_dir}")
+    logger.info(f"Pages: {pages}, Chunk size: {chunk_size}")
+
+    try:
+        extractor = GeminiPdfExtractor()
+        book_info_path, fulltext_path = asyncio.run(
+            extractor.extract_fulltext_chunked(
+                pdf_path=pdf,
+                output_dir=output_dir,
+                total_pages=pages,
+                chunk_size=chunk_size,
+                model=model,
+            )
+        )
+
+        logger.info("\n✓ Full-text extraction complete!")
+        logger.info(f"  Book info: {book_info_path}")
+        logger.info(f"  Full text: {fulltext_path}")
+        logger.info("\nNext step: Run 'extract-learnings' to extract domain-specific knowledge:")
+        logger.info(f"  make knowledge-extract-learnings SOURCE={output_dir} DOMAINS=your-domain")
+
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Full-text extraction complete: {pdf.name}",
+                cwd=os.getcwd(),
+            )
+
+    except Exception as e:
+        logger.error(f"Extraction failed: {e}")
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Full-text extraction failed: {e}",
+                cwd=os.getcwd(),
+            )
+        raise click.Abort()
+
+
+@cli.command("gemini-page-extract")
+@click.argument("pdf_path", type=click.Path(exists=True))
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output directory (default: same as PDF location)",
+)
+@click.option(
+    "--start",
+    type=int,
+    default=1,
+    help="Start page (1-based, default: 1)",
+)
+@click.option(
+    "--end",
+    type=int,
+    default=None,
+    help="End page (default: all pages)",
+)
+@click.option(
+    "--dpi",
+    type=int,
+    default=150,
+    help="Image resolution (default: 150, higher = better quality but slower)",
+)
+@click.option(
+    "--model",
+    "-m",
+    default="gemini-2.5-flash",
+    help="Gemini model (default: gemini-2.5-flash)",
+)
+@click.option(
+    "--notify",
+    is_flag=True,
+    default=False,
+    help="Send desktop notifications on completion",
+)
+def gemini_page_extract(
+    pdf_path: str,
+    output: str | None,
+    start: int,
+    end: int | None,
+    dpi: int,
+    model: str,
+    notify: bool,
+):
+    """Extract PDF page-by-page using image conversion (prevents repetition loops).
+
+    This extractor physically converts each PDF page to an image before sending
+    to Gemini. The model only sees one page at a time, which prevents the
+    cross-page repetition loops that can occur with full PDF uploads.
+
+    Benefits:
+    - Prevents repetition loops (physical page isolation)
+    - Describes images/illustrations naturally
+    - Better handling of Japanese/CJK text via OCR
+    - Resume-capable (skips existing pages)
+
+    Requires:
+    - GOOGLE_API_KEY environment variable
+    - poppler installed (brew install poppler on macOS)
+
+    Examples:
+        uv run knowledge gemini-page-extract ~/books/book.pdf
+        uv run knowledge gemini-page-extract ~/books/book.pdf --start 1 --end 50
+        uv run knowledge gemini-page-extract ~/books/book.pdf --dpi 200
+    """
+    from pathlib import Path
+
+    from .page_extractor import PageByPageExtractor
+
+    pdf = Path(pdf_path).expanduser()
+
+    # Determine output directory
+    if output:
+        output_dir = Path(output).expanduser()
+    else:
+        output_dir = pdf.parent / pdf.stem
+
+    logger.info(f"PDF: {pdf}")
+    logger.info(f"Output: {output_dir}")
+    logger.info(f"Page range: {start}-{end or 'end'}")
+    logger.info(f"DPI: {dpi}, Model: {model}")
+
+    try:
+        extractor = PageByPageExtractor()
+        fulltext_path = asyncio.run(
+            extractor.extract_pdf(
+                pdf_path=pdf,
+                output_dir=output_dir,
+                start_page=start,
+                end_page=end,
+                dpi=dpi,
+                model=model,
+            )
+        )
+
+        logger.info("\n✓ Page-by-page extraction complete!")
+        logger.info(f"  Full text: {fulltext_path}")
+        logger.info("\nNext step: Run 'extract-learnings' to extract domain-specific knowledge:")
+        logger.info(f"  make knowledge-extract-learnings SOURCE={output_dir} DOMAINS=your-domain")
+
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Page extraction complete: {pdf.name}",
+                cwd=os.getcwd(),
+            )
+
+    except Exception as e:
+        logger.error(f"Extraction failed: {e}")
+        if notify:
+            send_notification(
+                title="Amplifier",
+                message=f"Page extraction failed: {e}",
+                cwd=os.getcwd(),
+            )
+        raise click.Abort()
 
 
 @cli.command("gemini-fulltext-prompt")
@@ -1660,6 +2123,361 @@ Focus on what's most valuable for understanding and practicing in this domain.
             message=f"Learnings extraction complete for {book_title}",
             cwd=os.getcwd(),
         )
+
+
+@cli.command("extract-general")
+@click.argument("source", type=click.Path(exists=True))
+@click.option(
+    "--pages-per-chunk",
+    default=15,
+    type=int,
+    help="Number of pages per processing chunk (default: 15)",
+)
+@click.option(
+    "--notify",
+    is_flag=True,
+    default=False,
+    help="Send desktop notifications on completion",
+)
+def extract_general(source: str, pages_per_chunk: int, notify: bool):
+    """Extract ALL knowledge from a book (domain-agnostic).
+
+    This is a vault-wide extraction that captures all knowledge from a source
+    without domain filtering. Perfect for books where you want to extract
+    everything and discover potential new domains.
+
+    Reads _full-text.md from the source directory and extracts:
+    - All concepts and definitions
+    - All relationships between ideas
+    - All insights and principles
+    - Cross-domain bridges
+    - Emergent themes
+
+    Output goes to ~/switchboard/_extractions/general/{book-name}/
+
+    Examples:
+        uv run knowledge extract-general ~/switchboard/joi-writing/books/ai-driven-nen
+        uv run knowledge extract-general ~/switchboard/joi-writing/books/technology-mirai
+    """
+    from pathlib import Path
+
+    source_path = Path(source).expanduser()
+
+    # Find full-text file
+    full_text_file = source_path / "_full-text.md"
+    if not full_text_file.exists():
+        # Try finding parts
+        parts = list(source_path.glob("_full-text-part*.md"))
+        if not parts:
+            logger.error(f"No _full-text.md found in {source_path}")
+            logger.error("Run gemini-fulltext first to create the full-text file")
+            return
+        logger.info(f"Found {len(parts)} full-text parts")
+    else:
+        logger.info(f"Found: {full_text_file}")
+
+    # Load book info
+    book_info_file = source_path / "_book-info.md"
+    book_title = source_path.name
+    if book_info_file.exists():
+        import yaml
+
+        content = book_info_file.read_text()
+        if "---" in content:
+            yaml_part = content.split("---")[1]
+            try:
+                meta = yaml.safe_load(yaml_part)
+                book_title = meta.get("title", book_title)
+            except Exception:
+                pass
+        logger.info(f"Book: {book_title}")
+
+    # Load general domain config
+    from .domain_config import build_domain_context
+    from .domain_config import load_domain_config
+
+    config = load_domain_config("general")
+    if not config:
+        logger.error("General domain config not found!")
+        return
+
+    domain_context = build_domain_context(config)
+    logger.info("Using: general (domain-agnostic) extraction")
+
+    # Read full text
+    if full_text_file.exists():
+        full_text = full_text_file.read_text()
+    else:
+        parts = sorted(source_path.glob("_full-text-part*.md"))
+        full_text = "\n\n".join(p.read_text() for p in parts)
+
+    # Chunk by pages
+    import re
+
+    page_pattern = re.compile(r"<!-- PAGE: (\d+|[ivxlc]+)(?:\s*\([^)]+\))? -->", re.IGNORECASE)
+    pages = page_pattern.split(full_text)
+
+    if len(pages) < 3:
+        logger.warning("No page markers found. Processing as single chunk.")
+        chunks = [(full_text, "1", "end")]
+    else:
+        # Reconstruct chunks with page info
+        chunks = []
+        for i in range(0, len(pages) - 1, pages_per_chunk * 2):
+            chunk_content = ""
+            start_page = None
+            end_page = None
+            for j in range(i, min(i + pages_per_chunk * 2, len(pages) - 1), 2):
+                page_num = pages[j + 1] if j + 1 < len(pages) else "?"
+                page_text = pages[j + 2] if j + 2 < len(pages) else ""
+                if start_page is None:
+                    start_page = page_num
+                end_page = page_num
+                chunk_content += f"<!-- PAGE: {page_num} -->\n{page_text}\n\n"
+            if chunk_content.strip():
+                chunks.append((chunk_content, start_page or "?", end_page or "?"))
+
+    logger.info(f"Split into {len(chunks)} chunks ({pages_per_chunk} pages each)")
+
+    # Create output directory in _extractions/general/
+    book_slug = source_path.name
+    output_dir = Path("~/switchboard/_extractions/general").expanduser() / book_slug
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Process chunks
+    asyncio.run(
+        _extract_general_async(
+            chunks=chunks,
+            domain_context=domain_context,
+            book_title=book_title,
+            output_dir=output_dir,
+            notify=notify,
+        )
+    )
+
+
+async def _extract_general_async(
+    chunks: list[tuple[str, str, str]],
+    domain_context: str,
+    book_title: str,
+    output_dir,
+    notify: bool,
+):
+    """Async general extraction from chunks."""
+    from amplifier.knowledge_integration import UnifiedKnowledgeExtractor
+
+    extractor = UnifiedKnowledgeExtractor()
+
+    logger.info(f"\n{'=' * 50}")
+    logger.info(f"General Extraction: {book_title}")
+    logger.info(f"{'=' * 50}")
+
+    all_concepts = []
+    all_relationships = []
+    all_insights = []
+
+    for idx, (chunk_text, start_page, end_page) in enumerate(chunks):
+        logger.info(f"  Processing chunk {idx + 1}/{len(chunks)} (pp. {start_page}-{end_page})...")
+
+        try:
+            # Build extraction prompt with general context
+            prompt_prefix = f"""You are extracting comprehensive knowledge from a book.
+
+## Extraction Context
+{domain_context}
+
+## Source
+Book: {book_title}
+Pages: {start_page} - {end_page}
+
+## Instructions
+Extract ALL valuable knowledge from this text:
+- Every important concept with its definition
+- Relationships between ideas (how they connect)
+- Key insights and principles
+- Original terminology (preserve in original language with translation)
+- Page references [p.X] for all items
+
+Be comprehensive - this is a lossless knowledge extraction.
+
+## Source Text
+"""
+            # Extract using existing extractor
+            result = await extractor.extract_from_text(
+                text=prompt_prefix + chunk_text,
+                title=f"{book_title} (pp. {start_page}-{end_page})",
+                source="general",
+            )
+
+            if result.concepts:
+                all_concepts.extend(result.concepts)
+            if result.relationships:
+                all_relationships.extend(result.relationships)
+            if result.key_insights:
+                all_insights.extend(result.key_insights)
+
+            logger.info(f"    → {len(result.concepts)} concepts, {len(result.relationships)} relationships")
+
+        except Exception as e:
+            logger.error(f"    ✗ Error: {e}")
+            continue
+
+    # Save outputs
+    # 1. Markdown summary
+    md_file = output_dir / "extraction.md"
+    output_lines = [
+        "---",
+        f"title: {book_title} - General Extraction",
+        f"extracted_date: {__import__('datetime').date.today().isoformat()}",
+        f"concept_count: {len(all_concepts)}",
+        f"relationship_count: {len(all_relationships)}",
+        f"insight_count: {len(all_insights)}",
+        "---",
+        "",
+        f"# {book_title}",
+        "",
+        "## General Knowledge Extraction",
+        "",
+        "---",
+        "",
+    ]
+
+    if all_concepts:
+        output_lines.append("## Concepts")
+        output_lines.append("")
+        for concept in all_concepts:
+            name = concept.get("name", "Unknown")
+            desc = concept.get("description", "")
+            output_lines.append(f"### {name}")
+            output_lines.append(f"{desc}")
+            output_lines.append("")
+
+    if all_insights:
+        output_lines.append("## Insights")
+        output_lines.append("")
+        for insight in all_insights:
+            output_lines.append(f"- {insight}")
+        output_lines.append("")
+
+    if all_relationships:
+        output_lines.append("## Relationships")
+        output_lines.append("")
+        output_lines.append("| Subject | Predicate | Object |")
+        output_lines.append("|---------|-----------|--------|")
+        for rel in all_relationships[:100]:  # Limit for readability
+            output_lines.append(f"| {rel.subject} | {rel.predicate} | {rel.object} |")
+        if len(all_relationships) > 100:
+            output_lines.append(f"| ... | ({len(all_relationships) - 100} more) | ... |")
+        output_lines.append("")
+
+    md_file.write_text("\n".join(output_lines))
+    logger.info(f"\n✓ Saved: {md_file}")
+
+    # 2. JSONL for structured data
+    jsonl_file = output_dir / "extractions.jsonl"
+    import json
+
+    with open(jsonl_file, "w") as f:
+        extraction = {
+            "source": book_title,
+            "domain": "general",
+            "concepts": all_concepts,
+            "relationships": [
+                {"subject": r.subject, "predicate": r.predicate, "object": r.object, "confidence": r.confidence}
+                for r in all_relationships
+            ],
+            "insights": all_insights,
+        }
+        f.write(json.dumps(extraction, ensure_ascii=False) + "\n")
+    logger.info(f"✓ Saved: {jsonl_file}")
+
+    # 3. Domain analysis (for discovering potential new domains)
+    domain_analysis = output_dir / "domain-analysis.md"
+    _generate_domain_analysis(all_concepts, all_relationships, all_insights, book_title, domain_analysis)
+    logger.info(f"✓ Saved: {domain_analysis}")
+
+    logger.info(f"\n{'=' * 50}")
+    logger.info("EXTRACTION COMPLETE")
+    logger.info(f"Output directory: {output_dir}")
+    logger.info("  • extraction.md - Human-readable summary")
+    logger.info("  • extractions.jsonl - Structured data")
+    logger.info("  • domain-analysis.md - Potential domain clusters")
+    logger.info(f"{'=' * 50}")
+
+    if notify:
+        send_notification(
+            title="Amplifier",
+            message=f"General extraction complete: {book_title}",
+            cwd=os.getcwd(),
+        )
+
+
+def _generate_domain_analysis(concepts, relationships, insights, book_title, output_file):
+    """Analyze extracted content for potential domain clusters."""
+
+    # Simple keyword frequency analysis
+    all_text = " ".join(
+        [c.get("name", "") + " " + c.get("description", "") for c in concepts] + [str(i) for i in insights]
+    )
+
+    # Common domain-related keywords to look for
+    domain_indicators = {
+        "chanoyu": ["tea", "ceremony", "wabi", "sabi", "ichigo", "matcha", "chawan"],
+        "poa": ["proof", "attendance", "event", "nft", "token", "community"],
+        "technology": ["ai", "machine learning", "digital", "algorithm", "data", "software"],
+        "philosophy": ["ethics", "moral", "consciousness", "meaning", "existence"],
+        "business": ["market", "strategy", "company", "enterprise", "revenue"],
+        "web3": ["blockchain", "decentralized", "crypto", "dao", "smart contract"],
+        "creativity": ["art", "design", "creative", "innovation", "expression"],
+    }
+
+    # Count domain matches
+    text_lower = all_text.lower()
+    domain_scores = {}
+    for domain, keywords in domain_indicators.items():
+        score = sum(text_lower.count(kw) for kw in keywords)
+        if score > 0:
+            domain_scores[domain] = score
+
+    # Write analysis
+    lines = [
+        "---",
+        f"title: Domain Analysis - {book_title}",
+        f"generated: {__import__('datetime').date.today().isoformat()}",
+        "---",
+        "",
+        "# Domain Analysis",
+        "",
+        f"Analysis of extracted content from: **{book_title}**",
+        "",
+        "## Potential Domain Clusters",
+        "",
+    ]
+
+    if domain_scores:
+        sorted_domains = sorted(domain_scores.items(), key=lambda x: x[1], reverse=True)
+        lines.append("Based on keyword analysis, this content may relate to:")
+        lines.append("")
+        for domain, score in sorted_domains:
+            lines.append(f"- **{domain}**: {score} indicators")
+        lines.append("")
+        lines.append("## Recommendation")
+        lines.append("")
+        top_domain = sorted_domains[0][0] if sorted_domains else None
+        if top_domain:
+            lines.append(f"Consider re-extracting with `--domains {top_domain}` for domain-specific insights.")
+    else:
+        lines.append("No strong domain indicators found. This content may represent a new domain category.")
+
+    lines.append("")
+    lines.append("## Statistics")
+    lines.append("")
+    lines.append(f"- Total concepts: {len(concepts)}")
+    lines.append(f"- Total relationships: {len(relationships)}")
+    lines.append(f"- Total insights: {len(insights)}")
+    lines.append("")
+
+    output_file.write_text("\n".join(lines))
 
 
 if __name__ == "__main__":

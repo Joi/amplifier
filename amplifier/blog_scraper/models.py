@@ -46,13 +46,7 @@ extracted: {extracted_date}
         """Generate output file path based on date and language."""
         # Structure: {base}/{lang}/YYYY/MM/slug.md
         slug = self.source_path.rstrip(".html").split("/")[-1]
-        return (
-            base_dir
-            / self.language
-            / str(self.date.year)
-            / f"{self.date.month:02d}"
-            / f"{slug}.md"
-        )
+        return base_dir / self.language / str(self.date.year) / f"{self.date.month:02d}" / f"{slug}.md"
 
 
 @dataclass

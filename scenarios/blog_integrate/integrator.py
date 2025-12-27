@@ -1,7 +1,6 @@
 """Integrate blog extractions with vault content via cross-linking."""
 
 import json
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -198,9 +197,7 @@ class BlogIntegrator:
             people_matches = [m for m in self.entity_matches if m.entity_type == "people"]
             if people_matches:
                 for match in sorted(people_matches, key=lambda m: len(m.blog_posts), reverse=True)[:20]:
-                    lines.append(
-                        f"- **{match.entity_name.title()}** ({len(match.blog_posts)} mentions)"
-                    )
+                    lines.append(f"- **{match.entity_name.title()}** ({len(match.blog_posts)} mentions)")
             else:
                 lines.append("*No people matches found*")
             lines.append("")
@@ -209,21 +206,21 @@ class BlogIntegrator:
             org_matches = [m for m in self.entity_matches if m.entity_type == "organizations"]
             if org_matches:
                 for match in sorted(org_matches, key=lambda m: len(m.blog_posts), reverse=True)[:20]:
-                    lines.append(
-                        f"- **{match.entity_name.title()}** ({len(match.blog_posts)} mentions)"
-                    )
+                    lines.append(f"- **{match.entity_name.title()}** ({len(match.blog_posts)} mentions)")
             else:
                 lines.append("*No organization matches found*")
             lines.append("")
 
-        lines.extend([
-            "---",
-            "",
-            "## Topic-Concept Matches",
-            "",
-            f"Found {len(self.topic_matches)} blog topics that match existing vault concepts.",
-            "",
-        ])
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Topic-Concept Matches",
+                "",
+                f"Found {len(self.topic_matches)} blog topics that match existing vault concepts.",
+                "",
+            ]
+        )
 
         if self.topic_matches:
             for match in sorted(self.topic_matches, key=lambda m: m.post_count, reverse=True):
@@ -233,16 +230,18 @@ class BlogIntegrator:
         else:
             lines.append("*No topic-concept matches found*")
 
-        lines.extend([
-            "",
-            "---",
-            "",
-            "## Suggested Actions",
-            "",
-            "1. Add blog mention sections to matched people/organization files",
-            "2. Cross-link topics with matching concepts",
-            "3. Review unmatched high-frequency entities for potential new vault entries",
-        ])
+        lines.extend(
+            [
+                "",
+                "---",
+                "",
+                "## Suggested Actions",
+                "",
+                "1. Add blog mention sections to matched people/organization files",
+                "2. Cross-link topics with matching concepts",
+                "3. Review unmatched high-frequency entities for potential new vault entries",
+            ]
+        )
 
         return "\n".join(lines)
 

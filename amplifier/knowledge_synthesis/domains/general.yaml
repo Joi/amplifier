@@ -1,0 +1,65 @@
+# General (Domain-Agnostic) Knowledge Extraction Configuration
+# For extracting all knowledge from sources without domain filtering
+
+domain:
+  id: "general"
+  name: "General Knowledge Extraction"
+
+extraction:
+  focus: |
+    Extract ALL knowledge from this source comprehensively. This is a domain-agnostic
+    extraction that captures the full breadth of the content.
+
+    Look for:
+    - Core concepts and definitions
+    - Key principles and frameworks
+    - Relationships between ideas
+    - Historical context and evolution of ideas
+    - Practical applications and techniques
+    - Philosophical insights and worldviews
+    - Cross-domain connections (where ideas bridge different fields)
+    - Original terminology (preserve in original language with translation)
+    - Quotes and attributions worth preserving
+    - Emergent patterns that might suggest new domain categories
+
+    The goal is COMPREHENSIVE extraction - nothing important should be lost.
+    This serves as a foundation for later domain-specific re-extraction.
+
+  key_concepts:
+    # Meta-concepts for organizing extracted knowledge
+    - principle - a fundamental truth or proposition
+    - framework - a structured approach or model
+    - technique - a practical method or procedure
+    - insight - a deep understanding or realization
+    - pattern - a recurring theme or structure
+    - relationship - a connection between ideas
+    - evolution - how ideas change over time
+    - tension - productive contradictions between ideas
+    - bridge - concepts that connect different domains
+
+  concept_categories:
+    - principle
+    - framework
+    - technique
+    - insight
+    - pattern
+    - definition
+    - historical_context
+    - quote
+    - terminology
+    - cross_domain_bridge
+    - emergent_theme
+
+  relationship_types:
+    - defines
+    - enables
+    - requires
+    - contrasts_with
+    - evolved_from
+    - bridges_to
+    - exemplifies
+    - challenges
+    - extends
+    - synthesizes
+
+  output_path: "~/switchboard/_extractions/general/"

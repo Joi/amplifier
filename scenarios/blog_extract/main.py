@@ -16,7 +16,6 @@ import yaml
 from amplifier.utils.logger import get_logger
 
 from .extractor import BlogExtractor
-from .models import BlogExtraction
 
 logger = get_logger(__name__)
 
@@ -262,7 +261,7 @@ def main(
                 logger.debug(f"  Topics: {', '.join(extraction.topics[:5])}")
             else:
                 failed += 1
-                logger.warning(f"  Failed to extract")
+                logger.warning("  Failed to extract")
 
             # Rate limiting
             if i < len(posts) - 1:

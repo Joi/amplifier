@@ -101,7 +101,7 @@ def main(
     logger.info(f"  Extractions processed: {stats['extractions']}")
     logger.info(f"  Entity matches: {stats['entity_matches']}")
     logger.info(f"  Topic matches: {stats['topic_matches']}")
-    logger.info(f"  Report: ~/switchboard/joi-blog/_INTEGRATION_REPORT.md")
+    logger.info("  Report: ~/switchboard/joi-blog/_INTEGRATION_REPORT.md")
 
     return 0
 
