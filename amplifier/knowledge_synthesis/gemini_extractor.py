@@ -3,10 +3,18 @@ Gemini API client for PDF book extraction.
 
 Uses Google's Gemini API to extract knowledge from large PDF books,
 leveraging Gemini's large context window (1M+ tokens).
+
+Enhancements (Dec 2025):
+- Page count validation to catch missing pages
+- NDL metadata integration
+- Improved furigana handling
+- Structural element preservation (diagrams, family trees)
 """
 
 import asyncio
+import json
 import os
+import re
 from pathlib import Path
 
 from amplifier.utils.logger import get_logger
@@ -62,6 +70,138 @@ class GeminiPdfExtractor:
             return False
 
         return True
+
+    def load_ndl_metadata(self, source_dir: Path) -> dict | None:
+        """Load NDL (National Diet Library) metadata if available.
+
+        Args:
+            source_dir: Directory containing ndl.json
+
+        Returns:
+            Metadata dict or None if not found
+        """
+        ndl_file = source_dir / "ndl.json"
+        if ndl_file.exists():
+            try:
+                metadata = json.loads(ndl_file.read_text(encoding="utf-8"))
+                logger.info(f"Loaded NDL metadata: {metadata.get('title', [{}])[0].get('value', 'Unknown')}")
+                return metadata
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse ndl.json: {e}")
+        return None
+
+    def validate_page_extraction(
+        self,
+        text: str,
+        expected_pages: int | None = None,
+    ) -> tuple[bool, list[str]]:
+        """Validate extracted text for completeness.
+
+        Args:
+            text: Extracted markdown text
+            expected_pages: Expected number of pages (if known)
+
+        Returns:
+            Tuple of (is_valid, list of issues)
+        """
+        issues = []
+        page_pattern = re.compile(r'<!--\s*PAGE:\s*(\d+)\s*-->')
+        pages = [int(m.group(1)) for m in page_pattern.finditer(text)]
+
+        if not pages:
+            issues.append("No page markers found in extraction")
+            return False, issues
+
+        # Check for gaps
+        for i in range(1, len(pages)):
+            expected = pages[i - 1] + 1
+            if pages[i] != expected and pages[i] != pages[i - 1]:
+                gap_start = pages[i - 1] + 1
+                gap_end = pages[i] - 1
+                if gap_start == gap_end:
+                    issues.append(f"Missing page: {gap_start}")
+                else:
+                    issues.append(f"Missing pages: {gap_start}-{gap_end}")
+
+        # Check against expected count
+        if expected_pages:
+            extracted_pages = len(set(pages))
+            if extracted_pages < expected_pages * 0.9:  # Allow 10% tolerance
+                issues.append(
+                    f"Page count mismatch: extracted {extracted_pages}, expected ~{expected_pages}"
+                )
+
+        # Check for duplicates
+        seen = set()
+        for p in pages:
+            if p in seen:
+                issues.append(f"Duplicate page marker: {p}")
+            seen.add(p)
+
+        is_valid = len(issues) == 0
+        if issues:
+            logger.warning(f"Page validation issues: {issues}")
+        else:
+            logger.info(f"Page validation passed: {len(set(pages))} unique pages")
+
+        return is_valid, issues
+
+    def format_ndl_metadata_yaml(self, metadata: dict) -> str:
+        """Format NDL metadata as YAML frontmatter.
+
+        Args:
+            metadata: NDL metadata dict
+
+        Returns:
+            YAML formatted string
+        """
+        lines = []
+
+        # Title
+        if "title" in metadata and metadata["title"]:
+            title_entry = metadata["title"][0]
+            lines.append(f'title: "{title_entry.get("value", "")}"')
+            if "transcription" in title_entry:
+                lines.append(f'title_reading: "{title_entry["transcription"]}"')
+
+        # Creator/Author
+        if "creator" in metadata and metadata["creator"]:
+            creator = metadata["creator"][0]
+            lines.append(f'author: "{creator.get("name", "")}"')
+            if "transcription" in creator:
+                lines.append(f'author_reading: "{creator["transcription"]}"')
+
+        # Publisher
+        if "publisher" in metadata and metadata["publisher"]:
+            pub = metadata["publisher"][0]
+            lines.append(f'publisher: "{pub.get("name", "")}"')
+            if "location" in pub:
+                lines.append(f'publisher_location: "{pub["location"]}"')
+
+        # Date
+        if "date" in metadata:
+            lines.append(f'date: "{metadata["date"]}"')
+        if "issued" in metadata:
+            lines.append(f'year: {metadata["issued"]}')
+
+        # Subject classifications
+        if "subject" in metadata:
+            subj = metadata["subject"]
+            if "NDLSH" in subj:
+                lines.append(f'subjects: {subj["NDLSH"]}')
+            if "NDC" in subj:
+                lines.append(f'ndc: "{subj["NDC"][0]}"')
+
+        # Physical description
+        if "extent" in metadata:
+            lines.append(f'extent: "{metadata["extent"][0]}"')
+
+        # NDL identifiers
+        if "identifier" in metadata:
+            if "NDLBibID" in metadata["identifier"]:
+                lines.append(f'ndl_bib_id: "{metadata["identifier"]["NDLBibID"][0]}"')
+
+        return "\n".join(lines)
 
     async def extract_from_file(
         self,
@@ -265,7 +405,7 @@ complete, lossless markdown transcription of this PDF book.
 
 ### 1. Page Markers (MOST IMPORTANT)
 - Insert `<!-- PAGE: n -->` marker at the START of each page's content
-- Every page boundary must be marked
+- EVERY page boundary MUST be marked - do NOT skip pages
 - Page numbers enable precise citations later
 - If page numbers restart (e.g., roman numerals for preface), note: `<!-- PAGE: xii (preface) -->`
 
@@ -276,10 +416,15 @@ complete, lossless markdown transcription of this PDF book.
 - Maintain heading hierarchy (use #, ##, ###)
 - Keep original punctuation and formatting
 
-### 3. Japanese/Original Language Text
+### 3. Japanese/Original Language Text with Furigana
 - Preserve ALL kanji, hiragana, katakana EXACTLY as written
-- Add romaji in parentheses for specialized terms on first occurrence
-- Format: 茶道 (chadō)
+- When furigana (reading aids) appear above kanji, integrate them inline:
+  - Format: 茶道 (chadō) - the reading in parentheses immediately after
+  - For complex terms with non-standard readings, preserve the exact reading
+  - Example: 棟瓦 (munegawara) NOT (munagawara)
+  - Example: 焼貫 (yakinuki) NOT (yakunuki)
+- DO NOT create separate lines for furigana - always inline with the term
+- When readings conflict with standard dictionary readings, PRESERVE THE PRINTED READING
 - Keep original-language quotations intact
 
 ### 4. Tables and Lists
@@ -292,15 +437,29 @@ complete, lossless markdown transcription of this PDF book.
 - Preserve quotation attribution
 - Note if translation vs original: > "Quote" [Author, p.X, translated]
 
-### 6. Figures and Images
+### 6. Figures, Images, and Diagrams
 - Insert placeholder: `[Figure X.Y: brief description]`
 - Preserve captions exactly
 - Note if figure has Japanese labels
+- FOR FAMILY TREES / GENEALOGIES: Preserve structure using indentation or ASCII art:
+  ```
+  祖父 (Grandfather)
+    ├── 父 (Father)
+    │   ├── 長男 (Eldest Son)
+    │   └── 次男 (Second Son)
+    └── 叔父 (Uncle)
+  ```
+- FOR DIAGRAMS: Describe the structure, not just list elements linearly
 
 ### 7. Footnotes/Endnotes
 - Preserve using markdown footnote syntax: [^1]
 - Place footnote content at end of chapter or document
 - Keep original numbering
+
+### 8. Page Boundary Handling
+- If a sentence continues across a page boundary, include the COMPLETE sentence
+- Mark the page break but don't split mid-word or mid-sentence
+- Better to include a few extra words than to cut off meaning
 
 ## OUTPUT FORMAT
 
@@ -321,11 +480,14 @@ Then provide the complete transcription with page markers.
 
 ## QUALITY CHECKLIST
 
-- Every page has a `<!-- PAGE: n -->` marker
-- No content was summarized - this is FULL transcription
-- All Japanese/original characters preserved correctly
-- Paragraph structure maintained
-- All headings use proper markdown hierarchy"""
+- [ ] Every page has a `<!-- PAGE: n -->` marker
+- [ ] No pages were skipped - sequential numbering is complete
+- [ ] No content was summarized - this is FULL transcription
+- [ ] All Japanese/original characters preserved correctly
+- [ ] Furigana readings integrated inline (not as separate lines)
+- [ ] Paragraph structure maintained
+- [ ] All headings use proper markdown hierarchy
+- [ ] Family trees and diagrams preserve structural relationships"""
 
     def _get_domain_extraction_prompt(self, domain_ids: list[str], domain_context: str) -> str:
         """Get domain-specific extraction prompt."""
@@ -527,7 +689,7 @@ complete, lossless markdown transcription of PAGES {start_page} to {end_page} fr
 
 ### 1. Page Markers (MOST IMPORTANT)
 - Insert `<!-- PAGE: n -->` marker at the START of each page's content
-- Every page boundary must be marked
+- EVERY page from {start_page} to {end_page} MUST have a marker - do NOT skip any pages
 - Page numbers enable precise citations later
 
 ### 2. Complete Transcription
@@ -537,10 +699,13 @@ complete, lossless markdown transcription of PAGES {start_page} to {end_page} fr
 - Maintain heading hierarchy (use #, ##, ###)
 - Keep original punctuation and formatting
 
-### 3. Japanese/Original Language Text
+### 3. Japanese/Original Language Text with Furigana
 - Preserve ALL kanji, hiragana, katakana EXACTLY as written
-- Add romaji in parentheses for specialized terms on first occurrence
-- Format: 茶道 (chadō)
+- When furigana (reading aids) appear above kanji, integrate them inline:
+  - Format: 茶道 (chadō) - the reading in parentheses immediately after
+  - Preserve non-standard readings exactly as printed
+  - Example: 棟瓦 (munegawara), 焼貫 (yakinuki)
+- DO NOT create separate lines for furigana - always inline
 - Keep original-language quotations intact
 
 ### 4. Tables and Lists
@@ -552,13 +717,19 @@ complete, lossless markdown transcription of PAGES {start_page} to {end_page} fr
 - Use blockquote (>) for quotations
 - Preserve quotation attribution
 
-### 6. Figures and Images
+### 6. Figures, Images, and Diagrams
 - Insert placeholder: `[Figure X.Y: brief description]`
 - Preserve captions exactly
+- FOR FAMILY TREES: Preserve hierarchy using indentation or ASCII art
+- FOR DIAGRAMS: Describe structural relationships, not just linear text
 
 ### 7. Footnotes/Endnotes
 - Preserve using markdown footnote syntax: [^1]
 - Place footnote content at end of this section
+
+### 8. Page Boundary Handling
+- If a sentence continues across a page boundary, include the complete sentence
+- Mark the page break but don't split mid-word or mid-sentence
 
 ## OUTPUT FORMAT
 
@@ -569,6 +740,7 @@ Then provide the complete transcription of pages {start_page} to {end_page}.
 
 ## IMPORTANT
 - Only transcribe pages {start_page} through {end_page}
+- Do NOT skip any pages in this range
 - Do NOT repeat content or enter loops
 - Stop cleanly at page {end_page}
 """
