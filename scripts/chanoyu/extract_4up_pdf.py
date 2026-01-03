@@ -100,7 +100,20 @@ class FourUpExtractor:
 
     def __init__(self) -> None:
         """Initialize the extractor."""
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        # Check for cached API key first (avoids repeated biometric auth)
+        cache_file = Path.home() / ".cache" / "amplifier" / "gemini_api_key"
+        if cache_file.exists():
+            self.api_key = cache_file.read_text().strip()
+        else:
+            self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+
+        # Log which key source we're using
+        if self.api_key:
+            if cache_file.exists():
+                pass  # Silent - using cached key
+            else:
+                print("Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.")
+
         self.configured = bool(
             self.api_key and
             self.api_key.strip() and
@@ -128,7 +141,12 @@ class FourUpExtractor:
             return False
 
         if not self.api_key:
-            logger.error("GOOGLE_API_KEY not set. Use: op run --env-file=~/.env --")
+            logger.error(
+                "GOOGLE_API_KEY not set. Either:\n"
+                "  1. Cache key: op read 'op://Employee/Amplifier Gemini Key/credential' > ~/.cache/amplifier/gemini_api_key\n"
+                "  2. Use wrapper: ./scripts/chanoyu/run_with_gemini.sh uv run python ...\n"
+                "  3. Use op run: op run --env-file=.env.local -- uv run python ..."
+            )
             return False
 
         if not self.client:
@@ -262,9 +280,17 @@ class FourUpExtractor:
             }
         }
 
+        # Use generation config to prevent repetition loops
+        from google.genai import types
+        config = types.GenerateContentConfig(
+            temperature=0.1,  # Low but not zero to avoid fragmentation
+            max_output_tokens=8192,  # Enough for full pages but prevents infinite loops
+        )
+
         response = self.client.models.generate_content(
             model=model,
             contents=[image_data, prompt],
+            config=config,
         )
 
         if response.text:
@@ -273,13 +299,62 @@ class FourUpExtractor:
 
     def _get_quadrant_prompt(self, logical_page: int, position: str) -> str:
         """Generate prompt for quadrant extraction."""
-        return f"""Transcribe this page image exactly as markdown.
+        return f"""Transcribe this Japanese page image exactly as markdown.
+
+## CRITICAL: READING ORDER FOR JAPANESE VERTICAL TEXT (縦書き)
+
+This is VERTICAL Japanese text (tategaki). The page has COLUMNS that run TOP-to-BOTTOM.
+You MUST read the columns in this order:
+
+1. Start at the RIGHTMOST column (far right side of the page)
+2. Read that entire column from TOP to BOTTOM
+3. Move to the NEXT column to the LEFT
+4. Read that entire column from TOP to BOTTOM
+5. Continue until you reach the leftmost column
+
+**CRITICAL**: Complete each column fully before moving to the next.
+Do NOT jump between columns or mix text from different columns.
+
+Physical layout example:
+```
+[Column 5] [Column 4] [Column 3] [Column 2] [Column 1]
+   ↓           ↓           ↓           ↓           ↓
+  top         top         top         top         top
+   ↓           ↓           ↓           ↓           ↓
+bottom     bottom     bottom     bottom     bottom
+```
+Reading order: Column 1 → Column 2 → Column 3 → Column 4 → Column 5
+(rightmost first, leftmost last)
+
+## CRITICAL: SENTENCES MUST BE COMPLETE
+
+When Japanese text flows across columns, you MUST:
+1. **Join text into complete sentences** - Do NOT break mid-sentence at column edges
+2. **Each sentence should end with proper punctuation** (。, ?, etc.)
+3. If a sentence starts at the bottom of one column and continues at the top of the next, JOIN them
+4. The output should be readable paragraphs, NOT fragmented line snippets
+
+**BAD example (fragmented)**:
+```
+思い直したわけです。
+そうとなると茶室をもつ
+つながりを考える必要が
+```
+
+**GOOD example (complete sentences)**:
+```
+思い直したわけです。そうとなると茶室をもつつながりを考える必要があろうということで、昨年七月、八月、朝鮮半島のいくつかの民俗保存地区へ行ったところ、その類似性の高さに実はびっくりしました。
+```
 
 ## REQUIREMENTS
 
 1. **First line MUST be**: `<!-- PAGE: {logical_page} -->`
 
-2. **Transcribe ALL text** - this is lossless extraction, not a summary
+2. **Transcribe ALL text EXACTLY ONCE** - this is lossless extraction, not a summary
+   - CRITICAL: Do NOT repeat any text. No looping. No duplication.
+   - If you find yourself writing the same phrase twice, STOP immediately
+   - Each sentence must appear exactly ONE time
+   - If the page has ~500 characters of text, output ~500 characters (not 5000)
 
 3. **Format as markdown**:
    - Headings: #, ##, ###
@@ -314,7 +389,9 @@ Start with the page marker and provide complete transcription:
 <!-- PAGE: {logical_page} -->
 [Content here...]
 
-This is quadrant {position} of the physical page."""
+This is quadrant {position} of the physical page.
+
+REMINDER: Read columns RIGHT to LEFT. Do not repeat any text."""
 
     async def extract_pdf(
         self,
@@ -374,7 +451,8 @@ This is quadrant {position} of the physical page."""
         all_pages: list[tuple[int, str]] = []  # (logical_page, content)
 
         # Process each physical page
-        logical_page = 1
+        # Calculate starting logical page based on physical page offset
+        logical_page = (start_physical_page - 1) * pages_per_sheet + 1
         for physical_page in range(start_physical_page, end_physical_page + 1):
             logger.info(f"Processing physical page {physical_page}/{end_physical_page}...")
 
