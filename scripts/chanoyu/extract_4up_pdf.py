@@ -283,7 +283,7 @@ class FourUpExtractor:
         # Use generation config to prevent repetition loops
         from google.genai import types
         config = types.GenerateContentConfig(
-            temperature=0.1,  # Low but not zero to avoid fragmentation
+            temperature=0.0,  # Zero for deterministic column-order reading
             max_output_tokens=8192,  # Enough for full pages but prevents infinite loops
         )
 
@@ -299,99 +299,67 @@ class FourUpExtractor:
 
     def _get_quadrant_prompt(self, logical_page: int, position: str) -> str:
         """Generate prompt for quadrant extraction."""
-        return f"""Transcribe this Japanese page image exactly as markdown.
+        return f"""Transcribe this Japanese page image COLUMN BY COLUMN.
 
-## CRITICAL: READING ORDER FOR JAPANESE VERTICAL TEXT (縦書き)
+## STEP 1: IDENTIFY COLUMNS (REQUIRED)
 
-This is VERTICAL Japanese text (tategaki). The page has COLUMNS that run TOP-to-BOTTOM.
-You MUST read the columns in this order:
+This is VERTICAL Japanese text (縦書き/tategaki). First, mentally identify each vertical column from RIGHT to LEFT.
+Columns are separated by whitespace or visual breaks. A typical academic page has 10-15 columns.
 
-1. Start at the RIGHTMOST column (far right side of the page)
-2. Read that entire column from TOP to BOTTOM
-3. Move to the NEXT column to the LEFT
-4. Read that entire column from TOP to BOTTOM
-5. Continue until you reach the leftmost column
+## STEP 2: READ EACH COLUMN IN ORDER
 
-**CRITICAL**: Complete each column fully before moving to the next.
-Do NOT jump between columns or mix text from different columns.
+For each column (starting from the RIGHTMOST):
+- Read from TOP to BOTTOM
+- Complete the ENTIRE column before moving left
+- When text continues across a column boundary, JOIN it into complete sentences
 
-Physical layout example:
+## CRITICAL RULES
+
+1. **NEVER mix text from different columns** - this is the most common error
+2. **Complete each column fully** before moving to the next column
+3. **Join sentences across columns** - if a sentence ends mid-word at the bottom of column N, it continues at the top of column N+1
+
+## OUTPUT FORMAT
+
+**First line MUST be**: `<!-- PAGE: {logical_page} -->`
+
+Then transcribe the text as flowing paragraphs with complete sentences.
+
+## SENTENCE COMPLETENESS
+
+Each sentence MUST be complete with proper ending punctuation (。, ?, !, etc.)
+
+**WRONG** (fragmented):
 ```
-[Column 5] [Column 4] [Column 3] [Column 2] [Column 1]
-   ↓           ↓           ↓           ↓           ↓
-  top         top         top         top         top
-   ↓           ↓           ↓           ↓           ↓
-bottom     bottom     bottom     bottom     bottom
-```
-Reading order: Column 1 → Column 2 → Column 3 → Column 4 → Column 5
-(rightmost first, leftmost last)
-
-## CRITICAL: SENTENCES MUST BE COMPLETE
-
-When Japanese text flows across columns, you MUST:
-1. **Join text into complete sentences** - Do NOT break mid-sentence at column edges
-2. **Each sentence should end with proper punctuation** (。, ?, etc.)
-3. If a sentence starts at the bottom of one column and continues at the top of the next, JOIN them
-4. The output should be readable paragraphs, NOT fragmented line snippets
-
-**BAD example (fragmented)**:
-```
-思い直したわけです。
-そうとなると茶室をもつ
-つながりを考える必要が
+千利休が亡くなりましたの
+が一五九一年ですので、一
+九九〇年が、四百年忌に相
 ```
 
-**GOOD example (complete sentences)**:
+**CORRECT** (complete sentences):
 ```
-思い直したわけです。そうとなると茶室をもつつながりを考える必要があろうということで、昨年七月、八月、朝鮮半島のいくつかの民俗保存地区へ行ったところ、その類似性の高さに実はびっくりしました。
+千利休が亡くなりましたのが一五九一年ですので、一九九〇年が、四百年忌に相当するという訳で、この三月二八日に大徳寺の法堂におきまして法要が行われました。
 ```
 
-## REQUIREMENTS
+## FORMATTING
 
-1. **First line MUST be**: `<!-- PAGE: {logical_page} -->`
+- Use markdown headings (#, ##, ###) for titles
+- Preserve paragraph breaks
+- For proper names, add reading: 利休 (Rikyū), 大徳寺 (Daitokuji)
+- For key terms, add reading: 茶道 (chadō), 遠忌 (enki)
+- Figures: `[Figure: description]`
 
-2. **Transcribe ALL text EXACTLY ONCE** - this is lossless extraction, not a summary
-   - CRITICAL: Do NOT repeat any text. No looping. No duplication.
-   - If you find yourself writing the same phrase twice, STOP immediately
-   - Each sentence must appear exactly ONE time
-   - If the page has ~500 characters of text, output ~500 characters (not 5000)
+## IMPORTANT
 
-3. **Format as markdown**:
-   - Headings: #, ##, ###
-   - Paragraphs: preserve structure
-   - Lists: preserve numbered/bulleted
-   - Tables: markdown table format
-
-4. **Japanese text**:
-   - Preserve ALL kanji, hiragana, katakana exactly as written
-   - Add romaji in parentheses for key terms: 茶道 (chadō)
-   - For proper names, include reading: 利休 (Rikyū)
-
-5. **Figures/Images**: Write `[Figure: description]` with any captions
-
-6. **For genealogical charts/family trees**:
-   - Preserve hierarchy using ASCII tree structure
-   - Use proper indentation to show relationships
-   - Format like:
-   ```
-   祖先 (Ancestor)
-     ├── 長男 (Eldest Son)
-     │   └── 孫 (Grandson)
-     └── 次男 (Second Son)
-   ```
-
-7. **Footnotes**: Use [^1] syntax
-
-## OUTPUT
-
-Start with the page marker and provide complete transcription:
-
-<!-- PAGE: {logical_page} -->
-[Content here...]
+- Transcribe ALL text exactly ONCE - no repetition, no summarization
+- If there are ~500 characters of text, output ~500 characters
+- Do NOT add content that isn't in the image
+- Read columns RIGHT→LEFT, text within columns TOP→BOTTOM
 
 This is quadrant {position} of the physical page.
 
-REMINDER: Read columns RIGHT to LEFT. Do not repeat any text."""
+<!-- PAGE: {logical_page} -->
+[Begin transcription here...]"""
 
     async def extract_pdf(
         self,
