@@ -2,6 +2,52 @@
 
 This file documents non-obvious problems, solutions, and patterns discovered during development. Make sure these are regularly reviewed and updated, removing outdated entries or those replaced by better practices or code or tools, updating those where the best practice has evolved.
 
+## Amplifier CLI Module Validation Bug with Native Extensions (2026-01-04)
+
+### Issue
+
+`amplifier tool list` shows validation errors for modules that depend on packages with native extensions:
+```
+Failed to load module 'provider-anthropic': Module 'provider-anthropic' failed validation:
+FAILED: 0/1 checks passed. Errors: module_importable: Failed to import module: No module named 'jiter.jiter'
+```
+
+### Root Cause
+
+The amplifier-core validation code in `amplifier_core/validation/provider.py` uses `importlib.util.spec_from_file_location()` to validate modules. This method loads modules in isolation without properly setting up `sys.modules` for parent packages.
+
+When a module (like `provider-anthropic`) imports a package (like `anthropic`) that depends on a native extension submodule (`jiter.jiter`), the import fails because:
+1. The parent `jiter` package isn't registered in `sys.modules`
+2. Python can't find `jiter.jiter` without the parent package hierarchy
+
+The `jiter.jiter` submodule is a compiled extension (`.so` file) that requires proper package initialization.
+
+### Impact
+
+- **Cosmetic only**: The error appears in `amplifier tool list` output
+- **Runtime works**: `amplifier run` works correctly because it uses different import paths
+- **Functionality intact**: All amplifier operations work despite the validation errors
+
+### Workaround
+
+None available without modifying amplifier-core. The errors can be safely ignored.
+
+### Proper Fix (Upstream)
+
+The amplifier-core validation should either:
+1. Use `importlib.import_module()` for installed packages
+2. Properly set up `sys.path` AND register parent packages in `sys.modules` before validation
+3. Add a fallback to try standard import if `spec_from_file_location()` fails
+
+### Prevention
+
+This is an upstream issue in Microsoft's amplifier-cli. Monitor for updates or file a bug report.
+
+### Related Files
+
+- `~/.local/share/uv/tools/amplifier/lib/python3.12/site-packages/amplifier_core/validation/provider.py` - Validation code
+- `~/.local/share/uv/tools/amplifier/lib/python3.12/site-packages/amplifier_core/loader.py` - Module loading
+
 ## LLM Translation Repetition Loops (2026-01-04)
 
 ### Issue

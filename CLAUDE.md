@@ -351,3 +351,76 @@ When working with documents that contain references:
 4. **Track which articles informed which decisions** for learning
 
 This ensures we build on the full depth of ideas, not just their summaries.
+
+# Amplifier CLI Integration
+
+## What is Amplifier CLI?
+
+Microsoft's Amplifier CLI (`amplifier`) is an AI-powered modular development platform installed on this system. It provides:
+- **Profile-based sessions** with customizable tool/provider configurations
+- **Agent delegation** (explorer, zen-architect, bug-hunter, etc.)
+- **Session persistence** across projects
+- **Modular architecture** with providers, tools, orchestrators, hooks
+
+**Version**: 2026.01.03-491af19
+**Installation**: `~/.local/share/uv/tools/amplifier/`
+
+## When to Use Amplifier CLI
+
+Consider using `amplifier run` when:
+
+1. **Alternative LLM perspective needed** - Get a second opinion from a different AI session
+2. **Profile-specific workflows** - Tasks that benefit from pre-configured tool sets
+3. **Session persistence** - Work that should be resumable across terminal sessions
+4. **Isolated exploration** - Explore without consuming Claude Code context window
+5. **Batch operations** - Tasks benefiting from amplifier's modular tool architecture
+
+## Usage Examples
+
+### Basic prompt execution
+```bash
+echo "Analyze the structure of scripts/chanoyu/" | amplifier run --profile dev
+```
+
+### Interactive session
+```bash
+amplifier run --profile dev
+```
+
+### Check available profiles and tools
+```bash
+amplifier profile list
+amplifier tool list  # Note: May show validation warnings - see DISCOVERIES.md
+```
+
+## Available Profiles
+
+- `dev` - Development profile with full tool access
+- `base` - Minimal base configuration
+- `foundation` - Foundation tools only
+- `test` - Testing configuration
+- `full` - All available tools
+
+## Complementary Architecture
+
+**Claude Code** and **Amplifier CLI** are complementary, not competing:
+
+| Capability | Claude Code | Amplifier CLI |
+|------------|-------------|---------------|
+| IDE Integration | Native VSCode/terminal | Terminal only |
+| Context | Conversation-based | Session-based |
+| Sub-agents | Task tool delegation | Profile-based agents |
+| Persistence | Transcript restore | Session resume |
+| Tool ecosystem | MCP servers + built-in | Modular bundles |
+
+**Best practice**: Use Claude Code as primary orchestrator, delegate to Amplifier CLI for specific workflows where its architecture provides benefits.
+
+## Known Issues
+
+See `DISCOVERIES.md` for the `jiter.jiter` validation bug. This is cosmetic - `amplifier run` works correctly despite validation errors in `amplifier tool list`.
+
+## Notification Requirement
+
+**IMPORTANT**: When using amplifier-cli, always inform the user:
+- Before invoking: "I'm using amplifier-cli for this task because [reason]"
+- After completion: Summarize what amplifier-cli did and any relevant output
