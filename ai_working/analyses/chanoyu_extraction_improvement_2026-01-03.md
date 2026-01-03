@@ -98,14 +98,71 @@ Changed from 0.1 to 0.0 for deterministic output (line 286).
 - Some mixing still occurs at page boundaries
 - End of pages sometimes have garbled text
 
+## YomiToku Comparison (2026-01-03)
+
+Installed and tested YomiToku (https://github.com/kotaro-kinoshita/yomitoku) as alternative extraction approach.
+
+### YomiToku Features
+- Purpose-built for Japanese document OCR with layout analysis
+- Has reading order detection (読み順推定)
+- Automatically handles vertical text with right-to-left column order
+- Four specialized AI models: text detector, text recognizer, layout parser, table structure recognizer
+- Uses MPS (Metal Performance Shaders) on Mac
+
+### Test Command
+```bash
+uv run yomitoku "/Users/joi/Media/chanoyu-sources/jikunyu-raku/geinoushi_kenkyuu_1991-01.pdf" \
+    /tmp/yomitoku_test -f md --figure --figure_letter
+```
+
+### Comparison Results
+
+#### Sample: Physical Page 3 (Logical Pages 5-6)
+
+**YomiToku Output** (`/tmp/yomitoku_test/jikunyu-raku_geinoushi_kenkyuu_1991-01_p3.md`):
+```
+幕末には二百五十年遠忌がございました。そのときに現在の三千家
+の建物が造りあげられまして、とくに裏千家などは、現在の姿がほぼ
+完成しました。三百年忌は明治二十三年で、茶の湯の衰退期であった
+ために、さしたる行事らしきものは行われず...
+```
+✅ **Clean, well-ordered text with proper paragraph breaks**
+
+**Gemini Output** (`reextracted/_page_0005.md`):
+```
+幕末には二百五十年の建物が造りあげられました。三百年忌も完成しました。
+三百年忌のために、さしたる行事というものは、はなはだ乏しい年にわれれて...
+```
+❌ **Jumbled text mixing columns**: "二百五十年の建物" should be "二百五十年遠忌がございました"
+
+### Verdict
+
+**YomiToku is significantly better** for this Japanese academic journal:
+- Proper reading order preserved
+- Clean paragraph structure
+- No column mixing
+- Handles 2-up book spread layout better
+
+**Issues observed in YomiToku**:
+- Still processes physical pages as single units (not aware of 2-up spread)
+- Some artifacts from stamps/annotations (e.g., "西原4881489 守谷美帆2025/12/11")
+- Output uses `<br>` instead of proper line breaks
+
+### Recommendation
+
+Consider using YomiToku for future extractions:
+1. Better reading order detection for vertical Japanese text
+2. Produces cleaner, more accurate text
+3. May need post-processing to handle 2-up spread page ordering
+
 ## Next Steps
 
-1. Run full re-extraction of the document
-2. Compare quality across all pages
-3. If issues persist, consider:
-   - Pre-processing to detect column boundaries
-   - Multiple extraction passes with validation
-   - Trying Claude Vision API instead of Gemini
+1. ~~Run full re-extraction of the document~~ Done with both Gemini and YomiToku
+2. ~~Compare quality across all pages~~ YomiToku is superior
+3. Consider:
+   - Using YomiToku as primary extraction method
+   - Post-processing YomiToku output to reorder pages for 2-up spreads
+   - Cleaning up `<br>` tags to proper markdown
 
 ## Commands for Testing
 
