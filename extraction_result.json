@@ -1,0 +1,227 @@
+{
+  "concepts": [
+    {
+      "name": "Raku ceramics lineage",
+      "description": "The succession of potters in the orthodox Raku tradition: Chōjirō → Sōkei → Jōkei → Nonkō, establishing the foundations of low-temperature, lead-glazed tea ceramics [p.46-52]",
+      "importance": 0.95
+    },
+    {
+      "name": "Low-temperature lead-glazed ceramics",
+      "description": "A distinctive ceramic technique using lead glazes fired at lower temperatures than traditional Japanese ceramics, allowing for indoor kilns and amateur participation [p.49-54]",
+      "importance": 0.9
+    },
+    {
+      "name": "Raku seal mark",
+      "description": "The impressed seal derived from 'Juraku' (聚楽), the area around Hideyoshi's palace, used as a brand identifier - the earliest known example of Japanese potters marking their work with a seal [p.49, 52]",
+      "importance": 0.85
+    },
+    {
+      "name": "Amateur pottery in tea culture",
+      "description": "The practice of tea practitioners making their own utensils, beginning with bamboo tea scoops (Takeno Jōō) and extending to ceramics with Hon'ami Kōetsu [p.53-58]",
+      "importance": 0.9
+    },
+    {
+      "name": "Conflation of maker and owner",
+      "description": "When tea practitioners make their own ceramics, the object becomes uniquely valuable by combining sakusha (maker) and shojisha (owner) - investing the object with the 'aura of the person' [p.55]",
+      "importance": 0.85
+    },
+    {
+      "name": "Sen Sōtan",
+      "description": "Rikyū's grandson (1578-1658), called 'beggar Sōtan,' who revived the Sen house fortunes and whose patronage ensured Raku ceramics' success. Trained at Daitokuji under Shun'oku Sōen [p.47, 58-60]",
+      "importance": 0.9
+    },
+    {
+      "name": "Hon'ami Kōetsu",
+      "description": "Elite Kyoto artisan (1558-1637) from a sword polishing family, pioneering amateur potter who collaborated with Jōkei Kichizaemon's workshop and established the precedent of using handmade ceramics in gift exchange [p.52-58]",
+      "importance": 0.9
+    },
+    {
+      "name": "Mukōzuke (serving dishes)",
+      "description": "Food dishes used to serve kaiseki meals on lacquer trays during formal tea gatherings - Nonkō was the first low-temperature, lead-glaze potter known to regularly make sets of these [p.52]",
+      "importance": 0.75
+    },
+    {
+      "name": "Juraku clay",
+      "description": "Iron-bearing dark red clay from the area around Hideyoshi's Jurakudai palace, used by early Raku potters Sōkei and Jōkei [p.49]",
+      "importance": 0.7
+    },
+    {
+      "name": "Okazaki white clay",
+      "description": "The clay used by Nonkō, representing a shift from the Juraku red clay used by his predecessors [p.51]",
+      "importance": 0.65
+    },
+    {
+      "name": "Bamboo tea scoop tradition",
+      "description": "Practice initiated by Takeno Jōō (1502-1555) of tea practitioners carving their own tea scoops (chashaku), continued by Rikyū who invented the jointed tea scoop [p.53]",
+      "importance": 0.8
+    },
+    {
+      "name": "Furuta Oribe influence",
+      "description": "Tea master to the shogun known for radical experimental attitude and preference for distorted ceramic shapes; Kōetsu may have been his disciple [p.54]",
+      "importance": 0.75
+    },
+    {
+      "name": "Kōshin (Sen house)",
+      "description": "Sōtan's son, appointed tea master to Kii branch of Tokugawa house in 1641, active chronicler of tea gatherings whose diaries document the period [p.60]",
+      "importance": 0.75
+    },
+    {
+      "name": "Nonkō's decorative innovations",
+      "description": "Techniques including scraping away glaze patches, double-layer glazes, square shapes (Masu), and visible brush marks in slip - representing a more decorative statement than earlier Raku [p.51-52]",
+      "importance": 0.85
+    },
+    {
+      "name": "Tea utensil value system",
+      "description": "Objects judged both by when/where made AND by pedigree of ownership - a dual valuation that Kōetsu's handmade ceramics uniquely combined [p.55]",
+      "importance": 0.85
+    },
+    {
+      "name": "Sen house divisions",
+      "description": "In 1647, Sōtan gave Kōshin the front property (Fushin'an, 'omote' of Omotesenke) while retiring to the back (Konnichian, Yūin, Sangetsutei - 'ura' of Urasenke) [p.60]",
+      "importance": 0.8
+    }
+  ],
+  "relationships": [
+    {
+      "subject": "Low-temperature lead-glazed ceramics",
+      "predicate": "enables",
+      "object": "Amateur pottery in tea culture",
+      "confidence": 0.95,
+      "page_ref": "[p.53-54]"
+    },
+    {
+      "subject": "Hon'ami Kōetsu",
+      "predicate": "influences",
+      "object": "Nonkō",
+      "confidence": 0.9,
+      "page_ref": "[p.52-53]"
+    },
+    {
+      "subject": "Takeno Jōō",
+      "predicate": "establishes_precedent_for",
+      "object": "Bamboo tea scoop tradition",
+      "confidence": 0.95,
+      "page_ref": "[p.53]"
+    },
+    {
+      "subject": "Sen Sōtan",
+      "predicate": "lineage_connection",
+      "object": "Sen no Rikyū",
+      "confidence": 1.0,
+      "page_ref": "[p.47, 58]"
+    },
+    {
+      "subject": "Furuta Oribe",
+      "predicate": "influences",
+      "object": "Hon'ami Kōetsu",
+      "confidence": 0.85,
+      "page_ref": "[p.54]"
+    },
+    {
+      "subject": "Raku seal mark",
+      "predicate": "emerges_from",
+      "object": "Juraku clay",
+      "confidence": 0.85,
+      "page_ref": "[p.49]"
+    },
+    {
+      "subject": "Nonkō",
+      "predicate": "school_tradition",
+      "object": "Raku ceramics lineage",
+      "confidence": 0.95,
+      "page_ref": "[p.49-52]"
+    },
+    {
+      "subject": "Sen Sōtan",
+      "predicate": "enables",
+      "object": "Raku ceramics lineage",
+      "confidence": 0.9,
+      "page_ref": "[p.58]"
+    },
+    {
+      "subject": "Amateur pottery in tea culture",
+      "predicate": "exemplifies",
+      "object": "Conflation of maker and owner",
+      "confidence": 0.9,
+      "page_ref": "[p.55]"
+    },
+    {
+      "subject": "Kōshin (Sen house)",
+      "predicate": "lineage_connection",
+      "object": "Sen Sōtan",
+      "confidence": 1.0,
+      "page_ref": "[p.60]"
+    },
+    {
+      "subject": "Hon'ami Kōetsu",
+      "predicate": "requires",
+      "object": "Jōkei Kichizaemon workshop",
+      "confidence": 0.9,
+      "page_ref": "[p.55]"
+    },
+    {
+      "subject": "Mukōzuke (serving dishes)",
+      "predicate": "emerges_from",
+      "object": "Nonkō's decorative innovations",
+      "confidence": 0.85,
+      "page_ref": "[p.52]"
+    },
+    {
+      "subject": "Bamboo tea scoop tradition",
+      "predicate": "influences",
+      "object": "Amateur pottery in tea culture",
+      "confidence": 0.8,
+      "page_ref": "[p.53]"
+    },
+    {
+      "subject": "Sen house divisions",
+      "predicate": "emerges_from",
+      "object": "Sen Sōtan",
+      "confidence": 0.95,
+      "page_ref": "[p.60]"
+    },
+    {
+      "subject": "Nonkō",
+      "predicate": "contrasts_with",
+      "object": "Chōjirō",
+      "confidence": 0.85,
+      "page_ref": "[p.51-52]"
+    }
+  ],
+  "insights": [
+    "The ability for tea practitioners to make their own ceramics was enabled by the technical accessibility of low-temperature, lead-glazed firing - only requiring clay, carving tools, and basic instruction, with glazing and firing done by professionals [p.53-54]",
+    "When makers and owners are the same person, objects gain 'totemic significance' - a principle applicable to any handmade gift where the maker's identity adds meaning beyond the object itself [p.55]",
+    "Nonkō's innovations show that collaboration between amateur/patron and professional craftsman produces creative breakthroughs - he was 'not isolated from the cultural renaissance' but participated through customer collaboration [p.52-53]",
+    "The Raku seal mark represents the first Japanese ceramics brand identity - potters using their clay source's name as a mark of origin and quality [p.49, 52]",
+    "Sōtan strategically launched his sons into domainal tea master positions while avoiding direct warrior affiliation himself - demonstrating that one can build institutional legacy through others while maintaining personal artistic independence [p.60]",
+    "The practice of making one's own tea utensils (starting with bamboo scoops) provides tea practitioners with 'an excuse to make tangible objects to suit their own tastes' - creation as a mode of deeper engagement with practice [p.53]",
+    "Many 'Kōetsu' ceramics are later reproductions - a reminder that in tea culture, style attribution often reflects admiration and emulation rather than actual authorship [p.58]",
+    "Sōtan's extensive tea gathering attendance with his son Kōshin (46 of 54 gatherings in 1649) illustrates how knowledge transmission in chanoyu happens through sustained shared practice [p.60]"
+  ],
+  "patterns": [
+    {
+      "name": "Technical accessibility enabling participation",
+      "description": "Low-temperature ceramics, unlike high-fired ware, allowed amateur entry into pottery because the technical barriers (indoor kiln, no wheel needed, professional glazing/firing) were manageable. This pattern - reducing technical barriers to enable broader creative participation - is a recurring theme in craft evolution [p.53-54]"
+    },
+    {
+      "name": "Professional-amateur collaboration",
+      "description": "Kōetsu didn't work in isolation - he requested clay from Kichizaemon, had bowls professionally glazed and fired, and maintained friendly intimacy with the workshop. The highest quality amateur work emerges from collaboration with professionals, not despite it [p.55]"
+    },
+    {
+      "name": "Lineage as legitimacy",
+      "description": "The orthodox Raku genealogy (Chōjirō → Sōkei → Jōkei → Nonkō) provides attribution authority, while Sen house lineage (Rikyū → Shōan → Sōtan → Kōshin) provides patronage legitimacy. Objects and practices gain value through documented transmission chains [p.46-52, 58-60]"
+    },
+    {
+      "name": "Personal practice objects as gift currency",
+      "description": "Kōetsu used handmade ceramics 'profitably for social purposes' - gifts, fulfilling requests from acquaintances. Making objects becomes a way of building and maintaining social networks within the tea community [p.55]"
+    },
+    {
+      "name": "Economic necessity driving institutional development",
+      "description": "Sōtan's financial difficulties ('beggar Sōtan') motivated him to establish his sons in domainal tea master positions. Economic pressure can drive strategic moves that ultimately strengthen institutional continuity [p.59-60]"
+    },
+    {
+      "name": "Seal marks as early branding",
+      "description": "The 'raku' seal impressed on ceramic bases represents an early form of brand identity - using place-name origin as quality marker. This evolved from place-based ceramic naming conventions into deliberate self-identification [p.49, 52]"
+    }
+  ]
+}

@@ -75,6 +75,25 @@ def split_into_chunks(content: str, pages_per_chunk: int = 10) -> list[str]:
     return chunks
 
 
+def detect_repetition_loops(text: str, min_repeats: int = 5) -> str:
+    """Detect and flag LLM repetition loops in translated text.
+
+    Looks for phrases that repeat consecutively more than min_repeats times.
+    """
+    # Pattern: find any phrase (3-30 chars) that repeats 5+ times consecutively
+    pattern = r'(.{3,30}?)\1{' + str(min_repeats - 1) + r',}'
+
+    def replacement(match):
+        phrase = match.group(1).strip()
+        count = len(match.group(0)) // len(match.group(1))
+        return f'<!-- REPETITION LOOP DETECTED: "{phrase}" repeated {count}x - needs manual review -->'
+
+    flagged = re.sub(pattern, replacement, text)
+    if flagged != text:
+        print("  ⚠️  Repetition loop detected and flagged")
+    return flagged
+
+
 def translate_chunk(chunk: str, model: genai.GenerativeModel, chunk_num: int, total: int) -> str:
     """Translate a single chunk using Gemini."""
     print(f"  Translating chunk {chunk_num}/{total}...")
@@ -89,7 +108,8 @@ def translate_chunk(chunk: str, model: genai.GenerativeModel, chunk_num: int, to
                 max_output_tokens=8192,
             )
         )
-        return response.text
+        # Check for and flag repetition loops (common LLM hallucination)
+        return detect_repetition_loops(response.text)
     except Exception as e:
         print(f"  Error on chunk {chunk_num}: {e}")
         # Return original with error note

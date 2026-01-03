@@ -2,6 +2,44 @@
 
 This file documents non-obvious problems, solutions, and patterns discovered during development. Make sure these are regularly reviewed and updated, removing outdated entries or those replaced by better practices or code or tools, updating those where the best practice has evolved.
 
+## LLM Translation Repetition Loops (2026-01-04)
+
+### Issue
+
+LLM translations (especially Gemini) can fall into repetition loops, producing output like:
+```
+"tea ceremony, tea ceremony, tea ceremony, tea ceremony..." (repeated 24x)
+```
+
+### Root Cause
+
+This is a known LLM hallucination pattern where the model gets stuck generating the same phrase repeatedly. Common triggers:
+- Complex or ambiguous source text (especially measurements and technical notation)
+- OCR artifacts in source material
+- Truncated or malformed input
+
+### Solution
+
+Added `detect_repetition_loops()` to `scripts/translate_chanoyu_book.py`:
+```python
+def detect_repetition_loops(text: str, min_repeats: int = 5) -> str:
+    pattern = r'(.{3,30}?)\1{' + str(min_repeats - 1) + r',}'
+    # Replaces with: <!-- REPETITION LOOP DETECTED: "phrase" repeated Nx -->
+```
+
+The function flags repetitions for manual review rather than silently removing them.
+
+### Affected Files
+
+- `chanoyu/sources/jikunyu-raku/raku_chawan__seibian_zuihitsu_1947/_full-text-english.md` line 38
+- Likely other Jikunyu translations (different pipeline, not yet fixed)
+
+### Prevention
+
+1. Use `detect_repetition_loops()` as post-processor on all LLM translation output
+2. Consider lower temperature settings (already at 0.3)
+3. For Jikunyu pipeline: add similar detection to extraction scripts
+
 ## MCP Server Submodules Are Read-Only (2025-12-25)
 
 ### Issue

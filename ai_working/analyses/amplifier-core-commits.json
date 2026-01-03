@@ -1,0 +1,1 @@
+[{"author":"Brian Krabach","date":"2025-12-31T05:33:24Z","message":"docs: update kernel-overview.md to match actual interfaces.py","sha":"98bc28c"},{"author":"Brian Krabach","date":"2025-12-31T05:13:22Z","message":"fix: align event naming and remove dead constants in hooks.py","sha":"e4079a5"}]

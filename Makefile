@@ -432,6 +432,78 @@ knowledge-synthesize: ## Find patterns across all extracted knowledge [NOTIFY=tr
 	uv run python -m amplifier.knowledge_synthesis.run_synthesis $$notify_flag; \
 	echo "✅ Synthesis complete! Results saved to knowledge base"
 
+# PDF Extraction (Hybrid: YomiToku + Google Cloud Vision)
+pdf-extract: ## Extract PDF with auto language detection [PDF=path OUTPUT=dir]
+	@if [ -z "$${PDF:-}" ]; then \
+		echo "ERROR: PDF is required. Example:"; \
+		echo "  make pdf-extract PDF=~/books/document.pdf OUTPUT=~/output/"; \
+		exit 1; \
+	fi; \
+	output="$${OUTPUT:-./output}"; \
+	echo "Extracting PDF with hybrid system (auto-detect)..." >&2; \
+	uv run python scripts/chanoyu/extract_hybrid.py \
+		"$$PDF" \
+		"$$output" \
+		$${START_PAGE:+--start-page "$$START_PAGE"} \
+		$${END_PAGE:+--end-page "$$END_PAGE"}
+
+pdf-extract-yomitoku: ## Extract PDF using YomiToku (Japanese vertical text) [PDF=path OUTPUT=dir]
+	@if [ -z "$${PDF:-}" ]; then \
+		echo "ERROR: PDF is required. Example:"; \
+		echo "  make pdf-extract-yomitoku PDF=~/books/japanese-book.pdf OUTPUT=~/output/"; \
+		exit 1; \
+	fi; \
+	output="$${OUTPUT:-./output}"; \
+	echo "Extracting PDF with YomiToku (Japanese specialist)..." >&2; \
+	uv run python scripts/chanoyu/extract_hybrid.py \
+		"$$PDF" \
+		"$$output" \
+		--backend yomitoku \
+		$${START_PAGE:+--start-page "$$START_PAGE"} \
+		$${END_PAGE:+--end-page "$$END_PAGE"}
+
+pdf-extract-vision: ## Extract PDF using Google Cloud Vision (mixed/English) [PDF=path OUTPUT=dir]
+	@if [ -z "$${PDF:-}" ]; then \
+		echo "ERROR: PDF is required. Example:"; \
+		echo "  make pdf-extract-vision PDF=~/books/english-doc.pdf OUTPUT=~/output/"; \
+		exit 1; \
+	fi; \
+	output="$${OUTPUT:-./output}"; \
+	echo "Extracting PDF with Google Cloud Vision..." >&2; \
+	uv run python scripts/chanoyu/extract_hybrid.py \
+		"$$PDF" \
+		"$$output" \
+		--backend vision \
+		$${START_PAGE:+--start-page "$$START_PAGE"} \
+		$${END_PAGE:+--end-page "$$END_PAGE"}
+
+pdf-extract-translate: ## Extract PDF and translate Japanese to English [PDF=path OUTPUT=dir]
+	@if [ -z "$${PDF:-}" ]; then \
+		echo "ERROR: PDF is required. Example:"; \
+		echo "  make pdf-extract-translate PDF=~/books/japanese-book.pdf OUTPUT=~/output/"; \
+		exit 1; \
+	fi; \
+	output="$${OUTPUT:-./output}"; \
+	echo "Extracting and translating PDF (Japanese → English)..." >&2; \
+	uv run python scripts/chanoyu/extract_hybrid.py \
+		"$$PDF" \
+		"$$output" \
+		--translate \
+		$${START_PAGE:+--start-page "$$START_PAGE"} \
+		$${END_PAGE:+--end-page "$$END_PAGE"}
+
+md-translate: ## Translate a markdown file (Japanese → English) [INPUT=path OUTPUT=path]
+	@if [ -z "$${INPUT:-}" ]; then \
+		echo "ERROR: INPUT is required. Example:"; \
+		echo "  make md-translate INPUT=./output/_full-text.md OUTPUT=./output/_full-text-en.md"; \
+		exit 1; \
+	fi; \
+	output="$${OUTPUT:-$${INPUT%.md}-en.md}"; \
+	echo "Translating markdown (Japanese → English)..." >&2; \
+	uv run python scripts/chanoyu/translate.py \
+		"$$INPUT" \
+		"$$output"
+
 knowledge-query: ## Query the knowledge base. Usage: make knowledge-query Q="your question"
 	@if [ -z "$(Q)" ]; then \
 		echo "Error: Please provide a query. Usage: make knowledge-query Q=\"your question\""; \
