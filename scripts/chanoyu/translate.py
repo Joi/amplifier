@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from amplifier.utils.logger import get_logger
+from amplifier.utils.secrets import get_deepl_api_key
 
 logger = get_logger(__name__)
 
@@ -48,7 +49,7 @@ class TranslationResult:
 
 
 def get_deepl_key() -> str:
-    """Get DeepL API key from session cache or environment."""
+    """Get DeepL API key from unified secrets cache or environment."""
     import os
 
     # Check environment first
@@ -56,18 +57,14 @@ def get_deepl_key() -> str:
     if key:
         return key
 
-    # Check session cache
-    session_file = Path("/tmp/.env_session")
-    if session_file.exists():
-        content = session_file.read_text()
-        for line in content.strip().split("\n"):
-            if line.startswith("DEEPL_AUTH_KEY="):
-                return line.split("=", 1)[1].strip()
-
-    raise ValueError(
-        "DeepL API key not found. Set DEEPL_AUTH_KEY environment variable "
-        "or retrieve from 1Password with: op item get 'DeepL API Key' --vault Employee"
-    )
+    # Use unified secrets cache (falls back to 1Password)
+    try:
+        return get_deepl_api_key()
+    except RuntimeError as e:
+        raise ValueError(
+            "DeepL API key not found. Set DEEPL_AUTH_KEY environment variable "
+            f"or ensure 1Password CLI is configured: {e}"
+        ) from e
 
 
 class DeepLTranslator:

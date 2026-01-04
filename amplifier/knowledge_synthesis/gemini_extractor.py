@@ -42,7 +42,8 @@ class GeminiPdfExtractor:
 
     def __init__(self) -> None:
         """Initialize the Gemini client."""
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        # Accept either GEMINI_API_KEY or GOOGLE_API_KEY (prefer GEMINI_API_KEY)
+        self.api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.configured = bool(self.api_key and self.api_key.strip() and GENAI_AVAILABLE)
         self.client = None
 
@@ -62,7 +63,7 @@ class GeminiPdfExtractor:
             return False
 
         if not self.api_key:
-            logger.error("GOOGLE_API_KEY not set. Set it in your environment.")
+            logger.error("GEMINI_API_KEY or GOOGLE_API_KEY not set. Set one in your environment.")
             return False
 
         if not self.client:

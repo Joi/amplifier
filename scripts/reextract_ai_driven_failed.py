@@ -10,16 +10,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from amplifier.knowledge_synthesis.gemini_extractor import GeminiPdfExtractor
 from amplifier.utils.logger import get_logger
+from amplifier.utils.secrets import get_gemini_api_key
 
 logger = get_logger(__name__)
 
 PDF_PATH = Path("/Users/joi/My Drive (joi@ito.com)/Books/ai_driven_nen.pdf")
 OUTPUT_DIR = Path("/Users/joi/switchboard/joi-writing/books/ai-driven-nen")
 
-# Load API key from session file
-API_KEY_FILE = Path("/tmp/.gemini_api_key_session")
-if API_KEY_FILE.exists():
-    os.environ["GOOGLE_API_KEY"] = API_KEY_FILE.read_text().strip()
+# Load API key from unified secrets cache
+try:
+    os.environ["GOOGLE_API_KEY"] = get_gemini_api_key()
+except RuntimeError:
+    pass  # Fall back to existing environment variable
 
 
 def get_page_range_prompt(start_page: int, end_page: int) -> str:

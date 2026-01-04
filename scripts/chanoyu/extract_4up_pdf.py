@@ -36,6 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from amplifier.utils.logger import get_logger
+from amplifier.utils.secrets import get_gemini_api_key
 
 logger = get_logger(__name__)
 
@@ -100,19 +101,12 @@ class FourUpExtractor:
 
     def __init__(self) -> None:
         """Initialize the extractor."""
-        # Check for cached API key first (avoids repeated biometric auth)
-        cache_file = Path.home() / ".cache" / "amplifier" / "gemini_api_key"
-        if cache_file.exists():
-            self.api_key = cache_file.read_text().strip()
-        else:
+        # Use unified secrets caching (falls back to env vars if 1Password unavailable)
+        try:
+            self.api_key = get_gemini_api_key()
+        except RuntimeError:
+            # Fall back to environment variables
             self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-
-        # Log which key source we're using
-        if self.api_key:
-            if cache_file.exists():
-                pass  # Silent - using cached key
-            else:
-                print("Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.")
 
         self.configured = bool(
             self.api_key and

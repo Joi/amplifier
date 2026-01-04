@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
 """
-Hybrid PDF Extractor with Language-Based Routing.
+Hybrid PDF Extractor with 3-Tier Intelligent Routing.
 
-Routes documents to the appropriate extraction backend:
-- **YomiToku**: Pure Japanese vertical text (縦書き) - specialized OCR
-- **Google Cloud Vision**: Mixed English/Japanese, English-only, horizontal layouts
+Routes documents to the appropriate extraction backend using two-stage detection:
 
-Language detection is performed on a sample page to determine routing.
+TIER 1 - Language Detection:
+- **English/Mixed** → Google Cloud Vision (fast, cheap)
+- **Japanese** → TIER 2
+
+TIER 2 - Layout Complexity Detection:
+- **Simple layout** → YomiToku (free, fast, good for single-column)
+- **Multi-column/Complex** → Gemini 3 Flash (best quality, slower, costs money)
+
+Layout complexity is detected via:
+1. Manual hint (--layout multi-column)
+2. Known difficult sources (jikunyu-raku, tousetsu journals)
+3. PDF aspect ratio (book spreads are wider than single pages)
+
 Optional: Translate Japanese content to English using DeepL API.
 
 Usage:
-    # Auto-detect language and route appropriately
+    # Auto-detect language and layout, route appropriately
     uv run python scripts/chanoyu/extract_hybrid.py \
         /path/to/input.pdf \
         /path/to/output/dir
@@ -19,7 +29,13 @@ Usage:
     uv run python scripts/chanoyu/extract_hybrid.py \
         /path/to/input.pdf \
         /path/to/output/dir \
-        --backend yomitoku
+        --backend gemini
+
+    # Hint that this is a multi-column document
+    uv run python scripts/chanoyu/extract_hybrid.py \
+        /path/to/input.pdf \
+        /path/to/output/dir \
+        --layout multi-column
 
     # Extract and translate Japanese to English
     uv run python scripts/chanoyu/extract_hybrid.py \
@@ -28,7 +44,7 @@ Usage:
         --translate
 
 Author: Claude (Amplifier)
-Date: 2026-01-03
+Date: 2026-01-03 (updated 2026-01-04 for 3-tier routing)
 """
 
 import argparse
@@ -49,9 +65,26 @@ logger = get_logger(__name__)
 
 class ExtractionBackend(Enum):
     """Available extraction backends."""
-    YOMITOKU = "yomitoku"
-    VISION = "vision"
-    AUTO = "auto"
+    YOMITOKU = "yomitoku"  # Japanese vertical text, simple layouts
+    VISION = "vision"      # English/mixed content
+    GEMINI = "gemini"      # Multi-column Japanese, complex layouts
+    AUTO = "auto"          # Auto-detect
+
+
+class LayoutComplexity(Enum):
+    """Layout complexity for Japanese documents."""
+    SIMPLE = "simple"           # Single column, standard layout → YomiToku
+    MULTI_COLUMN = "multi"      # Multiple columns, book spreads → Gemini 3
+    UNKNOWN = "unknown"         # Can't determine → default to simple
+
+
+# Known filenames/patterns that are ALWAYS multi-column and need Gemini 3
+# Be specific - use filenames, not broad directory names
+KNOWN_MULTI_COLUMN_SOURCES = [
+    "tousetsu_2000-07",  # Specific journal issue we tested - 3-column
+    "tousetsu_",         # Tousetsu journal articles are typically multi-column
+    # Add more specific filenames as discovered
+]
 
 
 @dataclass
@@ -95,6 +128,7 @@ class HybridExtractor:
         """Initialize the extractor."""
         self._yomitoku_extractor = None
         self._vision_extractor = None
+        self._gemini_extractor = None
 
     @property
     def yomitoku_extractor(self):
@@ -111,6 +145,82 @@ class HybridExtractor:
             from scripts.chanoyu.extract_vision import VisionExtractor
             self._vision_extractor = VisionExtractor()
         return self._vision_extractor
+
+    @property
+    def gemini_extractor(self):
+        """Lazy-load Gemini 3 Flash extractor."""
+        if self._gemini_extractor is None:
+            from scripts.chanoyu.extract_gemini import GeminiExtractor
+            self._gemini_extractor = GeminiExtractor()
+        return self._gemini_extractor
+
+    def _get_pdf_dimensions(self, pdf_path: Path) -> tuple[float, float]:
+        """Get PDF page dimensions using pdfinfo."""
+        try:
+            result = subprocess.run(
+                ["pdfinfo", str(pdf_path)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                for line in result.stdout.split("\n"):
+                    if line.startswith("Page size:"):
+                        # Parse "Page size:      841.89 x 595.28 pts"
+                        parts = line.split(":")[1].strip()
+                        dims = parts.split("x")
+                        if len(dims) >= 2:
+                            width = float(dims[0].strip().split()[0])
+                            height = float(dims[1].strip().split()[0])
+                            return width, height
+        except Exception as e:
+            logger.debug(f"Could not get PDF dimensions: {e}")
+        return 0, 0
+
+    def detect_layout_complexity(
+        self,
+        pdf_path: Path,
+        layout_hint: str = "auto",
+    ) -> LayoutComplexity:
+        """Detect layout complexity for Japanese documents.
+
+        Args:
+            pdf_path: Path to PDF
+            layout_hint: Manual hint ("auto", "simple", "multi-column")
+
+        Returns:
+            LayoutComplexity indicating whether Gemini 3 is needed
+        """
+        # 1. Manual override takes priority
+        if layout_hint == "multi-column":
+            logger.info("Layout: multi-column (manual hint)")
+            return LayoutComplexity.MULTI_COLUMN
+        if layout_hint == "simple":
+            logger.info("Layout: simple (manual hint)")
+            return LayoutComplexity.SIMPLE
+
+        # 2. Known difficult sources
+        pdf_str = str(pdf_path).lower()
+        for source in KNOWN_MULTI_COLUMN_SOURCES:
+            if source.lower() in pdf_str:
+                logger.info(f"Layout: multi-column (known source: {source})")
+                return LayoutComplexity.MULTI_COLUMN
+
+        # 3. Dimension-based detection (book spreads are wider)
+        width, height = self._get_pdf_dimensions(pdf_path)
+        if width > 0 and height > 0:
+            aspect_ratio = width / height
+            if aspect_ratio > 1.3:
+                # Wide pages = likely book spread with multiple columns
+                logger.info(f"Layout: multi-column (aspect ratio: {aspect_ratio:.2f})")
+                return LayoutComplexity.MULTI_COLUMN
+            else:
+                logger.info(f"Layout: simple (aspect ratio: {aspect_ratio:.2f})")
+                return LayoutComplexity.SIMPLE
+
+        # 4. Default to simple (saves cost)
+        logger.info("Layout: simple (default)")
+        return LayoutComplexity.SIMPLE
 
     def _get_sample_text(self, pdf_path: Path, sample_page: int = 1) -> str:
         """Extract sample text from a PDF page for language analysis."""
@@ -243,6 +353,7 @@ class HybridExtractor:
         pdf_path: Path,
         output_dir: Path,
         backend: ExtractionBackend = ExtractionBackend.AUTO,
+        layout_hint: str = "auto",
         start_page: int = 1,
         end_page: int | None = None,
         dpi: int = 200,
@@ -252,10 +363,16 @@ class HybridExtractor:
     ) -> tuple[Path, Path | None]:
         """Extract text from PDF using appropriate backend.
 
+        Uses 3-tier routing:
+        1. Language detection → English/Mixed → Vision
+        2. Layout complexity → Simple Japanese → YomiToku
+        3. Layout complexity → Multi-column Japanese → Gemini 3 Flash
+
         Args:
             pdf_path: Path to PDF file
             output_dir: Output directory
-            backend: Extraction backend (auto, yomitoku, vision)
+            backend: Extraction backend (auto, yomitoku, vision, gemini)
+            layout_hint: Layout hint for Japanese docs ("auto", "simple", "multi-column")
             start_page: First page (1-based)
             end_page: Last page (None = all)
             dpi: Image resolution
@@ -271,23 +388,51 @@ class HybridExtractor:
 
         # Determine backend
         if backend == ExtractionBackend.AUTO:
+            # TIER 1: Language detection
             analysis = self.analyze_language(pdf_path, sample_page)
             logger.info(f"Language analysis: {analysis.reason}")
             logger.info(f"  Japanese: {analysis.japanese_ratio:.0%}")
             logger.info(f"  English: {analysis.english_ratio:.0%}")
-            logger.info(f"  Recommended: {analysis.recommended_backend.value}")
-            actual_backend = analysis.recommended_backend
+
+            if analysis.recommended_backend == ExtractionBackend.VISION:
+                # English or mixed → Vision
+                actual_backend = ExtractionBackend.VISION
+                logger.info(f"  TIER 1 routing: Vision (English/Mixed)")
+            else:
+                # Japanese → TIER 2: Layout complexity
+                layout = self.detect_layout_complexity(pdf_path, layout_hint)
+
+                if layout == LayoutComplexity.MULTI_COLUMN:
+                    actual_backend = ExtractionBackend.GEMINI
+                    logger.info(f"  TIER 2 routing: Gemini 3 (multi-column)")
+                else:
+                    actual_backend = ExtractionBackend.YOMITOKU
+                    logger.info(f"  TIER 2 routing: YomiToku (simple layout)")
         else:
             actual_backend = backend
             logger.info(f"Using forced backend: {actual_backend.value}")
 
-        # Route to appropriate extractor
+        # Route to appropriate extractor with fallbacks
+        if actual_backend == ExtractionBackend.GEMINI:
+            if not self.gemini_extractor.check_availability():
+                logger.warning("Gemini API not available, falling back to YomiToku")
+                actual_backend = ExtractionBackend.YOMITOKU
+
         if actual_backend == ExtractionBackend.YOMITOKU:
             if not self.yomitoku_extractor.check_availability():
                 logger.warning("YomiToku not available, falling back to Vision")
                 actual_backend = ExtractionBackend.VISION
 
-        if actual_backend == ExtractionBackend.YOMITOKU:
+        # Execute extraction
+        if actual_backend == ExtractionBackend.GEMINI:
+            fulltext_path = self.gemini_extractor.extract_pdf(
+                pdf_path,
+                output_dir,
+                start_page=start_page,
+                end_page=end_page,
+                dpi=dpi,
+            )
+        elif actual_backend == ExtractionBackend.YOMITOKU:
             from scripts.chanoyu.extract_yomitoku import ReadingOrder
             fulltext_path = self.yomitoku_extractor.extract_pdf(
                 pdf_path,
@@ -335,39 +480,54 @@ class HybridExtractor:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Hybrid PDF extractor with language-based routing",
+        description="Hybrid PDF extractor with 3-tier intelligent routing",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Extraction backends:
-  yomitoku  - Japanese vertical text specialist (縦書き)
+  auto      - 3-tier intelligent routing (default)
+  yomitoku  - Japanese vertical text specialist (free, fast)
   vision    - Google Cloud Vision (mixed/English content)
-  auto      - Automatically detect and route (default)
+  gemini    - Gemini 3 Flash (multi-column Japanese, best quality)
 
-Routing logic:
-  - Pure Japanese (>70%): YomiToku
-  - Mixed content: Vision
-  - English-dominant: Vision
-  - Vertical text detected: YomiToku
+3-Tier Routing Logic:
+  TIER 1 - Language:
+    - English/Mixed (>30% English) → Vision
+    - Japanese (>70%) → TIER 2
+
+  TIER 2 - Layout Complexity:
+    - Simple layout → YomiToku (free)
+    - Multi-column/book spread → Gemini 3 Flash ($)
+
+Layout Detection:
+  - Manual hint (--layout multi-column)
+  - Known sources (tousetsu_ journals)
+  - Aspect ratio (wide pages = book spreads)
 
 Examples:
-  # Auto-detect and route
+  # Auto-detect language and layout
   uv run python scripts/chanoyu/extract_hybrid.py \\
       ~/Media/document.pdf \\
       ~/output/
 
-  # Force YomiToku for Japanese book
+  # Force Gemini 3 for complex multi-column
+  uv run python scripts/chanoyu/extract_hybrid.py \\
+      ~/Media/journal.pdf \\
+      ~/output/ \\
+      --backend gemini
+
+  # Hint that this is multi-column (triggers Gemini 3)
   uv run python scripts/chanoyu/extract_hybrid.py \\
       ~/Media/japanese-book.pdf \\
       ~/output/ \\
+      --layout multi-column
+
+  # Force YomiToku for simple Japanese
+  uv run python scripts/chanoyu/extract_hybrid.py \\
+      ~/Media/simple-text.pdf \\
+      ~/output/ \\
       --backend yomitoku
 
-  # Force Vision for English article
-  uv run python scripts/chanoyu/extract_hybrid.py \\
-      ~/Media/english-article.pdf \\
-      ~/output/ \\
-      --backend vision
-
-  # Extract and translate Japanese to English
+  # Extract and translate to English
   uv run python scripts/chanoyu/extract_hybrid.py \\
       ~/Media/japanese-book.pdf \\
       ~/output/ \\
@@ -380,9 +540,16 @@ Examples:
     parser.add_argument(
         "--backend",
         type=str,
-        choices=["auto", "yomitoku", "vision"],
+        choices=["auto", "yomitoku", "vision", "gemini"],
         default="auto",
-        help="Extraction backend (default: auto)",
+        help="Extraction backend (default: auto = 3-tier routing)",
+    )
+    parser.add_argument(
+        "--layout",
+        type=str,
+        choices=["auto", "simple", "multi-column"],
+        default="auto",
+        help="Layout hint for Japanese docs (default: auto-detect)",
     )
     parser.add_argument(
         "--start-page",
@@ -427,6 +594,7 @@ Examples:
         "auto": ExtractionBackend.AUTO,
         "yomitoku": ExtractionBackend.YOMITOKU,
         "vision": ExtractionBackend.VISION,
+        "gemini": ExtractionBackend.GEMINI,
     }
     backend = backend_map[args.backend]
 
@@ -437,6 +605,7 @@ Examples:
             args.pdf_path,
             args.output_dir,
             backend=backend,
+            layout_hint=args.layout,
             start_page=args.start_page,
             end_page=args.end_page,
             dpi=args.dpi,
