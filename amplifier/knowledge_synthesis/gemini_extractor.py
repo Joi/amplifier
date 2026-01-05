@@ -106,7 +106,7 @@ class GeminiPdfExtractor:
             Tuple of (is_valid, list of issues)
         """
         issues = []
-        page_pattern = re.compile(r'<!--\s*PAGE:\s*(\d+)\s*-->')
+        page_pattern = re.compile(r"<!--\s*PAGE:\s*(\d+)\s*-->")
         pages = [int(m.group(1)) for m in page_pattern.finditer(text)]
 
         if not pages:
@@ -128,9 +128,7 @@ class GeminiPdfExtractor:
         if expected_pages:
             extracted_pages = len(set(pages))
             if extracted_pages < expected_pages * 0.9:  # Allow 10% tolerance
-                issues.append(
-                    f"Page count mismatch: extracted {extracted_pages}, expected ~{expected_pages}"
-                )
+                issues.append(f"Page count mismatch: extracted {extracted_pages}, expected ~{expected_pages}")
 
         # Check for duplicates
         seen = set()
@@ -183,13 +181,13 @@ class GeminiPdfExtractor:
         if "date" in metadata:
             lines.append(f'date: "{metadata["date"]}"')
         if "issued" in metadata:
-            lines.append(f'year: {metadata["issued"]}')
+            lines.append(f"year: {metadata['issued']}")
 
         # Subject classifications
         if "subject" in metadata:
             subj = metadata["subject"]
             if "NDLSH" in subj:
-                lines.append(f'subjects: {subj["NDLSH"]}')
+                lines.append(f"subjects: {subj['NDLSH']}")
             if "NDC" in subj:
                 lines.append(f'ndc: "{subj["NDC"][0]}"')
 

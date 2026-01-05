@@ -50,7 +50,7 @@ Provide the English translation maintaining all formatting:"""
 def split_into_chunks(content: str, pages_per_chunk: int = 10) -> list[str]:
     """Split content by page markers into chunks."""
     # Split by page markers
-    page_pattern = r'(<!-- PAGE: \d+ -->)'
+    page_pattern = r"(<!-- PAGE: \d+ -->)"
     parts = re.split(page_pattern, content)
 
     # Reconstruct pages
@@ -69,7 +69,7 @@ def split_into_chunks(content: str, pages_per_chunk: int = 10) -> list[str]:
     # Group into chunks
     chunks = []
     for i in range(0, len(pages), pages_per_chunk):
-        chunk = "".join(pages[i:i + pages_per_chunk])
+        chunk = "".join(pages[i : i + pages_per_chunk])
         chunks.append(chunk)
 
     return chunks
@@ -81,7 +81,7 @@ def detect_repetition_loops(text: str, min_repeats: int = 5) -> str:
     Looks for phrases that repeat consecutively more than min_repeats times.
     """
     # Pattern: find any phrase (3-30 chars) that repeats 5+ times consecutively
-    pattern = r'(.{3,30}?)\1{' + str(min_repeats - 1) + r',}'
+    pattern = r"(.{3,30}?)\1{" + str(min_repeats - 1) + r",}"
 
     def replacement(match):
         phrase = match.group(1).strip()
@@ -106,7 +106,7 @@ def translate_chunk(chunk: str, model: genai.GenerativeModel, chunk_num: int, to
             generation_config=genai.GenerationConfig(
                 temperature=0.3,
                 max_output_tokens=8192,
-            )
+            ),
         )
         # Check for and flag repetition loops (common LLM hallucination)
         return detect_repetition_loops(response.text)
@@ -131,10 +131,10 @@ def main():
     content = SOURCE_FILE.read_text(encoding="utf-8")
 
     # Extract frontmatter and content
-    frontmatter_match = re.match(r'^(---\n.*?\n---\n)', content, re.DOTALL)
+    frontmatter_match = re.match(r"^(---\n.*?\n---\n)", content, re.DOTALL)
     if frontmatter_match:
         frontmatter = frontmatter_match.group(1)
-        body = content[len(frontmatter):]
+        body = content[len(frontmatter) :]
     else:
         frontmatter = ""
         body = content

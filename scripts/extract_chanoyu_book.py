@@ -82,7 +82,7 @@ def detect_repetition(text: str, threshold: int = 5) -> tuple[bool, str]:
     # Check for any line repeated more than threshold times consecutively
     consecutive_count = 1
     for i in range(1, len(lines)):
-        if lines[i] == lines[i-1] and len(lines[i]) > 10:
+        if lines[i] == lines[i - 1] and len(lines[i]) > 10:
             consecutive_count += 1
             if consecutive_count >= threshold:
                 return True, f"Line repeated {consecutive_count}+ times: '{lines[i][:50]}...'"
@@ -100,7 +100,7 @@ def detect_repetition(text: str, threshold: int = 5) -> tuple[bool, str]:
 
 def count_page_markers(text: str) -> list[int]:
     """Extract all page numbers from PAGE markers."""
-    pattern = r'<!-- PAGE: (\d+) -->'
+    pattern = r"<!-- PAGE: (\d+) -->"
     matches = re.findall(pattern, text)
     return [int(m) for m in matches]
 
@@ -132,8 +132,7 @@ async def extract_chunk(
             if len(pages) >= len(expected) * 0.8:  # 80% of expected pages
                 logger.info(f"Chunk {start_page}-{end_page} already exists and valid, skipping")
                 return chunk_file, True
-            else:
-                logger.warning(f"Chunk {start_page}-{end_page} exists but missing pages, re-extracting")
+            logger.warning(f"Chunk {start_page}-{end_page} exists but missing pages, re-extracting")
 
     prompt = get_extraction_prompt(start_page, end_page)
 
@@ -150,11 +149,10 @@ async def extract_chunk(
                     logger.info("Retrying...")
                     await asyncio.sleep(3)
                     continue
-                else:
-                    logger.error(f"Failed to extract chunk {start_page}-{end_page} without repetition")
-                    # Save anyway for manual review
-                    chunk_file.write_text(result, encoding="utf-8")
-                    return chunk_file, False
+                logger.error(f"Failed to extract chunk {start_page}-{end_page} without repetition")
+                # Save anyway for manual review
+                chunk_file.write_text(result, encoding="utf-8")
+                return chunk_file, False
 
             # Check for expected pages
             pages = count_page_markers(result)
@@ -213,10 +211,8 @@ async def extract_book(
     failed_chunks = []
 
     for i, (start_page, end_page) in enumerate(chunks):
-        logger.info(f"\n=== Chunk {i+1}/{len(chunks)}: pages {start_page}-{end_page} ===")
-        chunk_file, success = await extract_chunk(
-            extractor, pdf_path, start_page, end_page, output_dir, model
-        )
+        logger.info(f"\n=== Chunk {i + 1}/{len(chunks)}: pages {start_page}-{end_page} ===")
+        chunk_file, success = await extract_chunk(extractor, pdf_path, start_page, end_page, output_dir, model)
         results.append((chunk_file, success))
         if not success:
             failed_chunks.append((start_page, end_page))
@@ -226,7 +222,7 @@ async def extract_book(
 
     # Report results
     success_count = sum(1 for _, s in results if s)
-    logger.info(f"\n=== Extraction Complete ===")
+    logger.info("\n=== Extraction Complete ===")
     logger.info(f"Successful: {success_count}/{len(chunks)}")
     if failed_chunks:
         logger.warning(f"Failed chunks: {failed_chunks}")
@@ -255,7 +251,8 @@ def combine_chunks(
     logger.info(f"Combining {len(chunk_files)} chunks...")
 
     # Build frontmatter
-    content = [f"""---
+    content = [
+        f"""---
 title: "決定版 茶の湯の手紙文例集"
 title_english: "Definitive Edition: Tea Ceremony Letter Examples Collection"
 category: source
@@ -265,7 +262,8 @@ total_pages: {total_pages}
 model: {model}
 ---
 
-"""]
+"""
+    ]
 
     # Add each chunk
     all_pages = set()

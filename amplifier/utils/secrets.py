@@ -73,13 +73,9 @@ def _read_from_1password(op_path: str) -> str:
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(
-            f"Failed to read secret from 1Password: {e.stderr.strip()}"
-        ) from e
+        raise RuntimeError(f"Failed to read secret from 1Password: {e.stderr.strip()}") from e
     except FileNotFoundError:
-        raise RuntimeError(
-            "1Password CLI (op) not found. Install from https://1password.com/downloads/command-line/"
-        )
+        raise RuntimeError("1Password CLI (op) not found. Install from https://1password.com/downloads/command-line/")
 
 
 def get_secret(name: str, op_path: str, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
@@ -193,6 +189,7 @@ def get_deepl_api_key(ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
 # 1Password item: "Supabase Chanoyu" in Employee vault
 # Fields: service_role_key, access_token, db_password
 
+
 def get_supabase_service_role_key(ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
     """Get Supabase service role key (server-side admin access)."""
     return get_secret(
@@ -223,6 +220,7 @@ def get_supabase_db_password(ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
 # Supabase Health Tracker - single secret needed
 # 1Password item: "Supabase Health Tracker" in Employee vault
 # Field: service_role_key
+
 
 def get_health_tracker_service_role_key(ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
     """Get Health Tracker Supabase service role key (server-side admin access)."""

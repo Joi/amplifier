@@ -84,7 +84,7 @@ def detect_repetition(text: str, threshold: int = 5) -> tuple[bool, str]:
     # Check for consecutive repetition
     consecutive_count = 1
     for i in range(1, len(lines)):
-        if lines[i] == lines[i-1] and len(lines[i]) > 10:
+        if lines[i] == lines[i - 1] and len(lines[i]) > 10:
             consecutive_count += 1
             if consecutive_count >= threshold:
                 return True, f"Line repeated {consecutive_count}+ times"
@@ -96,7 +96,7 @@ def detect_repetition(text: str, threshold: int = 5) -> tuple[bool, str]:
 
 def count_page_markers(text: str) -> list[int]:
     """Extract all page numbers from PAGE markers."""
-    pattern = r'<!-- PAGE: (\d+) -->'
+    pattern = r"<!-- PAGE: (\d+) -->"
     matches = re.findall(pattern, text)
     return [int(m) for m in matches]
 
@@ -138,9 +138,8 @@ async def extract_chunk(
                 if attempt < max_retries:
                     await asyncio.sleep(3)
                     continue
-                else:
-                    chunk_file.write_text(result, encoding="utf-8")
-                    return chunk_file, False
+                chunk_file.write_text(result, encoding="utf-8")
+                return chunk_file, False
 
             # Save successful extraction
             chunk_file.write_text(result, encoding="utf-8")
@@ -188,10 +187,8 @@ async def extract_book(
     failed_chunks = []
 
     for i, (start_page, end_page) in enumerate(chunks):
-        logger.info(f"\n=== Chunk {i+1}/{len(chunks)}: pages {start_page}-{end_page} ===")
-        chunk_file, success = await extract_chunk(
-            extractor, pdf_path, start_page, end_page, output_dir, model
-        )
+        logger.info(f"\n=== Chunk {i + 1}/{len(chunks)}: pages {start_page}-{end_page} ===")
+        chunk_file, success = await extract_chunk(extractor, pdf_path, start_page, end_page, output_dir, model)
         results.append((chunk_file, success))
         if not success:
             failed_chunks.append((start_page, end_page))
@@ -201,7 +198,7 @@ async def extract_book(
 
     # Report results
     success_count = sum(1 for _, s in results if s)
-    logger.info(f"\n=== Extraction Complete ===")
+    logger.info("\n=== Extraction Complete ===")
     logger.info(f"Successful: {success_count}/{len(chunks)}")
     if failed_chunks:
         logger.warning(f"Failed chunks: {failed_chunks}")
@@ -231,7 +228,8 @@ def combine_chunks(
     logger.info(f"Combining {len(chunk_files)} chunks...")
 
     # Build frontmatter
-    content = [f"""---
+    content = [
+        f"""---
 title: "Handmade Culture: Raku Potters, Patrons, and Tea Practitioners in Japan"
 author: "Morgan Pitelka"
 category: source
@@ -250,7 +248,8 @@ source_file: "{pdf_path.name}"
 
 ---
 
-"""]
+"""
+    ]
 
     # Add each chunk
     all_pages = set()
@@ -280,7 +279,9 @@ source_file: "{pdf_path.name}"
 async def main():
     """Extract the Raku book."""
 
-    pdf_path = Path("/Users/joi/Media/chanoyu-sources/dokumen.pub_handmade-culture-raku-potters-patrons-and-tea-practitioners-in-japan.pdf")
+    pdf_path = Path(
+        "/Users/joi/Media/chanoyu-sources/dokumen.pub_handmade-culture-raku-potters-patrons-and-tea-practitioners-in-japan.pdf"
+    )
     output_dir = Path("/Users/joi/switchboard/chanoyu/sources/handmade-culture-raku/chunks")
     total_pages = 269
 

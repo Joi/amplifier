@@ -65,24 +65,26 @@ logger = get_logger(__name__)
 
 class ExtractionBackend(Enum):
     """Available extraction backends."""
+
     YOMITOKU = "yomitoku"  # Japanese vertical text, simple layouts
-    VISION = "vision"      # English/mixed content
-    GEMINI = "gemini"      # Multi-column Japanese, complex layouts
-    AUTO = "auto"          # Auto-detect
+    VISION = "vision"  # English/mixed content
+    GEMINI = "gemini"  # Multi-column Japanese, complex layouts
+    AUTO = "auto"  # Auto-detect
 
 
 class LayoutComplexity(Enum):
     """Layout complexity for Japanese documents."""
-    SIMPLE = "simple"           # Single column, standard layout → YomiToku
-    MULTI_COLUMN = "multi"      # Multiple columns, book spreads → Gemini 3
-    UNKNOWN = "unknown"         # Can't determine → default to simple
+
+    SIMPLE = "simple"  # Single column, standard layout → YomiToku
+    MULTI_COLUMN = "multi"  # Multiple columns, book spreads → Gemini 3
+    UNKNOWN = "unknown"  # Can't determine → default to simple
 
 
 # Known filenames/patterns that are ALWAYS multi-column and need Gemini 3
 # Be specific - use filenames, not broad directory names
 KNOWN_MULTI_COLUMN_SOURCES = [
     "tousetsu_2000-07",  # Specific journal issue we tested - 3-column
-    "tousetsu_",         # Tousetsu journal articles are typically multi-column
+    "tousetsu_",  # Tousetsu journal articles are typically multi-column
     # Add more specific filenames as discovered
 ]
 
@@ -108,19 +110,21 @@ class HybridExtractor:
 
     # Japanese character ranges (hiragana, katakana, kanji)
     JAPANESE_PATTERN = re.compile(
-        r'[\u3040-\u309F'  # Hiragana
-        r'\u30A0-\u30FF'   # Katakana
-        r'\u4E00-\u9FFF'   # CJK Unified Ideographs (Kanji)
-        r'\u3400-\u4DBF'   # CJK Extension A
-        r'\uF900-\uFAFF]'  # CJK Compatibility Ideographs
+        r"[\u3040-\u309F"  # Hiragana
+        r"\u30A0-\u30FF"  # Katakana
+        r"\u4E00-\u9FFF"  # CJK Unified Ideographs (Kanji)
+        r"\u3400-\u4DBF"  # CJK Extension A
+        r"\uF900-\uFAFF]"  # CJK Compatibility Ideographs
     )
 
     # ASCII letters (English)
-    ENGLISH_PATTERN = re.compile(r'[a-zA-Z]')
+    ENGLISH_PATTERN = re.compile(r"[a-zA-Z]")
 
     # Vertical text indicators in Japanese
     VERTICAL_INDICATORS = [
-        "縦書き", "たてがき", "右から左",
+        "縦書き",
+        "たてがき",
+        "右から左",
         # Common patterns in vertical text metadata
     ]
 
@@ -135,6 +139,7 @@ class HybridExtractor:
         """Lazy-load YomiToku extractor."""
         if self._yomitoku_extractor is None:
             from scripts.chanoyu.extract_yomitoku import YomiTokuExtractor
+
             self._yomitoku_extractor = YomiTokuExtractor()
         return self._yomitoku_extractor
 
@@ -143,6 +148,7 @@ class HybridExtractor:
         """Lazy-load Vision extractor."""
         if self._vision_extractor is None:
             from scripts.chanoyu.extract_vision import VisionExtractor
+
             self._vision_extractor = VisionExtractor()
         return self._vision_extractor
 
@@ -151,6 +157,7 @@ class HybridExtractor:
         """Lazy-load Gemini 3 Flash extractor."""
         if self._gemini_extractor is None:
             from scripts.chanoyu.extract_gemini import GeminiExtractor
+
             self._gemini_extractor = GeminiExtractor()
         return self._gemini_extractor
 
@@ -214,9 +221,8 @@ class HybridExtractor:
                 # Wide pages = likely book spread with multiple columns
                 logger.info(f"Layout: multi-column (aspect ratio: {aspect_ratio:.2f})")
                 return LayoutComplexity.MULTI_COLUMN
-            else:
-                logger.info(f"Layout: simple (aspect ratio: {aspect_ratio:.2f})")
-                return LayoutComplexity.SIMPLE
+            logger.info(f"Layout: simple (aspect ratio: {aspect_ratio:.2f})")
+            return LayoutComplexity.SIMPLE
 
         # 4. Default to simple (saves cost)
         logger.info("Layout: simple (default)")
@@ -230,9 +236,12 @@ class HybridExtractor:
             # Convert sample page to image
             image_path = temp_path / "sample.png"
             cmd = [
-                "pdftoppm", "-png",
-                "-f", str(sample_page),
-                "-l", str(sample_page),
+                "pdftoppm",
+                "-png",
+                "-f",
+                str(sample_page),
+                "-l",
+                str(sample_page),
                 "-singlefile",
                 str(pdf_path),
                 str(temp_path / "sample"),
@@ -246,6 +255,7 @@ class HybridExtractor:
             # Use Vision API for initial analysis (quick and universal)
             try:
                 from google.cloud import vision
+
                 client = vision.ImageAnnotatorClient()
 
                 with open(image_path, "rb") as f:
@@ -397,17 +407,17 @@ class HybridExtractor:
             if analysis.recommended_backend == ExtractionBackend.VISION:
                 # English or mixed → Vision
                 actual_backend = ExtractionBackend.VISION
-                logger.info(f"  TIER 1 routing: Vision (English/Mixed)")
+                logger.info("  TIER 1 routing: Vision (English/Mixed)")
             else:
                 # Japanese → TIER 2: Layout complexity
                 layout = self.detect_layout_complexity(pdf_path, layout_hint)
 
                 if layout == LayoutComplexity.MULTI_COLUMN:
                     actual_backend = ExtractionBackend.GEMINI
-                    logger.info(f"  TIER 2 routing: Gemini 3 (multi-column)")
+                    logger.info("  TIER 2 routing: Gemini 3 (multi-column)")
                 else:
                     actual_backend = ExtractionBackend.YOMITOKU
-                    logger.info(f"  TIER 2 routing: YomiToku (simple layout)")
+                    logger.info("  TIER 2 routing: YomiToku (simple layout)")
         else:
             actual_backend = backend
             logger.info(f"Using forced backend: {actual_backend.value}")
@@ -434,6 +444,7 @@ class HybridExtractor:
             )
         elif actual_backend == ExtractionBackend.YOMITOKU:
             from scripts.chanoyu.extract_yomitoku import ReadingOrder
+
             fulltext_path = self.yomitoku_extractor.extract_pdf(
                 pdf_path,
                 output_dir,

@@ -19,11 +19,11 @@ import google.generativeai as genai
 
 def extract_page_range(japanese_text: str, start_page: int, end_page: int) -> str:
     """Extract a range of pages from Japanese source text."""
-    lines = japanese_text.split('\n')
+    lines = japanese_text.split("\n")
     result_lines = []
     in_range = False
 
-    page_pattern = re.compile(r'<!--\s*PAGE:\s*(\d+)\s*-->')
+    page_pattern = re.compile(r"<!--\s*PAGE:\s*(\d+)\s*-->")
 
     for line in lines:
         match = page_pattern.search(line)
@@ -38,7 +38,7 @@ def extract_page_range(japanese_text: str, start_page: int, end_page: int) -> st
         if in_range:
             result_lines.append(line)
 
-    return '\n'.join(result_lines)
+    return "\n".join(result_lines)
 
 
 def translate_with_gemini(japanese_text: str, model_name: str = "gemini-2.5-flash") -> str:
@@ -69,7 +69,7 @@ Provide the complete English translation:"""
         generation_config=genai.GenerationConfig(
             temperature=0.1,
             max_output_tokens=32000,
-        )
+        ),
     )
 
     return response.text
@@ -77,8 +77,8 @@ Provide the complete English translation:"""
 
 def find_insertion_point(english_text: str, start_page: int) -> int:
     """Find where to insert the re-translated pages."""
-    lines = english_text.split('\n')
-    page_pattern = re.compile(r'<!--\s*PAGE:\s*(\d+)\s*-->')
+    lines = english_text.split("\n")
+    page_pattern = re.compile(r"<!--\s*PAGE:\s*(\d+)\s*-->")
 
     for i, line in enumerate(lines):
         match = page_pattern.search(line)
@@ -90,11 +90,10 @@ def find_insertion_point(english_text: str, start_page: int) -> int:
     return -1
 
 
-def merge_translations(english_text: str, new_translation: str,
-                       start_page: int, end_page: int) -> str:
+def merge_translations(english_text: str, new_translation: str, start_page: int, end_page: int) -> str:
     """Merge new translation into existing English text, replacing incomplete pages."""
-    lines = english_text.split('\n')
-    page_pattern = re.compile(r'<!--\s*PAGE:\s*(\d+)\s*-->')
+    lines = english_text.split("\n")
+    page_pattern = re.compile(r"<!--\s*PAGE:\s*(\d+)\s*-->")
 
     # Find start and end indices to replace
     start_idx = -1
@@ -129,13 +128,11 @@ def merge_translations(english_text: str, new_translation: str,
 
     # Merge
     result_lines = lines[:start_idx] + [new_translation] + lines[end_idx:]
-    return '\n'.join(result_lines)
+    return "\n".join(result_lines)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Re-translate missing pages from Japanese source"
-    )
+    parser = argparse.ArgumentParser(description="Re-translate missing pages from Japanese source")
     parser.add_argument("source_dir", type=Path, help="Source directory with _full-text.md files")
     parser.add_argument("--pages", required=True, help="Page range to translate (e.g., 12-21)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without translating")
@@ -144,7 +141,7 @@ def main():
     args = parser.parse_args()
 
     # Parse page range
-    start_page, end_page = map(int, args.pages.split('-'))
+    start_page, end_page = map(int, args.pages.split("-"))
 
     # Find source files
     japanese_file = args.source_dir / "_full-text.md"
@@ -161,7 +158,7 @@ def main():
     print(f"Source directory: {args.source_dir}")
     print(f"Extracting pages {start_page}-{end_page} from Japanese source...")
 
-    japanese_text = japanese_file.read_text(encoding='utf-8')
+    japanese_text = japanese_file.read_text(encoding="utf-8")
     extracted = extract_page_range(japanese_text, start_page, end_page)
 
     if not extracted.strip():
@@ -169,7 +166,7 @@ def main():
         sys.exit(1)
 
     # Count pages found
-    page_markers = re.findall(r'<!--\s*PAGE:\s*\d+\s*-->', extracted)
+    page_markers = re.findall(r"<!--\s*PAGE:\s*\d+\s*-->", extracted)
     print(f"Found {len(page_markers)} page markers in extracted content")
 
     if args.dry_run:
@@ -181,21 +178,21 @@ def main():
     translated = translate_with_gemini(extracted, args.model)
 
     print("Merging into English translation...")
-    english_text = english_file.read_text(encoding='utf-8')
+    english_text = english_file.read_text(encoding="utf-8")
     merged = merge_translations(english_text, translated, start_page, end_page)
 
     # Backup original
-    backup_file = english_file.with_suffix('.md.bak')
+    backup_file = english_file.with_suffix(".md.bak")
     english_file.rename(backup_file)
     print(f"Backed up original to: {backup_file}")
 
     # Write merged
-    english_file.write_text(merged, encoding='utf-8')
+    english_file.write_text(merged, encoding="utf-8")
     print(f"Updated: {english_file}")
 
     # Verify
-    new_content = english_file.read_text(encoding='utf-8')
-    new_markers = re.findall(r'<!--\s*PAGE:\s*(\d+)\s*-->', new_content)
+    new_content = english_file.read_text(encoding="utf-8")
+    new_markers = re.findall(r"<!--\s*PAGE:\s*(\d+)\s*-->", new_content)
     print(f"\nVerification: Found {len(new_markers)} page markers in updated file")
 
 

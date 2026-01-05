@@ -27,11 +27,9 @@ ROMANIZATION_FIXES = [
     ("yakunuki", "yakinuki", "焼貫"),
     ("tenma-jō", "Denba-jō", "伝馬状"),
     ("Motozumi", "Genpaku", "元住→元伯"),
-
     # Common tea ceremony romanization patterns
     ("uwagusuri", "yūyaku", None),  # 釉薬 - keep both as variants
     ("Rakujawan", "Raku chawan", None),  # Normalize to spaced version
-
     # Add more corrections as discovered
 ]
 
@@ -43,13 +41,10 @@ def fix_romanization(text: str, dry_run: bool = False) -> tuple[str, list[str]]:
     for incorrect, correct, context in ROMANIZATION_FIXES:
         if context:
             # Context-aware replacement
-            pattern = re.compile(
-                rf'({re.escape(context)}[^)]*?\()' + re.escape(incorrect) + r'(\))',
-                re.IGNORECASE
-            )
+            pattern = re.compile(rf"({re.escape(context)}[^)]*?\()" + re.escape(incorrect) + r"(\))", re.IGNORECASE)
             if pattern.search(text):
                 if not dry_run:
-                    text = pattern.sub(rf'\1{correct}\2', text)
+                    text = pattern.sub(rf"\1{correct}\2", text)
                 changes.append(f"Fixed: {incorrect} → {correct} (near {context})")
         else:
             # Simple replacement
@@ -72,12 +67,12 @@ def clean_orphaned_furigana(text: str, dry_run: bool = False) -> tuple[str, list
     These should either be merged with the preceding term or removed if duplicate.
     """
     changes = []
-    lines = text.split('\n')
+    lines = text.split("\n")
     result_lines = []
     skip_next = False
 
     # Pattern for standalone furigana line: hiragana followed by (romanization)
-    furigana_pattern = re.compile(r'^([ぁ-んー]+)\s*\(([A-Za-z\-]+)\)\s*$')
+    furigana_pattern = re.compile(r"^([ぁ-んー]+)\s*\(([A-Za-z\-]+)\)\s*$")
 
     for i, line in enumerate(lines):
         if skip_next:
@@ -91,20 +86,19 @@ def clean_orphaned_furigana(text: str, dry_run: bool = False) -> tuple[str, list
 
             # Check if this romanization already appears nearby
             context_start = max(0, i - 5)
-            context = '\n'.join(lines[context_start:i])
+            context = "\n".join(lines[context_start:i])
 
             if romanization in context or romanization.lower() in context.lower():
                 # Already present, skip this orphaned line
                 changes.append(f"Removed duplicate furigana: {hiragana} ({romanization})")
                 continue
-            else:
-                # Keep but mark for review
-                changes.append(f"Kept orphaned furigana (review): {hiragana} ({romanization})")
+            # Keep but mark for review
+            changes.append(f"Kept orphaned furigana (review): {hiragana} ({romanization})")
 
         result_lines.append(line)
 
     if not dry_run:
-        text = '\n'.join(result_lines)
+        text = "\n".join(result_lines)
 
     return text, changes
 
@@ -122,7 +116,7 @@ def fix_page_boundaries(text: str, dry_run: bool = False) -> tuple[str, list[str
     # Pattern for incomplete lines before page markers
     # This is a heuristic - lines ending with particles/incomplete words
     incomplete_patterns = [
-        (r'([ぁ-んァ-ン一-龯]+)\n(<!--\s*PAGE:\s*\d+\s*-->)', r'\1\n\n\2'),
+        (r"([ぁ-んァ-ン一-龯]+)\n(<!--\s*PAGE:\s*\d+\s*-->)", r"\1\n\n\2"),
     ]
 
     for pattern, replacement in incomplete_patterns:
@@ -137,7 +131,7 @@ def fix_page_boundaries(text: str, dry_run: bool = False) -> tuple[str, list[str
 def validate_page_sequence(text: str) -> list[str]:
     """Check for missing or out-of-order pages."""
     issues = []
-    page_pattern = re.compile(r'<!--\s*PAGE:\s*(\d+)\s*-->')
+    page_pattern = re.compile(r"<!--\s*PAGE:\s*(\d+)\s*-->")
     pages = [int(m.group(1)) for m in page_pattern.finditer(text)]
 
     if not pages:
@@ -146,9 +140,9 @@ def validate_page_sequence(text: str) -> list[str]:
 
     # Check for gaps
     for i in range(1, len(pages)):
-        expected = pages[i-1] + 1
-        if pages[i] != expected and pages[i] != pages[i-1]:
-            gap_start = pages[i-1] + 1
+        expected = pages[i - 1] + 1
+        if pages[i] != expected and pages[i] != pages[i - 1]:
+            gap_start = pages[i - 1] + 1
             gap_end = pages[i] - 1
             if gap_start == gap_end:
                 issues.append(f"Missing page: {gap_start}")
@@ -174,8 +168,8 @@ def format_term_annotations(text: str, dry_run: bool = False) -> tuple[str, list
     changes = []
 
     # Pattern to fix: term (日本語/romanization) without space
-    pattern = r'\*\*([^*]+)\*\*\s*\(([一-龯ぁ-んァ-ン]+)/([A-Za-z\-]+)\)'
-    replacement = r'**\1** (\2 / \3)'
+    pattern = r"\*\*([^*]+)\*\*\s*\(([一-龯ぁ-んァ-ン]+)/([A-Za-z\-]+)\)"
+    replacement = r"**\1** (\2 / \3)"
 
     matches = re.findall(pattern, text)
     if matches and not dry_run:
@@ -186,9 +180,7 @@ def format_term_annotations(text: str, dry_run: bool = False) -> tuple[str, list
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Post-process chanoyu translation files"
-    )
+    parser = argparse.ArgumentParser(description="Post-process chanoyu translation files")
     parser.add_argument("file", type=Path, help="English translation file to process")
     parser.add_argument("--dry-run", action="store_true", help="Show changes without applying")
     parser.add_argument("--validate-only", action="store_true", help="Only validate, don't fix")
@@ -199,7 +191,7 @@ def main():
         print(f"Error: File not found: {args.file}")
         return 1
 
-    text = args.file.read_text(encoding='utf-8')
+    text = args.file.read_text(encoding="utf-8")
     all_changes = []
 
     print(f"Processing: {args.file}")
@@ -258,12 +250,12 @@ def main():
 
     if not args.dry_run and all_changes:
         # Backup and write
-        backup = args.file.with_suffix('.md.bak')
+        backup = args.file.with_suffix(".md.bak")
         if not backup.exists():  # Don't overwrite existing backup
             args.file.rename(backup)
             print(f"Backed up to: {backup}")
 
-        args.file.write_text(text, encoding='utf-8')
+        args.file.write_text(text, encoding="utf-8")
         print(f"Updated: {args.file}")
 
     return 0

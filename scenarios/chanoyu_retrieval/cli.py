@@ -79,18 +79,20 @@ def search(query: str, search_type: str, verbose: bool):
             for source in concept_data.get("sources", []):
                 source_id = source["id"]
                 source_meta = index["sources"].get(source_id, {})
-                results.append({
-                    "match_type": "concept",
-                    "query": query_lower,
-                    "relevance": source["relevance"],
-                    "source_id": source_id,
-                    "title": source_meta.get("title", source_id),
-                    "japanese": source_meta.get("japanese", ""),
-                    "author": source_meta.get("author", ""),
-                    "year": source_meta.get("year", ""),
-                    "path": source_meta.get("path", ""),
-                    "has_learnings": source_meta.get("has_learnings", False),
-                })
+                results.append(
+                    {
+                        "match_type": "concept",
+                        "query": query_lower,
+                        "relevance": source["relevance"],
+                        "source_id": source_id,
+                        "title": source_meta.get("title", source_id),
+                        "japanese": source_meta.get("japanese", ""),
+                        "author": source_meta.get("author", ""),
+                        "year": source_meta.get("year", ""),
+                        "path": source_meta.get("path", ""),
+                        "has_learnings": source_meta.get("has_learnings", False),
+                    }
+                )
 
     if search_type in ("person", "auto"):
         if query_lower in index.get("people", {}):
@@ -99,18 +101,20 @@ def search(query: str, search_type: str, verbose: bool):
                 source_meta = index["sources"].get(source_id, {})
                 # Check if already in results
                 if not any(r["source_id"] == source_id for r in results):
-                    results.append({
-                        "match_type": "person",
-                        "query": query_lower,
-                        "relevance": "mentioned",
-                        "source_id": source_id,
-                        "title": source_meta.get("title", source_id),
-                        "japanese": source_meta.get("japanese", ""),
-                        "author": source_meta.get("author", ""),
-                        "year": source_meta.get("year", ""),
-                        "path": source_meta.get("path", ""),
-                        "has_learnings": source_meta.get("has_learnings", False),
-                    })
+                    results.append(
+                        {
+                            "match_type": "person",
+                            "query": query_lower,
+                            "relevance": "mentioned",
+                            "source_id": source_id,
+                            "title": source_meta.get("title", source_id),
+                            "japanese": source_meta.get("japanese", ""),
+                            "author": source_meta.get("author", ""),
+                            "year": source_meta.get("year", ""),
+                            "path": source_meta.get("path", ""),
+                            "has_learnings": source_meta.get("has_learnings", False),
+                        }
+                    )
 
     if not results:
         click.echo(f"No sources found for '{query}'")
@@ -175,12 +179,14 @@ def context(topic: str, max_files: int):
                 if source_meta.get("has_learnings"):
                     path = CHANOYU_ROOT / source_meta["path"] / "_learnings.md"
                     if path not in [m["path"] for m in matches]:
-                        matches.append({
-                            "path": path,
-                            "reason": f"covers '{concept}'",
-                            "relevance": source["relevance"],
-                            "title": source_meta.get("title", source_id),
-                        })
+                        matches.append(
+                            {
+                                "path": path,
+                                "reason": f"covers '{concept}'",
+                                "relevance": source["relevance"],
+                                "title": source_meta.get("title", source_id),
+                            }
+                        )
 
     # Check people
     for person, data in index.get("people", {}).items():
@@ -190,12 +196,14 @@ def context(topic: str, max_files: int):
                 if source_meta.get("has_learnings"):
                     path = CHANOYU_ROOT / source_meta["path"] / "_learnings.md"
                     if path not in [m["path"] for m in matches]:
-                        matches.append({
-                            "path": path,
-                            "reason": f"mentions '{person}'",
-                            "relevance": "mentioned",
-                            "title": source_meta.get("title", source_id),
-                        })
+                        matches.append(
+                            {
+                                "path": path,
+                                "reason": f"mentions '{person}'",
+                                "relevance": "mentioned",
+                                "title": source_meta.get("title", source_id),
+                            }
+                        )
 
     # Sort by relevance
     relevance_order = {"primary": 0, "supporting": 1, "mentioned": 2}

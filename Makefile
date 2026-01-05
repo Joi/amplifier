@@ -981,6 +981,16 @@ knowledge-apply: ## Apply approved suggestions to vault. Usage: make knowledge-a
 	if [ "$(DRY_RUN)" = "true" ]; then ARGS="$$ARGS --dry-run"; fi; \
 	eval uv run python -m scenarios.knowledge_curator $$ARGS apply
 
+# GTD Weekly Review
+gtd-review: ## Run interactive weekly GTD review. Usage: make gtd-review [RESUME=true]
+	@echo "🗓️  Starting Weekly GTD Review..."
+	@cd ai_working/weekly-gtd-review && \
+	if [ "$(RESUME)" = "false" ]; then \
+		uv run python -m gtd_review.cli --no-resume; \
+	else \
+		uv run python -m gtd_review.cli --resume; \
+	fi
+
 # DOT to Mermaid Converter
 dot-to-mermaid: ## Convert DOT files to Mermaid format. Usage: make dot-to-mermaid INPUT="path/to/dot/files"
 	@if [ -z "$(INPUT)" ]; then \

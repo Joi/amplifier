@@ -25,10 +25,8 @@ Date: 2026-01-03
 
 import argparse
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -91,10 +89,7 @@ class YomiTokuExtractor:
     def check_availability(self) -> bool:
         """Check if all dependencies are available."""
         if not self.yomitoku_available:
-            logger.error(
-                "YomiToku not installed. Run: uv add yomitoku\n"
-                "Or install with: pip install yomitoku"
-            )
+            logger.error("YomiToku not installed. Run: uv add yomitoku\nOr install with: pip install yomitoku")
             return False
         return True
 
@@ -179,12 +174,18 @@ class YomiTokuExtractor:
         yomitoku_reading_order = "right2left" if reading_order == ReadingOrder.JAPANESE_BOOK_SPREAD else "left2right"
 
         cmd = [
-            "uv", "run", "yomitoku",
+            "uv",
+            "run",
+            "yomitoku",
             str(pdf_path),
-            "-o", str(yomitoku_dir),
-            "-f", "md",
-            "--reading_order", yomitoku_reading_order,
-            "--dpi", str(dpi),
+            "-o",
+            str(yomitoku_dir),
+            "-f",
+            "md",
+            "--reading_order",
+            yomitoku_reading_order,
+            "--dpi",
+            str(dpi),
             "--figure",
             "--figure_letter",
         ]

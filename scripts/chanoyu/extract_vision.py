@@ -59,6 +59,7 @@ class VisionExtractor:
         """Lazy-load Vision client."""
         if self._client is None:
             from google.cloud import vision
+
             self._client = vision.ImageAnnotatorClient()
         return self._client
 
@@ -67,6 +68,7 @@ class VisionExtractor:
         try:
             # Try to import and create client
             from google.cloud import vision
+
             client = vision.ImageAnnotatorClient()
             return True
         except Exception as e:
@@ -91,8 +93,10 @@ class VisionExtractor:
         cmd = [
             "pdftoppm",
             "-png",
-            "-r", str(dpi),
-            "-f", str(start_page),
+            "-r",
+            str(dpi),
+            "-f",
+            str(start_page),
         ]
 
         if end_page:

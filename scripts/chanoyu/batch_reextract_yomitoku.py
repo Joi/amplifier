@@ -32,7 +32,8 @@ from amplifier.utils.logger import get_logger
 logger = get_logger(__name__)
 
 # Import the YomiToku extractor
-from scripts.chanoyu.extract_yomitoku import YomiTokuExtractor, ReadingOrder
+from scripts.chanoyu.extract_yomitoku import ReadingOrder
+from scripts.chanoyu.extract_yomitoku import YomiTokuExtractor
 
 
 @dataclass
@@ -136,13 +137,15 @@ def scan_pdf_sources() -> list[PDFSource]:
             yomitoku_dir = output_dir / "yomitoku"
             already_extracted = yomitoku_dir.exists() and any(yomitoku_dir.glob("*.md"))
 
-            sources.append(PDFSource(
-                pdf_path=pdf_path,
-                output_dir=output_dir,
-                collection=collection,
-                name=name,
-                already_extracted=already_extracted,
-            ))
+            sources.append(
+                PDFSource(
+                    pdf_path=pdf_path,
+                    output_dir=output_dir,
+                    collection=collection,
+                    name=name,
+                    already_extracted=already_extracted,
+                )
+            )
 
     return sources
 
@@ -175,7 +178,8 @@ def main():
         help="Only process PDFs matching this pattern",
     )
     parser.add_argument(
-        "--yes", "-y",
+        "--yes",
+        "-y",
         action="store_true",
         help="Skip confirmation prompt",
     )
@@ -198,13 +202,13 @@ def main():
     already = sum(1 for s in sources if s.already_extracted)
     to_extract = [s for s in sources if not s.already_extracted or args.force]
 
-    logger.info(f"\nPDF Sources Summary:")
+    logger.info("\nPDF Sources Summary:")
     logger.info(f"  Total PDFs found: {total}")
     logger.info(f"  Already extracted: {already}")
     logger.info(f"  To extract: {len(to_extract)}")
 
     if args.limit:
-        to_extract = to_extract[:args.limit]
+        to_extract = to_extract[: args.limit]
         logger.info(f"  Limited to: {args.limit}")
 
     # Show what will be extracted

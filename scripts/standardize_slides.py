@@ -21,7 +21,6 @@ Date: 2026-01-04
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import os
 import re
@@ -114,8 +113,15 @@ class StyleAnalysis:
 
             # Use first non-None value from reference slides for each property
             result: dict[str, Any] = {}
-            for key in ["title_font", "title_size", "title_color",
-                       "body_font", "body_size", "body_color", "background_color"]:
+            for key in [
+                "title_font",
+                "title_size",
+                "title_color",
+                "body_font",
+                "body_size",
+                "body_color",
+                "background_color",
+            ]:
                 for style in ref_styles:
                     val = getattr(style, key, None)
                     if val is not None:
@@ -133,9 +139,7 @@ class StyleAnalysis:
             "body_font": self.body_fonts.most_common(1)[0][0] if self.body_fonts else None,
             "body_size": self.body_sizes.most_common(1)[0][0] if self.body_sizes else None,
             "body_color": self.body_colors.most_common(1)[0][0] if self.body_colors else None,
-            "background_color": (
-                self.background_colors.most_common(1)[0][0] if self.background_colors else None
-            ),
+            "background_color": (self.background_colors.most_common(1)[0][0] if self.background_colors else None),
         }
 
     def find_inconsistencies(self, recommended: dict[str, Any]) -> list[dict[str, Any]]:
@@ -153,9 +157,7 @@ class StyleAnalysis:
                 slide_issues.append(f"body font: {style.body_font}")
             if style.body_size and style.body_size != recommended.get("body_size"):
                 slide_issues.append(f"body size: {style.body_size}pt")
-            if style.background_color and style.background_color != recommended.get(
-                "background_color"
-            ):
+            if style.background_color and style.background_color != recommended.get("background_color"):
                 slide_issues.append(f"background: {style.background_color}")
 
             if slide_issues:
@@ -238,9 +240,7 @@ class GoogleSlidesClient:
         logger.info(f"Fetching presentation: {presentation_id}")
         return self.slides_service.presentations().get(presentationId=presentation_id).execute()
 
-    def export_slide_as_image(
-        self, presentation_id: str, slide_id: str, output_path: Path
-    ) -> Path:
+    def export_slide_as_image(self, presentation_id: str, slide_id: str, output_path: Path) -> Path:
         """Export a single slide as PNG image."""
         # Get slide thumbnail
         response = (
@@ -273,10 +273,7 @@ class GoogleSlidesClient:
         logger.info("Exporting presentation as PDF...")
 
         # Use Drive API to export as PDF
-        request = self.drive_service.files().export_media(
-            fileId=presentation_id,
-            mimeType="application/pdf"
-        )
+        request = self.drive_service.files().export_media(fileId=presentation_id, mimeType="application/pdf")
 
         # Download the PDF
         from googleapiclient.http import MediaIoBaseDownload
@@ -301,7 +298,8 @@ class GoogleSlidesClient:
         cmd = [
             "pdftoppm",
             "-png",
-            "-r", str(dpi),
+            "-r",
+            str(dpi),
             str(pdf_path),
             str(output_dir / "slide"),
         ]
@@ -324,11 +322,7 @@ class GoogleSlidesClient:
 
         logger.info(f"Applying {len(requests)} updates...")
         body = {"requests": requests}
-        response = (
-            self.slides_service.presentations()
-            .batchUpdate(presentationId=presentation_id, body=body)
-            .execute()
-        )
+        response = self.slides_service.presentations().batchUpdate(presentationId=presentation_id, body=body).execute()
         return response
 
     def upload_image_to_drive(self, image_path: Path) -> str:
@@ -346,11 +340,15 @@ class GoogleSlidesClient:
             resumable=True,
         )
 
-        file = self.drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields="id,webContentLink",
-        ).execute()
+        file = (
+            self.drive_service.files()
+            .create(
+                body=file_metadata,
+                media_body=media,
+                fields="id,webContentLink",
+            )
+            .execute()
+        )
 
         file_id = file.get("id")
         logger.info(f"Uploaded image to Drive: {file_id}")
@@ -550,9 +548,7 @@ Return ONLY the JSON object, no other text."""
 
         return {}
 
-    def analyze_presentation_holistically(
-        self, image_paths: list[Path]
-    ) -> dict[str, Any]:
+    def analyze_presentation_holistically(self, image_paths: list[Path]) -> dict[str, Any]:
         """Analyze all slides together for comprehensive style assessment."""
         if not image_paths:
             return {}
@@ -771,9 +767,7 @@ def generate_update_requests(
                 r = int(hex_color[0:2], 16) / 255
                 g = int(hex_color[2:4], 16) / 255
                 b = int(hex_color[4:6], 16) / 255
-                text_style["foregroundColor"] = {
-                    "opaqueColor": {"rgbColor": {"red": r, "green": g, "blue": b}}
-                }
+                text_style["foregroundColor"] = {"opaqueColor": {"rgbColor": {"red": r, "green": g, "blue": b}}}
                 fields.append("foregroundColor")
 
             if text_style and fields:
@@ -802,9 +796,7 @@ def generate_update_requests(
                         "objectId": slide_id,
                         "pageProperties": {
                             "pageBackgroundFill": {
-                                "solidFill": {
-                                    "color": {"rgbColor": {"red": r, "green": g, "blue": b}}
-                                }
+                                "solidFill": {"color": {"rgbColor": {"red": r, "green": g, "blue": b}}}
                             }
                         },
                         "fields": "pageBackgroundFill",
@@ -884,9 +876,7 @@ def print_analysis(
     print()
 
 
-def interactive_confirm(
-    recommended: dict[str, Any], inconsistencies: list[dict]
-) -> tuple[bool, dict[str, Any]]:
+def interactive_confirm(recommended: dict[str, Any], inconsistencies: list[dict]) -> tuple[bool, dict[str, Any]]:
     """Interactively confirm or edit the recommended style."""
     if not inconsistencies:
         print("No inconsistencies found - presentation is already consistent!")
@@ -979,7 +969,8 @@ Examples:
         help="Use Nano Banana Pro vision analysis for more accurate detection",
     )
     parser.add_argument(
-        "--yes", "-y",
+        "--yes",
+        "-y",
         action="store_true",
         help="Skip confirmation prompt",
     )
@@ -1112,14 +1103,12 @@ Examples:
                     # Fallback to individual slide thumbnails
                     for i, slide in enumerate(slides[:10]):
                         slide_id = slide.get("objectId")
-                        image_path = tmpdir / f"slide_{i+1:03d}.png"
+                        image_path = tmpdir / f"slide_{i + 1:03d}.png"
                         try:
-                            slides_client.export_slide_as_image(
-                                presentation_id, slide_id, image_path
-                            )
+                            slides_client.export_slide_as_image(presentation_id, slide_id, image_path)
                             image_paths.append(image_path)
                         except Exception as e2:
-                            logger.warning(f"Failed to export slide {i+1}: {e2}")
+                            logger.warning(f"Failed to export slide {i + 1}: {e2}")
 
                 if image_paths:
                     holistic = analyzer.analyze_presentation_holistically(image_paths)
@@ -1188,12 +1177,12 @@ Examples:
                 source_images = []
                 for i, slide in enumerate(slides):
                     slide_id = slide.get("objectId")
-                    image_path = tmpdir / f"slide_{i+1:03d}.png"
+                    image_path = tmpdir / f"slide_{i + 1:03d}.png"
                     try:
                         slides_client.export_slide_as_image(presentation_id, slide_id, image_path)
                         source_images.append(image_path)
                     except Exception as e2:
-                        logger.warning(f"Failed to export slide {i+1}: {e2}")
+                        logger.warning(f"Failed to export slide {i + 1}: {e2}")
 
             # Generate new images for each slide
             print(f"\nGenerating {len(source_images)} new slide images with Nano Banana Pro...")
@@ -1247,9 +1236,7 @@ Examples:
                 image_url = f"https://drive.google.com/uc?id={file_id}"
 
                 # Insert as full-slide image
-                slides_client.insert_fullsize_image(
-                    presentation_id, slide_id, image_url, presentation
-                )
+                slides_client.insert_fullsize_image(presentation_id, slide_id, image_url, presentation)
                 print("✓")
             except Exception as e:
                 print(f"✗ ({e})")

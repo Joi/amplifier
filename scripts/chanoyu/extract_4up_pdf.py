@@ -53,6 +53,7 @@ except ImportError:
 
 try:
     from google import genai
+
     GENAI_AVAILABLE = True
 except ImportError:
     genai = None
@@ -108,12 +109,7 @@ class FourUpExtractor:
             # Fall back to environment variables
             self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
-        self.configured = bool(
-            self.api_key and
-            self.api_key.strip() and
-            GENAI_AVAILABLE and
-            PDF2IMAGE_AVAILABLE
-        )
+        self.configured = bool(self.api_key and self.api_key.strip() and GENAI_AVAILABLE and PDF2IMAGE_AVAILABLE)
         self.client = None
 
         if self.configured and genai:
@@ -157,17 +153,16 @@ class FourUpExtractor:
         if order == ReadingOrder.JAPANESE_BOOK_SPREAD:
             # Japanese book: right page first, then left
             return ["R", "L"]
-        elif order == ReadingOrder.JAPANESE_4UP:
+        if order == ReadingOrder.JAPANESE_4UP:
             # Japanese 4-up: upper-right → lower-right → upper-left → lower-left
             return ["UR", "LR", "UL", "LL"]
-        elif order == ReadingOrder.WESTERN_BOOK_SPREAD:
+        if order == ReadingOrder.WESTERN_BOOK_SPREAD:
             # Western book: left page first, then right
             return ["L", "R"]
-        elif order == ReadingOrder.WESTERN_4UP:
+        if order == ReadingOrder.WESTERN_4UP:
             # Western 4-up: upper-left → upper-right → lower-left → lower-right
             return ["UL", "UR", "LL", "LR"]
-        else:
-            raise ValueError(f"Unknown reading order: {order}")
+        raise ValueError(f"Unknown reading order: {order}")
 
     def split_image_4up(self, image: Image.Image) -> dict[str, Image.Image]:
         """Split an image into 4 quadrants.
@@ -276,6 +271,7 @@ class FourUpExtractor:
 
         # Use generation config to prevent repetition loops
         from google.genai import types
+
         config = types.GenerateContentConfig(
             temperature=0.0,  # Zero for deterministic column-order reading
             max_output_tokens=8192,  # Enough for full pages but prevents infinite loops
@@ -390,6 +386,7 @@ This is quadrant {position} of the physical page.
 
         # Get physical page count
         from pdf2image.pdf2image import pdfinfo_from_path
+
         info = pdfinfo_from_path(str(pdf_path))
         total_physical_pages = info.get("Pages", 0)
 

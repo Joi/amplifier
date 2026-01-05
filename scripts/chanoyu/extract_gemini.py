@@ -24,7 +24,6 @@ import argparse
 import asyncio
 import subprocess
 import sys
-import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -123,6 +122,7 @@ class GeminiExtractor:
         """Lazy-load Gemini extractor."""
         if self._extractor is None:
             from amplifier.knowledge_synthesis.gemini_extractor import GeminiPdfExtractor
+
             self._extractor = GeminiPdfExtractor()
         return self._extractor
 
@@ -146,8 +146,10 @@ class GeminiExtractor:
         cmd = [
             "pdftoppm",
             "-png",
-            "-r", str(dpi),
-            "-f", str(start_page),
+            "-r",
+            str(dpi),
+            "-f",
+            str(start_page),
         ]
 
         if end_page:
@@ -265,7 +267,7 @@ class GeminiExtractor:
 
             # Skip cover page if requested (only when starting from page 1)
             if skip_cover and start_page == 1 and i == 1:
-                logger.info(f"Skipping page 1 (cover)")
+                logger.info("Skipping page 1 (cover)")
                 continue
 
             logger.info(f"Extracting page {actual_page}/{len(images) + start_page - 1}: {image_path.name}")
@@ -361,9 +363,9 @@ Full text extraction using Gemini 3 Flash for multi-column Japanese text.
         content_parts = [frontmatter]
         for result in sorted(pages, key=lambda p: p.page_num):
             if result.success:
-                content_parts.append(f"\n\n{'='*60}\n")
+                content_parts.append(f"\n\n{'=' * 60}\n")
                 content_parts.append(f"## PAGE {result.page_num}\n")
-                content_parts.append(f"{'='*60}\n\n")
+                content_parts.append(f"{'=' * 60}\n\n")
                 content_parts.append(result.text)
                 content_parts.append("\n\n")
 
@@ -458,6 +460,7 @@ Examples:
     except Exception as e:
         logger.error(f"Extraction failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

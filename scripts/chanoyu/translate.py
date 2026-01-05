@@ -19,7 +19,6 @@ Date: 2026-01-03
 """
 
 import argparse
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,6 +79,7 @@ class DeepLTranslator:
         """Lazy-load DeepL translator."""
         if self._translator is None:
             import deepl
+
             self._translator = deepl.Translator(self.auth_key)
         return self._translator
 
@@ -216,10 +216,12 @@ class DeepLTranslator:
             while i < len(lines):
                 current = lines[i]
                 # Stop at structural elements
-                if (current.strip() == "" or
-                    current.strip().startswith("<!-- ") or
-                    current.strip() == "---" or
-                    current.strip().startswith("```")):
+                if (
+                    current.strip() == ""
+                    or current.strip().startswith("<!-- ")
+                    or current.strip() == "---"
+                    or current.strip().startswith("```")
+                ):
                     break
                 block_lines.append(current)
                 i += 1
@@ -291,9 +293,7 @@ class DeepLTranslator:
         return {
             "character_count": usage.character.count,
             "character_limit": usage.character.limit,
-            "percent_used": usage.character.count / usage.character.limit * 100
-            if usage.character.limit
-            else 0,
+            "percent_used": usage.character.count / usage.character.limit * 100 if usage.character.limit else 0,
         }
 
 
@@ -345,7 +345,7 @@ Examples:
 
     if args.usage:
         usage = translator.get_usage()
-        print(f"DeepL API Usage:")
+        print("DeepL API Usage:")
         print(f"  Characters: {usage['character_count']:,} / {usage['character_limit']:,}")
         print(f"  Used: {usage['percent_used']:.2f}%")
         return
