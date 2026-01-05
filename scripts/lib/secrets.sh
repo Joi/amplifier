@@ -1,28 +1,40 @@
 #!/bin/bash
-# Unified secrets caching for 1Password-stored credentials.
+# Unified secrets caching for Apple Keychain-stored credentials.
 #
 # Provides shell functions matching the Python amplifier.utils.secrets module.
 # Source this file in your scripts to use the caching system.
 #
 # Usage:
 #   source "$(dirname "$0")/lib/secrets.sh"
-#   API_KEY=$(get_secret gemini_api_key "op://Employee/Amplifier Gemini Key/credential")
+#   API_KEY=$(get_secret gemini_api_key "Amplifier Gemini API Key")
 #
 # Cache location: ~/.cache/amplifier/secrets/
 # Default TTL: 4 hours (14400 seconds)
 #
-# 1Password Path Format:
-#   All API keys are stored in the "Employee" vault with this path format:
-#       op://Employee/<Item Name>/credential
+# Apple Keychain Storage:
+#   All API keys are stored in the login keychain with the service name format:
+#       Amplifier <Service> <Type>
 #
-#   IMPORTANT: API keys are stored as "credential" fields, NOT "password" fields.
-#   In 1Password, you must use "credential" (which requires "reveal" to view).
+#   Examples:
+#       Amplifier Gemini API Key
+#       Amplifier OpenAI API Key
+#       Amplifier Supabase Chanoyu Service Role Key
 #
-#   To add a new API key in 1Password:
-#   1. Create item in "Employee" vault
-#   2. Add field named "credential" (not password)
-#   3. Paste the API key value
-#   4. Add convenience function below following the pattern
+# SSH Access:
+#   Unlike 1Password, Apple Keychain secrets are accessible via SSH when:
+#   - You are logged into the Mac (GUI session active)
+#   - The login keychain is unlocked (happens automatically on login)
+#
+# Adding New Secrets:
+#   To add a new secret to Apple Keychain:
+#       security add-generic-password -s "Amplifier <Name>" -a "$USER" -w "<secret>"
+#
+#   To retrieve:
+#       security find-generic-password -s "Amplifier <Name>" -w
+#
+#   To update (delete then add):
+#       security delete-generic-password -s "Amplifier <Name>"
+#       security add-generic-password -s "Amplifier <Name>" -a "$USER" -w "<new_secret>"
 
 SECRETS_CACHE_DIR="$HOME/.cache/amplifier/secrets"
 SECRETS_DEFAULT_TTL=14400  # 4 hours
@@ -57,12 +69,12 @@ _is_secret_expired() {
     return 1  # Still valid
 }
 
-# Get secret from cache or 1Password
-# Args: $1 = name, $2 = op_path, $3 = ttl_seconds (optional)
+# Get secret from cache or Apple Keychain
+# Args: $1 = name, $2 = keychain_service, $3 = ttl_seconds (optional)
 # Outputs: secret value
 get_secret() {
     local name="$1"
-    local op_path="$2"
+    local keychain_service="$2"
     local ttl="${3:-$SECRETS_DEFAULT_TTL}"
 
     _ensure_secrets_cache_dir
@@ -74,11 +86,11 @@ get_secret() {
         return 0
     fi
 
-    # Fetch from 1Password and cache
+    # Fetch from Apple Keychain and cache
     local secret
-    secret=$(op read "$op_path" 2>/dev/null)
+    secret=$(security find-generic-password -s "$keychain_service" -w 2>/dev/null)
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to read secret from 1Password" >&2
+        echo "Error: Failed to read secret from Keychain: $keychain_service" >&2
         return 1
     fi
 
@@ -122,63 +134,62 @@ clear_all_secrets() {
     echo "$count"
 }
 
+# =============================================================================
 # Convenience functions for common secrets
+# =============================================================================
+
+# API Keys (single credential items)
+
 get_gemini_api_key() {
-    get_secret "gemini_api_key" "op://Employee/Amplifier Gemini Key/credential" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "gemini_api_key" "Amplifier Gemini API Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_openai_api_key() {
-    get_secret "openai_api_key" "op://Employee/OpenAI API Key/credential" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "openai_api_key" "Amplifier OpenAI API Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_anthropic_api_key() {
-    get_secret "anthropic_api_key" "op://Employee/Anthropic API Key/credential" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "anthropic_api_key" "Amplifier Anthropic API Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_deepl_api_key() {
-    get_secret "deepl_api_key" "op://Employee/DeepL API Key/credential" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "deepl_api_key" "Amplifier DeepL API Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
-# Supabase Chanoyu - multiple secrets from one 1Password item
-# 1Password item: "Supabase Chanoyu" in Employee vault
-# Fields: service_role_key, access_token, db_password
+# Supabase Chanoyu - multiple secrets from one service
 
 get_supabase_service_role_key() {
-    get_secret "supabase_service_role_key" "op://Employee/Supabase Chanoyu/service_role_key" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "supabase_service_role_key" "Amplifier Supabase Chanoyu Service Role Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_supabase_access_token() {
-    get_secret "supabase_access_token" "op://Employee/Supabase Chanoyu/access_token" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "supabase_access_token" "Amplifier Supabase Chanoyu Access Token" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_supabase_db_password() {
-    get_secret "supabase_db_password" "op://Employee/Supabase Chanoyu/db_password" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "supabase_db_password" "Amplifier Supabase Chanoyu DB Password" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
-# Supabase Health Tracker - single secret needed
-# 1Password item: "Supabase Health Tracker" in Employee vault
-# Field: service_role_key
+# Supabase Health Tracker
 
 get_health_tracker_service_role_key() {
-    get_secret "health_tracker_service_role_key" "op://Employee/Supabase Health Tracker/service_role_key" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "health_tracker_service_role_key" "Amplifier Health Tracker Service Role Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_health_tracker_access_token() {
-    get_secret "health_tracker_access_token" "op://Employee/Supabase Health Tracker/access_token" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "health_tracker_access_token" "Amplifier Health Tracker Access Token" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_health_tracker_db_password() {
-    get_secret "health_tracker_db_password" "op://Employee/Supabase Health Tracker/db_password" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "health_tracker_db_password" "Amplifier Health Tracker DB Password" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
-# Withings API - OAuth credentials
-# 1Password item: "Withings API" in Employee vault
-# Fields: client_id, secret
+# Withings API
 
 get_withings_client_id() {
-    get_secret "withings_client_id" "op://Employee/Withings API/client_id" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "withings_client_id" "Amplifier Withings Client ID" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
 get_withings_client_secret() {
-    get_secret "withings_client_secret" "op://Employee/Withings API/secret" "${1:-$SECRETS_DEFAULT_TTL}"
+    get_secret "withings_client_secret" "Amplifier Withings Client Secret" "${1:-$SECRETS_DEFAULT_TTL}"
 }
