@@ -334,3 +334,9 @@ get_whoop_client_id() {
 get_whoop_client_secret() {
     get_secret "whoop_client_secret" "Amplifier Whoop Client Secret" "${1:-$SECRETS_DEFAULT_TTL}"
 }
+
+# Semantic Scholar API
+
+get_semantic_scholar_api_key() {
+    get_secret "semantic_scholar_api_key" "Semantic Scholar API" "${1:-$SECRETS_DEFAULT_TTL}" "SEMANTIC_SCHOLAR_API_KEY"
+}

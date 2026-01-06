@@ -488,3 +488,16 @@ def get_whoop_client_secret(ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
         "Amplifier Whoop Client Secret",
         ttl_seconds=ttl_seconds,
     )
+
+
+# Semantic Scholar API
+
+
+def get_semantic_scholar_api_key(ttl_seconds: int = DEFAULT_TTL_SECONDS) -> str:
+    """Get Semantic Scholar API key."""
+    return get_secret(
+        "semantic_scholar_api_key",
+        "Semantic Scholar API",
+        env_name="SEMANTIC_SCHOLAR_API_KEY",
+        ttl_seconds=ttl_seconds,
+    )
