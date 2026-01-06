@@ -39,14 +39,20 @@ except ImportError:
 # Model configurations
 MODELS = {
     "pro": {
-        "id": "gemini-3-pro-image-preview",
-        "name": "Nano Banana Pro",
+        "id": "imagen-4.0-generate-001",
+        "name": "Imagen 4.0",
+        "sizes": ["1K", "2K", "4K"],
+        "default_size": "2K",
+    },
+    "ultra": {
+        "id": "imagen-4.0-ultra-generate-001",
+        "name": "Imagen 4.0 Ultra",
         "sizes": ["1K", "2K", "4K"],
         "default_size": "2K",
     },
     "flash": {
         "id": "gemini-2.5-flash-image",
-        "name": "Nano Banana",
+        "name": "Gemini Flash Image",
         "sizes": ["1K"],  # Fixed size
         "default_size": "1K",
     },
@@ -150,33 +156,31 @@ def generate_image(
     # Add text prompt
     contents.append(prompt)
 
-    # Build image config - only include image_size for pro model
-    image_config_kwargs: dict = {"aspect_ratio": aspect_ratio}
-    if model_key == "pro":
-        image_config_kwargs["image_size"] = size
+    # Build image config
+    config_kwargs: dict = {"aspect_ratio": aspect_ratio}
+    if model_key == "pro" and size:
+        config_kwargs["image_size"] = size
 
-    # Generate
+    # Generate using the new generate_images API
     print("Generating image...")
-    response = client.models.generate_content(
+    response = client.models.generate_images(
         model=model_id,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE"],
-            image_config=types.ImageConfig(**image_config_kwargs),
-        ),
+        prompt=prompt,
+        config=types.GenerateImagesConfig(**config_kwargs),
     )
 
     # Extract image from response
     image_data = None
     response_text = None
 
-    for part in response.candidates[0].content.parts:
-        if hasattr(part, "inline_data") and part.inline_data:
-            image_data = part.inline_data.data
-        elif hasattr(part, "text") and part.text:
-            response_text = part.text
+    if response.generated_images and len(response.generated_images) > 0:
+        generated_image = response.generated_images[0]
+        if hasattr(generated_image, "image") and generated_image.image:
+            if hasattr(generated_image.image, "image_bytes"):
+                image_data = generated_image.image.image_bytes
 
-    if response_text:
+    if hasattr(response, "text") and response.text:
+        response_text = response.text
         print(f"Response text: {response_text}")
 
     if not image_data:
