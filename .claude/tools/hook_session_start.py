@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Claude Code hook for session start - minimal wrapper for memory retrieval.
-Reads JSON from stdin, calls amplifier modules, writes JSON to stdout.
+Claude Code hook for session start - saves session info and retrieves memories.
+Reads JSON from stdin, saves session info, calls amplifier modules, writes JSON to stdout.
 """
 
 import asyncio
@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Add amplifier to path
@@ -57,27 +58,30 @@ from hook_logger import HookLogger
 
 logger = HookLogger("session_start")
 
+
+# Try to import amplifier modules for memory retrieval
+memory_available = False
 try:
     from amplifier.memory import MemoryStore
     from amplifier.search import MemorySearcher
+    memory_available = True
 except ImportError as e:
-    logger.error(f"Failed to import amplifier modules: {e}")
-    # Exit gracefully to not break hook chain
-    json.dump({}, sys.stdout)
-    sys.exit(0)
+    logger.info(f"Amplifier memory modules not available: {e}")
 
 
 async def main():
-    """Read input, search memories, return context"""
+    """Search memories and return context. Session already tracked at module load."""
     global input_data  # Use input_data parsed during early session tracking
 
     try:
-        # Check if memory system is enabled
-        import os
+        # Session info already saved during early tracking (lines 48-53)
+        # Don't read stdin again - it was consumed during early tracking
 
+        # Check if memory system is enabled
         memory_enabled = os.getenv("MEMORY_SYSTEM_ENABLED", "false").lower() in ["true", "1", "yes"]
-        if not memory_enabled:
-            logger.info("Memory system disabled via MEMORY_SYSTEM_ENABLED env var")
+        if not memory_enabled or not memory_available:
+            if not memory_enabled:
+                logger.info("Memory system disabled via MEMORY_SYSTEM_ENABLED env var")
             # Return empty response and exit gracefully
             json.dump({}, sys.stdout)
             return
@@ -86,8 +90,6 @@ async def main():
         logger.cleanup_old_logs()  # Clean up old logs on each run
 
         # Use input_data already parsed during early session tracking
-        logger.info(f"Using pre-parsed input data")
-
         prompt = input_data.get("prompt", "")
         logger.info(f"Prompt length: {len(prompt)}")
 
