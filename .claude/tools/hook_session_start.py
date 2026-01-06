@@ -6,11 +6,50 @@ Reads JSON from stdin, calls amplifier modules, writes JSON to stdout.
 
 import asyncio
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
 # Add amplifier to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Session tracking file location
+SESSION_FILE = Path.home() / ".claude" / "current_session.json"
+
+
+def track_session(input_data: dict) -> None:
+    """Save session info for /session command and update tmux."""
+    try:
+        session_info = {
+            "session_id": input_data.get("session_id", ""),
+            "session_name": input_data.get("session_name", ""),
+            "project_dir": input_data.get("workspace", {}).get("project_dir", ""),
+            "current_dir": input_data.get("workspace", {}).get("current_dir", ""),
+            "model": input_data.get("model", {}).get("display_name", ""),
+        }
+
+        SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SESSION_FILE.write_text(json.dumps(session_info, indent=2))
+
+        # Update tmux window name if in tmux
+        if os.environ.get("TMUX"):
+            project = os.path.basename(session_info["project_dir"]) or "claude"
+            name = session_info["session_name"] or session_info["session_id"][:8] or "session"
+            subprocess.run(["tmux", "rename-window", f"{project}:{name}"], check=False)
+    except Exception:
+        pass  # Don't break the hook chain for tracking failures
+
+
+# === EARLY SESSION TRACKING ===
+# Track session BEFORE importing amplifier modules (which may fail due to missing deps)
+# This ensures /session command works even if memory system is unavailable
+try:
+    raw_input = sys.stdin.read()
+    input_data = json.loads(raw_input) if raw_input else {}
+    track_session(input_data)
+except Exception:
+    input_data = {}
 
 # Import logger from the same directory
 sys.path.insert(0, str(Path(__file__).parent))
@@ -30,6 +69,8 @@ except ImportError as e:
 
 async def main():
     """Read input, search memories, return context"""
+    global input_data  # Use input_data parsed during early session tracking
+
     try:
         # Check if memory system is enabled
         import os
@@ -44,11 +85,9 @@ async def main():
         logger.info("Starting memory retrieval")
         logger.cleanup_old_logs()  # Clean up old logs on each run
 
-        # Read JSON input
-        raw_input = sys.stdin.read()
-        logger.info(f"Received input length: {len(raw_input)}")
+        # Use input_data already parsed during early session tracking
+        logger.info(f"Using pre-parsed input data")
 
-        input_data = json.loads(raw_input)
         prompt = input_data.get("prompt", "")
         logger.info(f"Prompt length: {len(prompt)}")
 
