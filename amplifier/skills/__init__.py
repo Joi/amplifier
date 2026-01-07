@@ -12,6 +12,8 @@ Available Skills:
     - apple_notes: Create, read, search Apple Notes
     - imagen: Generate images via Google Imagen/Gemini
     - sync_repos: Sync all tracked git repositories
+    - gmail: Read, search, send, and manage Gmail
+    - google_calendar: Create, list, manage calendar events
 """
 
 # Academic Search
@@ -73,6 +75,47 @@ from .sync_repos import sync_all
 from .sync_repos import sync_all_sync
 from .sync_repos import sync_repo
 
+# Gmail
+from .gmail import EmailAddress
+from .gmail import EmailMessage
+from .gmail import EmailThread
+from .gmail import Label as GmailLabel
+from .gmail import get_labels as get_gmail_labels
+from .gmail import get_message
+from .gmail import get_message_sync
+from .gmail import get_unread_count
+from .gmail import list_messages
+from .gmail import list_messages_sync
+from .gmail import mark_as_read
+from .gmail import mark_as_unread
+from .gmail import reply_to_message
+from .gmail import search_messages
+from .gmail import search_messages_sync
+from .gmail import send_email
+from .gmail import send_email_sync
+from .gmail import star_message
+from .gmail import trash_message
+from .gmail import unstar_message
+
+# Google Calendar
+from .google_calendar import Attendee as CalendarAttendee
+from .google_calendar import Calendar
+from .google_calendar import CalendarEvent
+from .google_calendar import create_event
+from .google_calendar import create_event_sync
+from .google_calendar import delete_event
+from .google_calendar import get_calendars
+from .google_calendar import get_event
+from .google_calendar import get_event_sync
+from .google_calendar import get_todays_events
+from .google_calendar import get_todays_events_sync
+from .google_calendar import get_upcoming_events
+from .google_calendar import list_events
+from .google_calendar import list_events_sync
+from .google_calendar import quick_add
+from .google_calendar import quick_add_sync
+from .google_calendar import update_event
+
 __all__ = [
     # Academic Search
     "Paper",
@@ -126,4 +169,43 @@ __all__ = [
     "sync_all",
     "sync_all_sync",
     "sync_repo",
+    # Gmail
+    "EmailAddress",
+    "EmailMessage",
+    "EmailThread",
+    "GmailLabel",
+    "get_gmail_labels",
+    "get_message",
+    "get_message_sync",
+    "get_unread_count",
+    "list_messages",
+    "list_messages_sync",
+    "mark_as_read",
+    "mark_as_unread",
+    "reply_to_message",
+    "search_messages",
+    "search_messages_sync",
+    "send_email",
+    "send_email_sync",
+    "star_message",
+    "trash_message",
+    "unstar_message",
+    # Google Calendar
+    "Calendar",
+    "CalendarAttendee",
+    "CalendarEvent",
+    "create_event",
+    "create_event_sync",
+    "delete_event",
+    "get_calendars",
+    "get_event",
+    "get_event_sync",
+    "get_todays_events",
+    "get_todays_events_sync",
+    "get_upcoming_events",
+    "list_events",
+    "list_events_sync",
+    "quick_add",
+    "quick_add_sync",
+    "update_event",
 ]
