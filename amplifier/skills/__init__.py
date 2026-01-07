@@ -129,6 +129,8 @@ from .tea_calendar import get_tea_events
 from .tea_calendar import get_tea_events_sync
 from .tea_calendar import sync_sheet_to_calendar as sync_tea_calendar
 from .tea_calendar import sync_sheet_to_calendar_sync as sync_tea_calendar_sync
+from .tea_calendar import sync_calendar_to_sheet as discover_tea_events
+from .tea_calendar import sync_calendar_to_sheet_sync as discover_tea_events_sync
 
 __all__ = [
     # Academic Search
@@ -234,4 +236,6 @@ __all__ = [
     "get_tea_events_sync",
     "sync_tea_calendar",
     "sync_tea_calendar_sync",
+    "discover_tea_events",
+    "discover_tea_events_sync",
 ]

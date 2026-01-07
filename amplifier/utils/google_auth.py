@@ -63,6 +63,10 @@ class GoogleScopes:
     CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events"
     CALENDAR_FULL = "https://www.googleapis.com/auth/calendar"
 
+    # Sheets
+    SHEETS_READONLY = "https://www.googleapis.com/auth/spreadsheets.readonly"
+    SHEETS = "https://www.googleapis.com/auth/spreadsheets"
+
 
 @dataclass
 class GoogleCredentials:

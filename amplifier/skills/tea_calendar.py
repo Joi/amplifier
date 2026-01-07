@@ -37,7 +37,7 @@ import csv
 import io
 import re
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import TYPE_CHECKING
 
 import httpx
@@ -120,7 +120,7 @@ async def fetch_sheet(sheet_id: str = DEFAULT_SHEET_ID) -> list[TeaEvent]:
     """
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         response = await client.get(url)
         response.raise_for_status()
     
@@ -330,6 +330,163 @@ def sync_sheet_to_calendar_sync(
     return asyncio.run(sync_sheet_to_calendar(sheet_id, dry_run))
 
 
+def _parse_tea_event_from_calendar(event: CalendarEvent) -> TeaEvent | None:
+    """Parse a CalendarEvent into a TeaEvent."""
+    if not event.start:
+        return None
+    
+    # Extract event name (remove emoji prefix)
+    event_name = (event.summary or "").replace(TEA_EMOJI, "").strip()
+    if not event_name:
+        return None
+    
+    # Extract location and style from description
+    location = event.location or ""
+    style = ""
+    
+    if event.description:
+        # Try to get location from description if not in location field
+        loc_match = re.search(r"Location:\s*(.+)", event.description)
+        if loc_match and not location:
+            location = loc_match.group(1).strip()
+        
+        # Get attire/style
+        attire_match = re.search(r"Attire:\s*(.+)", event.description)
+        if attire_match:
+            style = attire_match.group(1).strip()
+    
+    return TeaEvent(
+        date=event.start.date() if hasattr(event.start, 'date') else event.start,
+        event=event_name,
+        location=location,
+        style=style,
+        calendar_id=event.id,
+    )
+
+
+async def _append_rows_to_sheet(
+    sheet_id: str,
+    rows: list[list[str]],
+) -> dict:
+    """Append rows to a Google Sheet using the Sheets API.
+    
+    Args:
+        sheet_id: Google Sheet ID
+        rows: List of rows, each row is a list of cell values
+        
+    Returns:
+        API response
+    """
+    from amplifier.utils.google_auth import get_google_credentials
+    
+    creds = get_google_credentials()
+    
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/A:D:append"
+    params = {
+        "valueInputOption": "USER_ENTERED",
+        "insertDataOption": "INSERT_ROWS",
+    }
+    
+    body = {
+        "values": rows
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            url,
+            params=params,
+            json=body,
+            headers={"Authorization": f"Bearer {creds.access_token}"},
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def sync_calendar_to_sheet(
+    time_min: str | date,
+    time_max: str | date,
+    sheet_id: str = DEFAULT_SHEET_ID,
+    dry_run: bool = False,
+) -> dict:
+    """Sync tea events from Calendar to Google Sheet.
+    
+    Discovers new tea events in the calendar (within date range) that
+    aren't in the sheet, and adds them.
+    
+    Args:
+        time_min: Start date for calendar search
+        time_max: End date for calendar search  
+        sheet_id: Google Sheet ID
+        dry_run: If True, don't actually add rows
+        
+    Returns:
+        Dict with counts and new events: {"added": N, "skipped": N, "events": [...]}
+    """
+    # Parse date inputs and convert to datetime with timezone
+    if isinstance(time_min, str):
+        time_min = date.fromisoformat(time_min)
+    if isinstance(time_max, str):
+        time_max = date.fromisoformat(time_max)
+    
+    # Convert to datetime for API
+    time_min_dt = datetime(time_min.year, time_min.month, time_min.day, 0, 0, 0, tzinfo=timezone.utc)
+    time_max_dt = datetime(time_max.year, time_max.month, time_max.day, 23, 59, 59, tzinfo=timezone.utc)
+    
+    # Fetch existing events from sheet
+    sheet_events = await fetch_sheet(sheet_id)
+    sheet_lookup: set[tuple[date, str]] = {
+        (e.date, e.event) for e in sheet_events
+    }
+    
+    # Fetch tea events from calendar
+    calendar_events = await get_tea_events(time_min=time_min_dt, time_max=time_max_dt)
+    
+    # Find events in calendar but not in sheet
+    new_events: list[TeaEvent] = []
+    skipped = 0
+    
+    for ce in calendar_events:
+        te = _parse_tea_event_from_calendar(ce)
+        if te is None:
+            skipped += 1
+            continue
+        
+        # Check if already in sheet
+        key = (te.date, te.event)
+        if key in sheet_lookup:
+            skipped += 1
+            continue
+        
+        new_events.append(te)
+    
+    # Add new events to sheet
+    if new_events and not dry_run:
+        rows = []
+        for te in new_events:
+            # Format: Date, Event, Location, Style
+            date_str = f"{te.date.year}/{te.date.month}/{te.date.day}"
+            rows.append([date_str, te.event, te.location, te.style])
+        
+        await _append_rows_to_sheet(sheet_id, rows)
+    
+    return {
+        "added": len(new_events),
+        "skipped": skipped,
+        "events": [e.to_dict() for e in new_events],
+    }
+
+
+def sync_calendar_to_sheet_sync(
+    time_min: str | date,
+    time_max: str | date,
+    sheet_id: str = DEFAULT_SHEET_ID,
+    dry_run: bool = False,
+) -> dict:
+    """Sync version of sync_calendar_to_sheet."""
+    import asyncio
+    return asyncio.run(sync_calendar_to_sheet(time_min, time_max, sheet_id, dry_run))
+
+
 async def generate_kimono_table(
     time_min: str | date | None = None,
     time_max: str | date | None = None,
@@ -398,10 +555,17 @@ def _cli_main() -> None:
     parser = argparse.ArgumentParser(description="Tea Ceremony Calendar")
     subparsers = parser.add_subparsers(dest="command", help="Command")
     
-    # sync command
+    # sync command (sheet -> calendar)
     sync_parser = subparsers.add_parser("sync", help="Sync sheet to calendar")
     sync_parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID)
     sync_parser.add_argument("--dry-run", action="store_true")
+    
+    # discover command (calendar -> sheet)
+    discover_parser = subparsers.add_parser("discover", help="Discover new events in calendar and add to sheet")
+    discover_parser.add_argument("--from", dest="time_min", required=True, help="Start date (YYYY-MM-DD)")
+    discover_parser.add_argument("--to", dest="time_max", required=True, help="End date (YYYY-MM-DD)")
+    discover_parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID)
+    discover_parser.add_argument("--dry-run", action="store_true")
     
     # list command
     list_parser = subparsers.add_parser("list", help="List tea events")
@@ -421,6 +585,17 @@ def _cli_main() -> None:
         results = sync_sheet_to_calendar_sync(args.sheet_id, args.dry_run)
         prefix = "[DRY RUN] " if args.dry_run else ""
         print(f"{prefix}✅ Created: {results['created']}, Updated: {results['updated']}, Unchanged: {results['unchanged']}")
+        
+    elif args.command == "discover":
+        results = sync_calendar_to_sheet_sync(
+            args.time_min, args.time_max, args.sheet_id, args.dry_run
+        )
+        prefix = "[DRY RUN] " if args.dry_run else ""
+        print(f"{prefix}✅ Added to sheet: {results['added']}, Skipped: {results['skipped']}")
+        if results['events']:
+            print("\nNew events discovered:")
+            for e in results['events']:
+                print(f"  {e['date']}: {e['event']} @ {e['location']}")
         
     elif args.command == "list":
         if args.kimono:
