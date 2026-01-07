@@ -2,6 +2,62 @@
 
 This file documents non-obvious problems, solutions, and patterns discovered during development. Make sure these are regularly reviewed and updated, removing outdated entries or those replaced by better practices or code or tools, updating those where the best practice has evolved.
 
+## Amplifier CLI Editable Install Version Detection Bug (2026-01-08)
+
+### Issue
+
+`amplifier update` shows "unknown" for `amplifier-core` local version while correctly detecting the remote version, preventing proper update detection:
+```
+                  Amplifier
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━┓
+┃ Package           ┃   Local ┃  Remote ┃   ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━╇━━━┩
+│ amplifier-core    │ unknown │ 51b8559 │ ● │
+└───────────────────┴─────────┴─────────┴───┘
+```
+
+### Root Cause
+
+The version detection code in `_get_umbrella_dependency_details()` only checks for `vcs_info` in `direct_url.json`:
+```python
+if 'vcs_info' in direct_url:
+    current_sha = direct_url['vcs_info'].get('commit_id', '')[:7]
+```
+
+When packages are installed as editable from local cache paths (`file://...`), they use `dir_info` instead of `vcs_info`:
+```json
+// Editable install (broken detection):
+{"url":"file:///Users/joi/.amplifier/cache/amplifier-core-...", "dir_info":{"editable":true}}
+
+// VCS install (working detection):
+{"url":"https://github.com/...", "vcs_info":{"vcs":"git", "commit_id":"51b8559..."}}
+```
+
+### Impact
+
+- Version detection fails for editable installs
+- Updates cannot be properly compared
+- Cache is actually up-to-date but shows as needing update
+
+### Solution
+
+Run `uv tool upgrade amplifier` to reinstall packages from git URLs instead of file paths:
+```bash
+uv tool upgrade amplifier
+```
+
+This changes the installation source:
+- Before: `amplifier-core==1.0.0 (from file:///.amplifier/cache/...)`
+- After: `amplifier-core==1.0.0 (from git+https://github.com/microsoft/amplifier-core@51b8559...)`
+
+### Proper Fix (Upstream)
+
+The code should also check for `dir_info` installs and run `git rev-parse HEAD` in the directory path to get the SHA.
+
+### Prevention
+
+If `amplifier update` shows "unknown" for package versions, run `uv tool upgrade amplifier` to fix the installation source.
+
 ## Amplifier CLI Module Validation Bug with Native Extensions (2026-01-04)
 
 ### Issue
