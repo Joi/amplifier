@@ -38,6 +38,10 @@ default: ## Show essential commands
 	@echo "  make worktree-adopt BRANCH  Create worktree from remote"
 	@echo "  make worktree-rm NAME  Remove worktree and delete branch"
 	@echo ""
+	@echo "Repository Sync:"
+	@echo "  make sync-repos      Sync all tracked git repositories"
+	@echo "  make sync-repos-push Sync all repos (pull + push)"
+	@echo ""
 	@echo "AI Context:"
 	@echo "  make ai-context-files Build AI context documentation"
 	@echo ""
@@ -141,6 +145,10 @@ help: ## Show ALL available commands
 	@echo "  make worktree-rm-force NAME  Force remove (with changes)"
 	@echo "  make worktree-unstash NAME  Restore hidden worktree"
 	@echo "  make worktree-list-stashed  List all hidden worktrees"
+	@echo ""
+	@echo "REPOSITORY SYNC:"
+	@echo "  make sync-repos      Sync all tracked git repositories (pull only)"
+	@echo "  make sync-repos-push Sync all repos (pull + push)"
 	@echo ""
 	@echo "SYNTHESIS:"
 	@echo "  make synthesize query=\"...\" files=\"...\"  Run synthesis"
@@ -289,6 +297,13 @@ worktree-adopt: ## Create worktree from remote branch. Usage: make worktree-adop
 
 worktree-list-stashed: ## List all hidden worktrees
 	@python tools/worktree_manager.py list-stashed
+
+# Repository sync
+sync-repos: ## Sync all tracked git repositories (pull only)
+	@uv run python scripts/sync_repos.py
+
+sync-repos-push: ## Sync all repos (pull + push)
+	@uv run python scripts/sync_repos.py --push
 
 # Catch-all target to handle branch names for worktree functionality
 # and show error for invalid commands
