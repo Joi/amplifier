@@ -1,31 +1,35 @@
 """Google OAuth2 authentication for Gmail and Calendar APIs.
 
-This module handles the OAuth2 flow for Google APIs:
-- Loads client credentials from ~/.googleauth/credentials.json
-- Stores/refreshes tokens per-app in ~/.googleauth/{app_name}/
-- Opens browser for initial authorization when needed
-- Automatically refreshes expired tokens
+This module handles OAuth2 for Google APIs using age-encrypted secrets:
+- Client credentials from GOOGLE_CLIENT_ID/SECRET in age secrets
+- Refresh token from GOOGLE_REFRESH_TOKEN in age secrets
+- Access tokens cached in ~/.cache/amplifier/google/ (short-lived)
+
+For initial authorization (one-time browser flow):
+    python -m amplifier.utils.google_auth
+
+After that, tokens are refreshed automatically without browser.
 
 Usage:
     from amplifier.utils.google_auth import get_google_credentials, GoogleScopes
 
     # Get credentials for Gmail
     creds = get_google_credentials(
-        app_name="amplifier",
         scopes=[GoogleScopes.GMAIL_MODIFY, GoogleScopes.GMAIL_SEND]
     )
 
-    # Use with Google API client
-    from googleapiclient.discovery import build
-    service = build('gmail', 'v1', credentials=creds)
+    # Use with httpx
+    headers = {"Authorization": f"Bearer {creds.access_token}"}
 """
 
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import webbrowser
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
@@ -35,9 +39,14 @@ import httpx
 if TYPE_CHECKING:
     pass
 
-# Default paths
-GOOGLE_AUTH_DIR = Path.home() / ".googleauth"
-CREDENTIALS_FILE = GOOGLE_AUTH_DIR / "credentials.json"
+# Paths
+AGE_KEY_PATH = Path.home() / ".config" / "age" / "secrets.key"
+AGE_SECRETS_PATH = Path.home() / "dotfiles-private" / "amplifier-secrets.env.age"
+ACCESS_TOKEN_CACHE = Path.home() / ".cache" / "amplifier" / "google"
+HYDRATED_DIR = Path.home() / ".cache" / "amplifier" / "google-hydrated"
+
+# Legacy path for fallback
+LEGACY_CREDENTIALS_FILE = Path.home() / ".googleauth" / "credentials.json"
 
 
 class GoogleScopes:
@@ -71,11 +80,9 @@ class GoogleCredentials:
     def expired(self) -> bool:
         """Check if the access token is expired."""
         if self.expiry is None:
-            return False
+            return True  # Assume expired if no expiry
         # Add 5 minute buffer
-        return datetime.now(timezone.utc) >= self.expiry.replace(
-            tzinfo=timezone.utc
-        )
+        return datetime.now(timezone.utc) >= self.expiry - timedelta(minutes=5)
 
     @property
     def valid(self) -> bool:
@@ -94,87 +101,111 @@ class GoogleCredentials:
             "expiry": self.expiry.isoformat() if self.expiry else None,
         }
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "GoogleCredentials":
-        """Create from dict."""
-        expiry = None
-        if data.get("expiry"):
-            try:
-                expiry = datetime.fromisoformat(data["expiry"].replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                pass
-        elif data.get("expiry_date"):
-            # Handle legacy format (milliseconds since epoch)
-            try:
-                expiry = datetime.fromtimestamp(
-                    data["expiry_date"] / 1000, tz=timezone.utc
-                )
-            except (ValueError, TypeError):
-                pass
 
-        return cls(
-            access_token=data.get("access_token", ""),
-            refresh_token=data.get("refresh_token", ""),
-            token_uri=data.get("token_uri", "https://oauth2.googleapis.com/token"),
-            client_id=data.get("client_id", ""),
-            client_secret=data.get("client_secret", ""),
-            scopes=data.get("scopes", []) or data.get("scope", "").split(),
-            expiry=expiry,
+def _load_age_secrets() -> dict[str, str]:
+    """Load secrets from age-encrypted file."""
+    if not AGE_KEY_PATH.exists():
+        raise FileNotFoundError(f"Age key not found at {AGE_KEY_PATH}")
+    if not AGE_SECRETS_PATH.exists():
+        raise FileNotFoundError(f"Age secrets not found at {AGE_SECRETS_PATH}")
+
+    result = subprocess.run(
+        ["age", "-d", "-i", str(AGE_KEY_PATH), str(AGE_SECRETS_PATH)],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Failed to decrypt secrets: {result.stderr}")
+
+    secrets = {}
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            secrets[key.strip()] = value.strip()
+
+    return secrets
+
+
+def _get_google_secrets() -> tuple[str, str, str]:
+    """Get Google OAuth credentials from age secrets.
+    
+    Returns:
+        Tuple of (client_id, client_secret, refresh_token)
+    """
+    secrets = _load_age_secrets()
+
+    client_id = secrets.get("GOOGLE_CLIENT_ID")
+    client_secret = secrets.get("GOOGLE_CLIENT_SECRET")
+    refresh_token = secrets.get("GOOGLE_REFRESH_TOKEN")
+
+    if not client_id or not client_secret:
+        raise ValueError(
+            "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET not found in secrets.\n"
+            "Add them to ~/dotfiles-private/amplifier-secrets.env.age"
         )
 
-
-def _load_client_config(credentials_file: Path = CREDENTIALS_FILE) -> dict:
-    """Load OAuth client configuration from credentials.json."""
-    if not credentials_file.exists():
-        raise FileNotFoundError(
-            f"Google credentials not found at {credentials_file}\n"
-            "Download from: https://console.cloud.google.com/apis/credentials"
+    if not refresh_token:
+        raise ValueError(
+            "GOOGLE_REFRESH_TOKEN not found in secrets.\n"
+            "Run: python -m amplifier.utils.google_auth --initial-auth\n"
+            "to authorize and get a refresh token."
         )
 
-    data = json.loads(credentials_file.read_text())
-
-    # Handle "installed" (desktop) or "web" app types
-    if "installed" in data:
-        return data["installed"]
-    elif "web" in data:
-        return data["web"]
-    else:
-        raise ValueError(f"Invalid credentials.json format: {list(data.keys())}")
+    return client_id, client_secret, refresh_token
 
 
-def _get_token_path(app_name: str, service: str) -> Path:
-    """Get the token file path for an app/service combination."""
-    token_dir = GOOGLE_AUTH_DIR / app_name
-    token_dir.mkdir(parents=True, exist_ok=True)
-    return token_dir / f"{service}_token.json"
+def _load_cached_access_token() -> dict | None:
+    """Load cached access token if it exists and is valid."""
+    cache_file = ACCESS_TOKEN_CACHE / "access_token.json"
+    if not cache_file.exists():
+        return None
 
+    try:
+        data = json.loads(cache_file.read_text())
+        expiry_str = data.get("expiry")
+        if expiry_str:
+            expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) < expiry - timedelta(minutes=5):
+                return data
+    except (json.JSONDecodeError, OSError, ValueError):
+        pass
 
-def _load_token(token_path: Path) -> dict | None:
-    """Load token from file if it exists."""
-    if token_path.exists():
-        try:
-            return json.loads(token_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            return None
     return None
 
 
-def _save_token(token_path: Path, token_data: dict) -> None:
-    """Save token to file."""
-    token_path.parent.mkdir(parents=True, exist_ok=True)
-    token_path.write_text(json.dumps(token_data, indent=2))
-    # Secure the token file
-    token_path.chmod(0o600)
+def _save_cached_access_token(access_token: str, expires_in: int, scopes: list[str]) -> None:
+    """Cache access token with expiry."""
+    ACCESS_TOKEN_CACHE.mkdir(parents=True, exist_ok=True)
+    cache_file = ACCESS_TOKEN_CACHE / "access_token.json"
+
+    data = {
+        "access_token": access_token,
+        "scopes": scopes,
+        "expiry": (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).isoformat(),
+    }
+
+    cache_file.write_text(json.dumps(data, indent=2))
+    cache_file.chmod(0o600)
 
 
-def _refresh_access_token(creds: GoogleCredentials) -> GoogleCredentials:
-    """Refresh the access token using the refresh token."""
+def _refresh_access_token(
+    client_id: str,
+    client_secret: str,
+    refresh_token: str,
+) -> tuple[str, int]:
+    """Refresh the access token using the refresh token.
+    
+    Returns:
+        Tuple of (access_token, expires_in_seconds)
+    """
     response = httpx.post(
-        creds.token_uri,
+        "https://oauth2.googleapis.com/token",
         data={
-            "client_id": creds.client_id,
-            "client_secret": creds.client_secret,
-            "refresh_token": creds.refresh_token,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
             "grant_type": "refresh_token",
         },
     )
@@ -183,38 +214,212 @@ def _refresh_access_token(creds: GoogleCredentials) -> GoogleCredentials:
         raise RuntimeError(f"Token refresh failed: {response.text}")
 
     data = response.json()
+    return data["access_token"], data.get("expires_in", 3600)
+
+
+def get_google_credentials(
+    scopes: list[str] | None = None,
+    force_refresh: bool = False,
+    # Legacy parameters (ignored but kept for compatibility)
+    app_name: str = "amplifier",
+    service: str = "google",
+) -> GoogleCredentials:
+    """Get Google OAuth2 credentials from age-encrypted secrets.
+
+    Args:
+        scopes: Required OAuth scopes (for documentation, actual scopes in token)
+        force_refresh: Force token refresh even if cached token is valid
+
+    Returns:
+        GoogleCredentials object ready to use with Google APIs
+
+    Raises:
+        ValueError: If secrets not configured
+        RuntimeError: If token refresh fails
+    """
+    scopes = scopes or [GoogleScopes.GMAIL_READONLY]
+
+    # Check cache first (unless force refresh)
+    if not force_refresh:
+        cached = _load_cached_access_token()
+        if cached:
+            client_id, client_secret, refresh_token = _get_google_secrets()
+            return GoogleCredentials(
+                access_token=cached["access_token"],
+                refresh_token=refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=client_id,
+                client_secret=client_secret,
+                scopes=cached.get("scopes", scopes),
+                expiry=datetime.fromisoformat(cached["expiry"].replace("Z", "+00:00")),
+            )
+
+    # Load secrets and refresh
+    client_id, client_secret, refresh_token = _get_google_secrets()
+
+    access_token, expires_in = _refresh_access_token(
+        client_id, client_secret, refresh_token
+    )
+
+    # Cache the new access token
+    _save_cached_access_token(access_token, expires_in, scopes)
 
     return GoogleCredentials(
-        access_token=data["access_token"],
-        refresh_token=creds.refresh_token,  # Keep original refresh token
-        token_uri=creds.token_uri,
-        client_id=creds.client_id,
-        client_secret=creds.client_secret,
-        scopes=creds.scopes,
-        expiry=datetime.now(timezone.utc)
-        + __import__("datetime").timedelta(seconds=data.get("expires_in", 3600)),
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=scopes,
+        expiry=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
     )
 
 
-def _run_oauth_flow(
-    client_config: dict,
-    scopes: list[str],
-    redirect_uri: str = "http://localhost:8085",
-) -> dict:
-    """Run the OAuth2 authorization flow.
+def hydrate_google_tokens(
+    output_dir: Path | None = None,
+    include_credentials_json: bool = True,
+) -> dict[str, Path]:
+    """Write Google tokens to plain files for tools that need them.
+    
+    This creates:
+    - credentials.json (OAuth client config)
+    - token.json (with refresh token and cached access token)
+    
+    These files are written to a cache directory and should NOT be
+    committed to version control.
+    
+    Args:
+        output_dir: Directory to write files (default: ~/.cache/amplifier/google-hydrated/)
+        include_credentials_json: Also write credentials.json
+    
+    Returns:
+        Dict mapping file type to path: {"credentials": Path, "token": Path}
+    """
+    output_dir = output_dir or HYDRATED_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    Opens browser for user authorization and runs a local server to capture the callback.
+    client_id, client_secret, refresh_token = _get_google_secrets()
+
+    paths = {}
+
+    # Write credentials.json (OAuth client config)
+    if include_credentials_json:
+        creds_path = output_dir / "credentials.json"
+        creds_data = {
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["http://localhost:8085"],
+            }
+        }
+        creds_path.write_text(json.dumps(creds_data, indent=2))
+        creds_path.chmod(0o600)
+        paths["credentials"] = creds_path
+
+    # Get current access token (refresh if needed)
+    try:
+        cached = _load_cached_access_token()
+        if cached:
+            access_token = cached["access_token"]
+            expiry = cached["expiry"]
+        else:
+            access_token, expires_in = _refresh_access_token(
+                client_id, client_secret, refresh_token
+            )
+            expiry = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).isoformat()
+            _save_cached_access_token(access_token, expires_in, [])
+    except Exception:
+        access_token = ""
+        expiry = None
+
+    # Write token.json (for obs-dailynotes and similar tools)
+    token_path = output_dir / "token.json"
+    token_data = {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scopes": [
+            GoogleScopes.GMAIL_READONLY,
+            GoogleScopes.GMAIL_MODIFY,
+            GoogleScopes.GMAIL_SEND,
+            GoogleScopes.CALENDAR_READONLY,
+            GoogleScopes.CALENDAR_EVENTS,
+        ],
+    }
+    if expiry:
+        token_data["expiry"] = expiry
+
+    token_path.write_text(json.dumps(token_data, indent=2))
+    token_path.chmod(0o600)
+    paths["token"] = token_path
+
+    return paths
+
+
+def hydrate_for_obs_dailynotes() -> dict[str, Path]:
+    """Hydrate tokens specifically for obs-dailynotes.
+    
+    Creates files at ~/.cache/amplifier/google-hydrated/ that can be
+    referenced by obs-dailynotes via environment variables.
+    
+    Returns:
+        Dict with paths to credentials.json and token.json
+    """
+    paths = hydrate_google_tokens()
+    
+    # Also create separate calendar and gmail token files
+    # (obs-dailynotes uses separate files)
+    client_id, client_secret, refresh_token = _get_google_secrets()
+    
+    # Get current access token
+    cached = _load_cached_access_token()
+    access_token = cached["access_token"] if cached else ""
+    
+    for service in ["calendar", "gmail"]:
+        token_path = HYDRATED_DIR / f"{service}_token.json"
+        token_data = {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        }
+        token_path.write_text(json.dumps(token_data, indent=2))
+        token_path.chmod(0o600)
+        paths[service] = token_path
+    
+    return paths
+
+
+# =============================================================================
+# Initial Authorization (One-time browser flow)
+# =============================================================================
+
+
+def _run_initial_oauth_flow(
+    client_id: str,
+    client_secret: str,
+    scopes: list[str],
+) -> str:
+    """Run the OAuth2 authorization flow to get a refresh token.
+    
+    This is only needed once. After getting the refresh token,
+    add it to your age-encrypted secrets file.
+    
+    Returns:
+        The refresh token
     """
     import socket
     import urllib.parse
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
-    client_id = client_config["client_id"]
-    client_secret = client_config["client_secret"]
-    token_uri = client_config.get("token_uri", "https://oauth2.googleapis.com/token")
-    auth_uri = client_config.get(
-        "auth_uri", "https://accounts.google.com/o/oauth2/auth"
-    )
+    redirect_uri = "http://localhost:8085"
+    token_uri = "https://oauth2.googleapis.com/token"
+    auth_uri = "https://accounts.google.com/o/oauth2/auth"
 
     # Build authorization URL
     auth_params = {
@@ -226,10 +431,6 @@ def _run_oauth_flow(
         "prompt": "consent",  # Force consent to get refresh token
     }
     auth_url = f"{auth_uri}?{urlencode(auth_params)}"
-
-    # Parse port from redirect_uri
-    parsed = urllib.parse.urlparse(redirect_uri)
-    port = parsed.port or 8085
 
     # Storage for the authorization code
     auth_code = {"code": None, "error": None}
@@ -257,9 +458,6 @@ def _run_oauth_flow(
                     f"<html><body><h1>Authorization failed</h1>"
                     f"<p>{auth_code['error']}</p></body></html>".encode()
                 )
-            else:
-                self.send_response(400)
-                self.end_headers()
 
         def log_message(self, format, *args):
             pass  # Suppress logging
@@ -267,16 +465,16 @@ def _run_oauth_flow(
     # Check if port is available
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        sock.bind(("localhost", port))
+        sock.bind(("localhost", 8085))
         sock.close()
     except OSError:
         raise RuntimeError(
-            f"Port {port} is in use. Close the application using it and try again."
+            "Port 8085 is in use. Close the application using it and try again."
         )
 
     # Start local server
-    server = HTTPServer(("localhost", port), CallbackHandler)
-    server.timeout = 120  # 2 minute timeout
+    server = HTTPServer(("localhost", 8085), CallbackHandler)
+    server.timeout = 120
 
     print(f"\n🔐 Opening browser for Google authorization...")
     print(f"   If browser doesn't open, visit:\n   {auth_url}\n")
@@ -284,7 +482,6 @@ def _run_oauth_flow(
 
     print("⏳ Waiting for authorization (timeout: 2 minutes)...")
 
-    # Handle one request
     server.handle_request()
     server.server_close()
 
@@ -312,114 +509,72 @@ def _run_oauth_flow(
         raise RuntimeError(f"Token exchange failed: {response.text}")
 
     token_data = response.json()
-    token_data["client_id"] = client_id
-    token_data["client_secret"] = client_secret
-    token_data["token_uri"] = token_uri
-    token_data["scopes"] = scopes
+    refresh_token = token_data.get("refresh_token")
 
-    print("✅ Authorization successful!")
+    if not refresh_token:
+        raise RuntimeError("No refresh token received. Try again with prompt=consent.")
 
-    return token_data
-
-
-def get_google_credentials(
-    app_name: str = "amplifier",
-    scopes: list[str] | None = None,
-    service: str = "google",
-    force_refresh: bool = False,
-    credentials_file: Path = CREDENTIALS_FILE,
-) -> GoogleCredentials:
-    """Get Google OAuth2 credentials, refreshing or authorizing as needed.
-
-    Args:
-        app_name: Application name for token storage (e.g., "amplifier")
-        scopes: Required OAuth scopes
-        service: Service name for token file (e.g., "gmail", "calendar")
-        force_refresh: Force token refresh even if not expired
-        credentials_file: Path to credentials.json
-
-    Returns:
-        GoogleCredentials object ready to use with Google APIs
-
-    Raises:
-        FileNotFoundError: If credentials.json not found
-        RuntimeError: If authorization fails
-    """
-    scopes = scopes or [GoogleScopes.GMAIL_READONLY]
-
-    # Load client config
-    client_config = _load_client_config(credentials_file)
-
-    # Try to load existing token
-    token_path = _get_token_path(app_name, service)
-    token_data = _load_token(token_path)
-
-    creds = None
-
-    if token_data:
-        # Merge client config into token data
-        token_data["client_id"] = client_config["client_id"]
-        token_data["client_secret"] = client_config["client_secret"]
-        token_data["token_uri"] = client_config.get(
-            "token_uri", "https://oauth2.googleapis.com/token"
-        )
-
-        creds = GoogleCredentials.from_dict(token_data)
-
-        # Check if we have all required scopes
-        existing_scopes = set(creds.scopes)
-        required_scopes = set(scopes)
-
-        if not required_scopes.issubset(existing_scopes):
-            print(f"⚠️  Additional scopes required. Re-authorizing...")
-            creds = None
-        elif creds.expired or force_refresh:
-            # Try to refresh
-            try:
-                creds = _refresh_access_token(creds)
-                _save_token(token_path, creds.to_dict())
-            except Exception as e:
-                print(f"⚠️  Token refresh failed: {e}. Re-authorizing...")
-                creds = None
-
-    if creds is None:
-        # Need to run OAuth flow
-        token_data = _run_oauth_flow(client_config, scopes)
-        creds = GoogleCredentials.from_dict(token_data)
-        _save_token(token_path, creds.to_dict())
-
-    return creds
+    return refresh_token
 
 
 def authorize_google(
-    app_name: str = "amplifier",
     scopes: list[str] | None = None,
+    # Legacy parameters (ignored)
+    app_name: str = "amplifier",
     service: str = "google",
 ) -> None:
-    """Explicitly run authorization flow (useful for initial setup).
-
-    Args:
-        app_name: Application name for token storage
-        scopes: OAuth scopes to request
-        service: Service name for token file
+    """Run initial authorization to get a refresh token.
+    
+    This opens a browser for Google sign-in. After authorization,
+    it prints the refresh token to add to your age secrets.
     """
     scopes = scopes or [
+        GoogleScopes.GMAIL_READONLY,
         GoogleScopes.GMAIL_MODIFY,
         GoogleScopes.GMAIL_SEND,
+        GoogleScopes.CALENDAR_READONLY,
         GoogleScopes.CALENDAR_EVENTS,
     ]
 
-    print(f"🔐 Authorizing Google APIs for {app_name}...")
+    print("🔐 Google OAuth2 Initial Authorization")
     print(f"   Scopes: {', '.join(s.split('/')[-1] for s in scopes)}")
 
-    get_google_credentials(
-        app_name=app_name,
-        scopes=scopes,
-        service=service,
-        force_refresh=True,
-    )
+    # Try to get client_id/secret from age secrets
+    try:
+        secrets = _load_age_secrets()
+        client_id = secrets.get("GOOGLE_CLIENT_ID")
+        client_secret = secrets.get("GOOGLE_CLIENT_SECRET")
+    except Exception:
+        client_id = None
+        client_secret = None
 
-    print(f"\n✅ Credentials saved to ~/.googleauth/{app_name}/{service}_token.json")
+    # Fall back to credentials.json if not in age secrets
+    if not client_id or not client_secret:
+        if LEGACY_CREDENTIALS_FILE.exists():
+            print(f"   Loading client config from {LEGACY_CREDENTIALS_FILE}")
+            data = json.loads(LEGACY_CREDENTIALS_FILE.read_text())
+            config = data.get("installed") or data.get("web", {})
+            client_id = config.get("client_id")
+            client_secret = config.get("client_secret")
+        else:
+            raise ValueError(
+                "No Google client credentials found.\n"
+                "Either add GOOGLE_CLIENT_ID/SECRET to age secrets,\n"
+                "or place credentials.json at ~/.googleauth/credentials.json"
+            )
+
+    refresh_token = _run_initial_oauth_flow(client_id, client_secret, scopes)
+
+    print("\n" + "=" * 60)
+    print("✅ Authorization successful!")
+    print("=" * 60)
+    print("\nAdd this to your age-encrypted secrets file:")
+    print(f"\nGOOGLE_REFRESH_TOKEN={refresh_token}")
+    print("\nTo update secrets:")
+    print("  1. Decrypt: age -d -i ~/.config/age/secrets.key ~/dotfiles-private/amplifier-secrets.env.age > /tmp/secrets.env")
+    print("  2. Add the GOOGLE_REFRESH_TOKEN line")
+    print("  3. Re-encrypt: age -r <your-public-key> -o ~/dotfiles-private/amplifier-secrets.env.age /tmp/secrets.env")
+    print("  4. Delete temp: rm /tmp/secrets.env")
 
 
 # =============================================================================
@@ -428,54 +583,84 @@ def authorize_google(
 
 
 def _cli_main() -> None:
-    """CLI entry point for authorization."""
+    """CLI entry point."""
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="Google OAuth2 Authorization")
+    parser = argparse.ArgumentParser(description="Google OAuth2 Authentication")
     parser.add_argument(
-        "--app",
-        default="amplifier",
-        help="Application name (default: amplifier)",
-    )
-    parser.add_argument(
-        "--service",
-        default="google",
-        help="Service name (default: google)",
-    )
-    parser.add_argument(
-        "--scopes",
-        nargs="+",
-        help="OAuth scopes (default: gmail.modify, gmail.send, calendar.events)",
-    )
-    parser.add_argument(
-        "--gmail-only",
+        "--initial-auth",
         action="store_true",
-        help="Only authorize Gmail scopes",
+        help="Run initial authorization flow (opens browser)",
     )
     parser.add_argument(
-        "--calendar-only",
+        "--hydrate",
         action="store_true",
-        help="Only authorize Calendar scopes",
+        help="Write plain token files for tools that need them",
+    )
+    parser.add_argument(
+        "--hydrate-obs",
+        action="store_true",
+        help="Hydrate tokens for obs-dailynotes",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Test credentials by fetching user info",
+    )
+    parser.add_argument(
+        "--show-token",
+        action="store_true",
+        help="Show current access token (for debugging)",
     )
 
     args = parser.parse_args()
 
-    if args.scopes:
-        scopes = args.scopes
-    elif args.gmail_only:
-        scopes = [GoogleScopes.GMAIL_MODIFY, GoogleScopes.GMAIL_SEND]
-    elif args.calendar_only:
-        scopes = [GoogleScopes.CALENDAR_EVENTS]
-    else:
-        scopes = [
-            GoogleScopes.GMAIL_MODIFY,
-            GoogleScopes.GMAIL_SEND,
-            GoogleScopes.CALENDAR_EVENTS,
-        ]
-
     try:
-        authorize_google(app_name=args.app, scopes=scopes, service=args.service)
+        if args.initial_auth:
+            authorize_google()
+
+        elif args.hydrate:
+            paths = hydrate_google_tokens()
+            print("✅ Hydrated Google tokens:")
+            for name, path in paths.items():
+                print(f"   {name}: {path}")
+
+        elif args.hydrate_obs:
+            paths = hydrate_for_obs_dailynotes()
+            print("✅ Hydrated tokens for obs-dailynotes:")
+            for name, path in paths.items():
+                print(f"   {name}: {path}")
+            print("\nUpdate obs-dailynotes.env:")
+            print(f"   GCAL_CREDS_PATH={paths['credentials']}")
+            print(f"   GCAL_TOKEN_PATH={paths['calendar']}")
+            print(f"   GMAIL_CREDS_PATH={paths['credentials']}")
+            print(f"   GMAIL_TOKEN_PATH={paths['gmail']}")
+
+        elif args.test:
+            creds = get_google_credentials()
+            print("✅ Credentials valid!")
+            print(f"   Access token: {creds.access_token[:20]}...")
+            print(f"   Expiry: {creds.expiry}")
+
+            # Test with Gmail API
+            response = httpx.get(
+                "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+                headers={"Authorization": f"Bearer {creds.access_token}"},
+            )
+            if response.status_code == 200:
+                profile = response.json()
+                print(f"   Email: {profile.get('emailAddress')}")
+            else:
+                print(f"   Gmail API test failed: {response.status_code}")
+
+        elif args.show_token:
+            creds = get_google_credentials()
+            print(creds.access_token)
+
+        else:
+            parser.print_help()
+
     except Exception as e:
         print(f"❌ Error: {e}", file=sys.stderr)
         sys.exit(1)
