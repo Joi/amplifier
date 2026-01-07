@@ -388,22 +388,48 @@ results = await asyncio.gather(
 )
 ```
 
-### Custom MCP Servers
+### MCP Servers (Model Context Protocol)
 
-Integrate with Model Context Protocol servers:
+Extend Claude with custom tools via MCP servers:
 
 ```python
-from amplifier.ccsdk_toolkit import MCPServerConfig
+from amplifier.ccsdk_toolkit import ClaudeSession, SessionOptions
 
-mcp_config = MCPServerConfig(
-    name="custom-tools",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-example"],
-    env={"API_KEY": "your-key"}
+# Option 1: Pass MCP servers directly
+options = SessionOptions(
+    system_prompt="You are a helpful assistant with memory",
+    mcp_servers={
+        "memory": {
+            "command": "npx",
+            "args": ["-y", "@anthropic-ai/mcp-server-memory"]
+        },
+        "filesystem": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "/allowed/path"]
+        }
+    },
+    # Allow specific MCP tools (pattern: mcp__{server}__{tool})
+    allowed_tools=["mcp__memory__search", "mcp__memory__create_entities", "Read", "Write"]
 )
 
-config = ToolkitConfig(mcp_servers=[mcp_config])
+async with ClaudeSession(options) as session:
+    response = await session.query("Remember that my favorite color is blue")
+    print(response.content)
+
+# Option 2: Use .mcp.json file path
+options = SessionOptions(
+    system_prompt="You are a helpful assistant",
+    mcp_servers=".mcp.json"  # Path to MCP config file
+)
+
+# Option 3: Auto-discovery from project root
+# If you have a .mcp.json in your project root, the SDK reads it automatically
 ```
+
+**MCP Tool Naming Convention:**
+- Tools from MCP servers follow the pattern: `mcp__{server_name}__{tool_name}`
+- Example: `mcp__memory__search`, `mcp__filesystem__read_file`
+- Use these names in `allowed_tools` to grant access
 
 ## Architecture
 

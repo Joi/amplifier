@@ -1,6 +1,7 @@
 """Data models for CCSDK Core module."""
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -9,6 +10,10 @@ from pydantic import Field
 # Default model to use for Claude sessions.
 # Update this when a better model becomes available.
 DEFAULT_MODEL = "claude-opus-4-5-20251101"
+
+
+# Type alias for MCP server configuration
+MCPServerDict = dict[str, dict[str, Any]]
 
 
 class SessionOptions(BaseModel):
@@ -22,6 +27,9 @@ class SessionOptions(BaseModel):
         retry_delay: Initial retry delay in seconds (default: 1.0)
         stream_output: Enable real-time streaming output (default: False)
         progress_callback: Optional callback for progress updates
+        mcp_servers: MCP server configurations (dict, path to .mcp.json, or None)
+        allowed_tools: List of allowed tools (use mcp__{server}__{tool} for MCP tools)
+        disallowed_tools: List of disallowed tools
     """
 
     system_prompt: str = Field(default="You are a helpful assistant")
@@ -35,6 +43,19 @@ class SessionOptions(BaseModel):
         description="Optional callback for progress updates",
         exclude=True,  # Exclude from serialization since callables can't be serialized
     )
+    mcp_servers: MCPServerDict | str | Path | None = Field(
+        default=None,
+        description="MCP server configurations: dict of servers, path to .mcp.json, or None",
+        exclude=True,  # Exclude from JSON serialization
+    )
+    allowed_tools: list[str] | None = Field(
+        default=None,
+        description="List of allowed tools (e.g., ['Bash', 'Read', 'mcp__memory__search'])",
+    )
+    disallowed_tools: list[str] | None = Field(
+        default=None,
+        description="List of disallowed tools",
+    )
 
     class Config:
         json_schema_extra = {
@@ -44,7 +65,14 @@ class SessionOptions(BaseModel):
                 "max_turns": 1,
                 "retry_attempts": 3,
                 "retry_delay": 1.0,
-                "stream_output": False,  # Streaming disabled by default
+                "stream_output": False,
+                "mcp_servers": {
+                    "memory": {
+                        "command": "npx",
+                        "args": ["-y", "@anthropic-ai/mcp-server-memory"],
+                    }
+                },
+                "allowed_tools": ["Read", "Write", "mcp__memory__search"],
             }
         }
 

@@ -11,6 +11,7 @@ Basic Usage:
 """
 
 from .models import DEFAULT_MODEL
+from .models import MCPServerDict
 from .models import SessionOptions
 from .models import SessionResponse
 from .session import ClaudeSession
@@ -24,6 +25,7 @@ __all__ = [
     "CCSDKSession",
     "ClaudeSession",
     "DEFAULT_MODEL",
+    "MCPServerDict",
     "SessionError",
     "SDKNotAvailableError",
     "SessionResponse",

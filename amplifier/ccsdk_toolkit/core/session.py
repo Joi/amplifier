@@ -68,13 +68,24 @@ class ClaudeSession:
             from claude_code_sdk import ClaudeCodeOptions
             from claude_code_sdk import ClaudeSDKClient
 
-            self.client = ClaudeSDKClient(
-                options=ClaudeCodeOptions(
-                    system_prompt=self.options.system_prompt,
-                    model=self.options.model,
-                    max_turns=self.options.max_turns,
-                )
-            )
+            # Build options dict, only including non-None values
+            options_kwargs: dict[str, Any] = {
+                "system_prompt": self.options.system_prompt,
+                "model": self.options.model,
+                "max_turns": self.options.max_turns,
+            }
+
+            # Add MCP servers if configured
+            if self.options.mcp_servers is not None:
+                options_kwargs["mcp_servers"] = self.options.mcp_servers
+
+            # Add tool permissions if configured
+            if self.options.allowed_tools is not None:
+                options_kwargs["allowed_tools"] = self.options.allowed_tools
+            if self.options.disallowed_tools is not None:
+                options_kwargs["disallowed_tools"] = self.options.disallowed_tools
+
+            self.client = ClaudeSDKClient(options=ClaudeCodeOptions(**options_kwargs))
             await self.client.__aenter__()
             return self
 
