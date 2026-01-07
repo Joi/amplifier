@@ -114,7 +114,7 @@ def _get_credentials(
     return get_google_credentials(
         app_name="amplifier",
         scopes=scopes,
-        service="calendar",
+        service="google",  # Shared token with Gmail
     )
 
 

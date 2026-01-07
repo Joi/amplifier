@@ -120,7 +120,7 @@ def _get_credentials(
     return get_google_credentials(
         app_name="amplifier",
         scopes=scopes,
-        service="gmail",
+        service="google",  # Shared token with Calendar
     )
 
 
