@@ -1,94 +1,115 @@
 ---
 name: imagen
-description: Generate images using Google's Imagen model. Use when user wants to create, generate, or make images from text descriptions.
-version: 1.0.0
+description: Generate images using Google's Imagen/Gemini models. Use when user wants to create, generate, or make images from text descriptions.
+version: 2.0.0
 ---
 
-# Imagen - Image Generation Tool
+# Imagen Skill
 
-Generate images using Google's Imagen model (via Gemini API).
+Generate images using Google's Imagen 4.0 and Gemini Flash Image models.
 
 ## When to Use
 
-- User asks to "generate an image" or "create a picture"
-- User wants to visualize something
-- User asks for illustrations, diagrams, or artwork
-- User wants to transform or edit an existing image
+- User says "generate an image of..."
+- User wants to create visual content
+- User asks for illustrations or artwork
+- User wants to transform/edit an existing image
 
-## Tool Location
+## Python API (Preferred)
 
-```bash
-python /Users/joi/amplifier/tools/imagen.py "<prompt>" [options]
+```python
+from amplifier.skills import generate_image, generate_image_sync, ImageConfig, GeneratedImage
+
+# Simple generation (async)
+result = await generate_image("A serene mountain landscape at sunset")
+print(f"Saved to: {result.path}")
+
+# Synchronous version
+result = generate_image_sync("A cat playing in a garden")
+
+# With configuration
+config = ImageConfig(
+    model="pro",        # "pro", "ultra", or "flash"
+    size="2K",          # "1K", "2K", "4K" (pro/ultra only)
+    aspect_ratio="16:9" # See ratios below
+)
+result = await generate_image("A futuristic cityscape", config=config)
+
+# Transform an existing image
+result = await generate_image(
+    "Transform into a watercolor painting",
+    input_file="photo.jpg"
+)
+
+# Custom output path
+result = await generate_image(
+    "A logo design",
+    output_path="~/Desktop/logo.png"
+)
 ```
 
-## Basic Usage
+## Data Classes
 
-```bash
-# Simple image generation
-python /Users/joi/amplifier/tools/imagen.py "A serene mountain landscape at sunset"
+```python
+@dataclass
+class ImageConfig:
+    model: Literal["pro", "ultra", "flash"] = "pro"
+    size: Literal["1K", "2K", "4K"] | None = None
+    aspect_ratio: str = "1:1"
+    output_dir: Path = ~/Downloads/imagen
 
-# With specific size
-python /Users/joi/amplifier/tools/imagen.py "A cat in a garden" --size 2K
-
-# With aspect ratio
-python /Users/joi/amplifier/tools/imagen.py "A panoramic city skyline" --aspect-ratio 16:9
-
-# Save to specific location
-python /Users/joi/amplifier/tools/imagen.py "A logo design" --output ~/Desktop/logo.png
+@dataclass
+class GeneratedImage:
+    path: Path
+    prompt: str
+    model: str
+    size: str
+    aspect_ratio: str
 ```
 
-## Options
+## Models
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--size` | Image size: 1K, 2K, 4K | 1K |
-| `--aspect-ratio` | Aspect ratio: 1:1, 16:9, 9:16, 4:3, 3:4 | 1:1 |
-| `--output` | Output file path | Auto-generated |
-| `--model` | Model variant: flash, pro | flash |
-| `--input` | Input image for editing/transformation | None |
+| Model | ID | Sizes | Best For |
+|-------|-----|-------|----------|
+| `pro` | Imagen 4.0 | 1K, 2K, 4K | High quality, general use |
+| `ultra` | Imagen 4.0 Ultra | 1K, 2K, 4K | Maximum quality |
+| `flash` | Gemini Flash | 1K only | Fast generation |
 
-## Image Editing
+## Aspect Ratios
 
-Transform or edit existing images:
+Supported: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`
 
-```bash
-# Transform style
-python /Users/joi/amplifier/tools/imagen.py "Transform into watercolor painting" --input photo.jpg
-
-# Edit specific elements
-python /Users/joi/amplifier/tools/imagen.py "Add a rainbow in the sky" --input landscape.jpg
-```
-
-## Prompt Tips
-
-For best results:
-- Be specific about style: "digital art", "photorealistic", "watercolor", "sketch"
-- Describe lighting: "soft morning light", "dramatic shadows", "golden hour"
-- Mention composition: "close-up", "wide angle", "bird's eye view"
-- Include mood: "peaceful", "energetic", "mysterious"
-
-## Examples
+## CLI Interface
 
 ```bash
-# Blog post illustration
-python /Users/joi/amplifier/tools/imagen.py "A minimalist illustration of AI and human collaboration, soft blue tones, modern tech aesthetic"
+# Basic generation
+python -m amplifier.skills.imagen "A mountain at sunset"
 
-# Icon design
-python /Users/joi/amplifier/tools/imagen.py "A simple app icon for a note-taking app, flat design, purple gradient" --aspect-ratio 1:1
+# With options
+python -m amplifier.skills.imagen "A cat" --model pro --size 2K --aspect-ratio 16:9
 
-# Header image
-python /Users/joi/amplifier/tools/imagen.py "Abstract geometric pattern representing data flow, dark background with cyan accents" --aspect-ratio 16:9 --size 2K
+# Transform image
+python -m amplifier.skills.imagen "Make it look like a painting" --input photo.jpg
+
+# Custom output
+python -m amplifier.skills.imagen "A logo" --output ~/Desktop/logo.png
 ```
 
-## Output
+## Output Location
 
-The tool:
-1. Generates the image
-2. Saves it to the specified path (or auto-generates a path)
-3. Returns the file path
-
-Images are saved as PNG by default.
+By default, images are saved to:
+```
+~/Downloads/imagen/imagen_YYYYMMDD_HHMMSS.png
+```
 
 ## Requirements
 
-- `GOOGLE_API_KEY` environment variable or configured in Amplifier secrets
+- Google API key (stored via `age` secrets as `GEMINI_API_KEY`)
+- `google-genai` package: `uv add google-genai`
+
+## Advantages Over MCP
+
+- ✅ Works in subagents (MCP tools don't inherit)
+- ✅ Async-first with sync wrapper
+- ✅ Works in scripts, cron jobs, SDK calls
+- ✅ Returns proper Python dataclasses with paths

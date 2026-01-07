@@ -1,97 +1,127 @@
 ---
 name: apple-notes
-description: Create, read, search, and manage Apple Notes. Use when user wants to save information to Apple Notes, read existing notes, or search their notes.
-version: 1.0.0
+description: Create, read, search, and manage Apple Notes with Markdown support. Use when user wants to save information, read notes, or search their notes.
+version: 2.0.0
 ---
 
-# Apple Notes Tool
+# Apple Notes Skill
 
-Create, read, search, and manage Apple Notes from the command line.
+Native integration with Apple Notes via AppleScript. Supports Markdown-to-HTML conversion.
 
 ## When to Use
 
-- User asks to "save this to Apple Notes" or "create a note"
-- User wants to read or find an existing Apple Note
-- User wants to search their notes for something
-- User mentions saving information for later reference
+- User says "save this to notes" or "create a note"
+- User wants to read/find an existing note
+- User asks to search their notes
+- Saving research, meeting notes, or documentation
+- Part of morning routine workflows
 
-## Tool Location
+## Python API (Preferred)
 
-```bash
-python /Users/joi/amplifier/tools/apple_notes.py <command> [options]
-```
+```python
+from amplifier.skills import (
+    create_note, read_note, search_notes, list_notes, delete_note,
+    markdown_to_html, Note
+)
 
-## Commands
+# Create a note (Markdown auto-converted to HTML)
+note = create_note("Meeting Notes", """
+## Attendees
+- Alice
+- Bob
 
-### Create a Note
+## Action Items
+1. Review proposal
+2. Send follow-up email
 
-```bash
-# From text (supports Markdown - converted to HTML for proper rendering)
-python /Users/joi/amplifier/tools/apple_notes.py create "Note Title" "Content in **markdown**"
+**Important:** Deadline is Friday
+""")
 
-# From a file
-python /Users/joi/amplifier/tools/apple_notes.py create "Note Title" --file content.md
+# Create in specific folder
+note = create_note("Project Ideas", content, folder="Work")
 
-# From stdin
-echo "# My Note" | python /Users/joi/amplifier/tools/apple_notes.py create "Note Title" --stdin
+# Create without Markdown conversion (raw HTML)
+note = create_note("Raw Note", "<h1>Title</h1>", convert_markdown=False)
 
-# In a specific folder
-python /Users/joi/amplifier/tools/apple_notes.py create "Note Title" "Content" --folder "Work Notes"
-```
+# Read a note
+content = read_note("Meeting Notes")  # Partial title match
+if content:
+    print(content)
 
-### Read a Note
+# Search notes
+results = search_notes("project")  # Search titles
+results = search_notes("deadline", search_body=True)  # Search content too
 
-```bash
-# Read by title (exact match)
-python /Users/joi/amplifier/tools/apple_notes.py read "Note Title"
-
-# Read by ID
-python /Users/joi/amplifier/tools/apple_notes.py read --id "x-coredata://..."
-```
-
-### Search Notes
-
-```bash
-# Search by keyword
-python /Users/joi/amplifier/tools/apple_notes.py search "keyword"
-
-# Limit results
-python /Users/joi/amplifier/tools/apple_notes.py search "keyword" --limit 5
-```
-
-### List Notes
-
-```bash
 # List recent notes
-python /Users/joi/amplifier/tools/apple_notes.py list
+notes = list_notes(limit=20)
+notes = list_notes(folder="Work")
 
-# List notes in a folder
-python /Users/joi/amplifier/tools/apple_notes.py list --folder "Work Notes"
+# Delete a note
+delete_note("Old Note")  # Exact title match
+```
 
-# Limit results
-python /Users/joi/amplifier/tools/apple_notes.py list --limit 10
+## Data Classes
+
+```python
+@dataclass
+class Note:
+    title: str
+    id: str | None = None
+    content: str | None = None
+    folder: str = "Notes"
 ```
 
 ## Markdown Support
 
-The tool automatically converts Markdown to HTML for proper rendering in Apple Notes:
+The skill converts Markdown to HTML that Apple Notes understands:
 
-- **Bold** and *italic* text
-- Headers (# ## ###)
-- Lists (- and 1.)
-- Code blocks
-- Links
-- Tables
+| Markdown | Result |
+|----------|--------|
+| `# Heading` | `<h1>` |
+| `## Heading` | `<h2>` |
+| `**bold**` | `<b>` |
+| `*italic*` | `<i>` |
+| `- item` | `<ul><li>` |
+| `1. item` | `<ol><li>` |
+| `` `code` `` | `<code>` |
+| `[link](url)` | `<a href>` |
+| ` ``` ` blocks | `<pre>` |
 
-## Examples
+## CLI Interface
 
 ```bash
-# Save a meeting summary
-python /Users/joi/amplifier/tools/apple_notes.py create "Meeting Notes - Jan 7" "## Attendees\n- Alice\n- Bob\n\n## Action Items\n1. Review proposal\n2. Schedule follow-up"
+# Create note
+python -m amplifier.skills.apple_notes create "Title" "Content in **markdown**"
+python -m amplifier.skills.apple_notes create "Title" --file notes.md
+echo "Content" | python -m amplifier.skills.apple_notes create "Title" --stdin
 
-# Save this conversation's summary
-python /Users/joi/amplifier/tools/apple_notes.py create "Migration Plan Summary" --stdin <<< "$CONTENT"
+# Search
+python -m amplifier.skills.apple_notes search "keyword"
+python -m amplifier.skills.apple_notes search "keyword" --body
 
-# Find notes about a project
-python /Users/joi/amplifier/tools/apple_notes.py search "amplifier migration"
+# Read
+python -m amplifier.skills.apple_notes read "Note Title"
+
+# List
+python -m amplifier.skills.apple_notes list --limit 20
+
+# Delete
+python -m amplifier.skills.apple_notes delete "Exact Title"
 ```
+
+## Helper Function
+
+```python
+from amplifier.skills import markdown_to_html
+
+# Convert Markdown to Apple Notes HTML
+html = markdown_to_html("# Title\n\n**Bold** text")
+# Returns: <h1>Title</h1>\n<p><b>Bold</b> text</p>
+```
+
+## Advantages Over MCP
+
+- ✅ Works in subagents (MCP tools don't inherit)
+- ✅ Built-in Markdown conversion
+- ✅ Works in scripts, cron jobs, SDK calls
+- ✅ Returns proper Python dataclasses
