@@ -7,6 +7,7 @@ main Claude Code session, subagents, SDK, scripts, and cron jobs.
 Available Skills:
     - academic_search: Search academic papers via Semantic Scholar
     - notion: Notion workspace integration (pages, databases, search)
+    - browser: Browser automation via Playwright
 """
 
 # Academic Search
@@ -28,6 +29,13 @@ from .notion import query_database
 from .notion import search as notion_search
 from .notion import update_page
 
+# Browser
+from .browser import Browser
+from .browser import BrowserConfig
+from .browser import PageSnapshot
+from .browser import fetch_page
+from .browser import screenshot_url
+
 __all__ = [
     # Academic Search
     "Paper",
@@ -46,4 +54,10 @@ __all__ = [
     "notion_search",
     "query_database",
     "update_page",
+    # Browser
+    "Browser",
+    "BrowserConfig",
+    "PageSnapshot",
+    "fetch_page",
+    "screenshot_url",
 ]
