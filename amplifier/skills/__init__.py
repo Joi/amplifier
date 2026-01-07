@@ -14,6 +14,7 @@ Available Skills:
     - sync_repos: Sync all tracked git repositories
     - gmail: Read, search, send, and manage Gmail
     - google_calendar: Create, list, manage calendar events
+    - tea_calendar: Tea ceremony calendar sync with Google Sheets
 """
 
 # Academic Search
@@ -116,6 +117,19 @@ from .google_calendar import quick_add
 from .google_calendar import quick_add_sync
 from .google_calendar import update_event
 
+# Tea Calendar
+from .tea_calendar import TeaEvent
+from .tea_calendar import fetch_sheet as fetch_tea_sheet
+from .tea_calendar import fetch_sheet_sync as fetch_tea_sheet_sync
+from .tea_calendar import generate_kimono_table
+from .tea_calendar import generate_kimono_table_sync
+from .tea_calendar import get_kimono_events
+from .tea_calendar import get_kimono_events_sync
+from .tea_calendar import get_tea_events
+from .tea_calendar import get_tea_events_sync
+from .tea_calendar import sync_sheet_to_calendar as sync_tea_calendar
+from .tea_calendar import sync_sheet_to_calendar_sync as sync_tea_calendar_sync
+
 __all__ = [
     # Academic Search
     "Paper",
@@ -208,4 +222,16 @@ __all__ = [
     "quick_add",
     "quick_add_sync",
     "update_event",
+    # Tea Calendar
+    "TeaEvent",
+    "fetch_tea_sheet",
+    "fetch_tea_sheet_sync",
+    "generate_kimono_table",
+    "generate_kimono_table_sync",
+    "get_kimono_events",
+    "get_kimono_events_sync",
+    "get_tea_events",
+    "get_tea_events_sync",
+    "sync_tea_calendar",
+    "sync_tea_calendar_sync",
 ]
