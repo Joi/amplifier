@@ -2,6 +2,82 @@
 
 This file documents non-obvious problems, solutions, and patterns discovered during development. Make sure these are regularly reviewed and updated, removing outdated entries or those replaced by better practices or code or tools, updating those where the best practice has evolved.
 
+## Claude Code Installation: Use pnpm Global (2026-01-09)
+
+### Standard Installation Method
+
+Claude Code is installed globally via **pnpm**, not npm or Homebrew:
+
+```bash
+# Install
+pnpm add -g @anthropic-ai/claude-code
+
+# Update
+pnpm update -g @anthropic-ai/claude-code
+
+# Check version
+claude --version
+```
+
+### Installation Location
+
+- **Binary**: `/Users/joi/Library/pnpm/claude`
+- **Packages**: `/Users/joi/Library/pnpm/global/5/node_modules/@anthropic-ai/claude-code/`
+
+### Why pnpm?
+
+1. **Consistent package management** - pnpm is the standard for this project
+2. **Disk efficiency** - pnpm uses content-addressable storage
+3. **Avoids conflicts** - Single source of truth for the installation
+
+### Common Issues
+
+**Multiple installations causing version mismatch:**
+If `claude --version` shows an older version after updating, check for duplicate installations:
+```bash
+# Check for npm global
+npm list -g | grep claude
+
+# Check for Homebrew
+brew list | grep claude
+
+# Remove duplicates
+npm uninstall -g @anthropic-ai/claude-code  # if present
+brew uninstall claude  # if present
+```
+
+**Configuration mismatch warnings:**
+The "unknown installation" warning during `claude update` occurs when Claude Code can't detect the installation method. This is cosmetic - updates still work. Use `pnpm update -g @anthropic-ai/claude-code` directly to avoid the warning.
+
+### Shell Wrapper
+
+A shell function in `~/.zshrc` handles API key loading before running claude:
+```bash
+claude() {
+    if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+        export ANTHROPIC_API_KEY="$(get_anthropic_api_key 2>/dev/null)"
+    fi
+    command claude "$@"
+}
+```
+
+The `get_anthropic_api_key()` function comes from `~/amplifier/scripts/lib/secrets.sh` which is sourced at shell startup. This uses the age-encrypted secrets system (no 1Password/Touch ID required).
+
+### Secrets Migration (2026-01-09)
+
+All API keys have been migrated from 1Password to age-encrypted secrets:
+- ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, DEEPL_API_KEY
+- GITHUB_TOKEN, TAVILY_API_KEY, NOTION_TOKEN
+- Plus many service-specific keys (Slack, Supabase, Withings, Whoop, etc.)
+
+Age secrets location: `~/dotfiles-private/amplifier-secrets.env.age`
+
+**Benefits:**
+- No Touch ID / 1Password prompts for CLI tools
+- Works over SSH without GUI authentication
+- 4-hour local cache for performance
+- Single source of truth synced via dotfiles
+
 ## Amplifier CLI Editable Install Version Detection Bug (2026-01-08)
 
 ### Issue

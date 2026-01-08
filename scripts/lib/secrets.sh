@@ -259,6 +259,14 @@ get_deepl_api_key() {
     get_secret "deepl_api_key" "Amplifier DeepL API Key" "${1:-$SECRETS_DEFAULT_TTL}"
 }
 
+get_github_token() {
+    get_secret "github_token" "Amplifier GitHub Token" "${1:-$SECRETS_DEFAULT_TTL}" "GITHUB_TOKEN"
+}
+
+get_tavily_api_key() {
+    get_secret "tavily_api_key" "Amplifier Tavily API Key" "${1:-$SECRETS_DEFAULT_TTL}" "TAVILY_API_KEY"
+}
+
 # Chanoyu Supabase - multiple secrets from one service
 
 get_chanoyu_sb_service_role_key() {
