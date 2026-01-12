@@ -274,6 +274,222 @@ def get_existing_drafts() -> dict[str, dict]:
     return drafts
 
 
+def get_all_drafts_detailed() -> list[dict]:
+    """Get all drafts with full details including body content."""
+    service = get_gmail_service()
+
+    drafts_response = service.users().drafts().list(userId="me").execute()
+    drafts = []
+
+    for draft in drafts_response.get("drafts", []):
+        draft_detail = service.users().drafts().get(userId="me", id=draft["id"], format="full").execute()
+        msg = draft_detail.get("message", {})
+
+        # Extract body
+        body = extract_body(msg)
+
+        # Extract headers
+        headers = msg.get("payload", {}).get("headers", [])
+        header_dict = {h["name"].lower(): h["value"] for h in headers}
+
+        drafts.append(
+            {
+                "draft_id": draft["id"],
+                "message_id": msg.get("id"),
+                "thread_id": msg.get("threadId"),
+                "subject": header_dict.get("subject", ""),
+                "to": header_dict.get("to", ""),
+                "body": body,
+                "link": f"https://mail.google.com/mail/u/0/#drafts/{msg.get('id')}",
+            }
+        )
+
+    return drafts
+
+
+# Patterns that indicate a poorly-formed draft that needs regeneration
+PLACEHOLDER_PATTERNS = [
+    "[Your response here]",
+    "[your response here]",
+    "Thank you for your email.",
+    "Thank you for your email.\n\n[",
+    "Hi Joe,",  # Wrong name template
+    "Hi there,\n\nThank you for your email.",
+]
+
+
+def is_poorly_formed_draft(body: str) -> bool:
+    """Check if a draft body contains placeholder text that needs regeneration."""
+    if not body:
+        return True
+
+    body_lower = body.lower()
+
+    # Check for placeholder patterns
+    for pattern in PLACEHOLDER_PATTERNS:
+        if pattern.lower() in body_lower:
+            return True
+
+    # Check for very short drafts (likely incomplete)
+    # But only if they don't have quoted content
+    lines = [line for line in body.split("\n") if line.strip() and not line.strip().startswith(">")]
+    if len(lines) < 3:
+        return True
+
+    return False
+
+
+def update_gmail_draft(draft_id: str, to: str, subject: str, body: str, thread_id: str) -> dict:
+    """Update an existing Gmail draft with new content."""
+    import base64
+    from email.mime.text import MIMEText
+
+    service = get_gmail_service()
+
+    message = MIMEText(body)
+    message["to"] = to
+    message["subject"] = subject
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    draft_body = {
+        "message": {
+            "raw": raw,
+            "threadId": thread_id,
+        }
+    }
+
+    updated = service.users().drafts().update(userId="me", id=draft_id, body=draft_body).execute()
+
+    return {
+        "draft_id": updated["id"],
+        "message_id": updated["message"]["id"],
+        "link": f"https://mail.google.com/mail/u/0/#drafts/{updated['message']['id']}",
+    }
+
+
+def upgrade_drafts(dry_run: bool = False, verbose: bool = True) -> dict:
+    """Scan drafts, deduplicate, and regenerate poorly-formed ones."""
+    results = {
+        "total_drafts": 0,
+        "poorly_formed": [],
+        "upgraded": [],
+        "duplicates_removed": [],
+        "errors": [],
+    }
+
+    if verbose:
+        print("Scanning Gmail drafts...")
+
+    drafts = get_all_drafts_detailed()
+    results["total_drafts"] = len(drafts)
+
+    if verbose:
+        print(f"Found {len(drafts)} drafts")
+
+    # Group drafts by thread_id to find duplicates
+    by_thread: dict[str, list[dict]] = {}
+    for draft in drafts:
+        tid = draft.get("thread_id")
+        if tid:
+            if tid not in by_thread:
+                by_thread[tid] = []
+            by_thread[tid].append(draft)
+
+    # Remove duplicates (keep one per thread, prefer well-formed)
+    for thread_id, thread_drafts in by_thread.items():
+        if len(thread_drafts) > 1:
+            if verbose:
+                print(f"  Found {len(thread_drafts)} duplicates for thread {thread_id[:16]}...")
+
+            # Sort: well-formed first, then by message_id (newer)
+            thread_drafts.sort(
+                key=lambda d: (is_poorly_formed_draft(d["body"]), d["message_id"]),
+                reverse=True,
+            )
+
+            # Keep the best one (last after sort), delete the rest
+            to_keep = thread_drafts[-1]
+            for draft in thread_drafts[:-1]:
+                if verbose:
+                    print(f"    Removing duplicate: {draft['subject'][:30]}...")
+
+                if not dry_run:
+                    if delete_gmail_draft(draft["draft_id"]):
+                        results["duplicates_removed"].append(draft["draft_id"])
+                    else:
+                        results["errors"].append(f"Failed to delete duplicate: {draft['draft_id']}")
+                else:
+                    results["duplicates_removed"].append(draft["draft_id"])
+
+            # Update the list to only have the kept draft
+            by_thread[thread_id] = [to_keep]
+
+    # Now check remaining drafts for poor quality
+    for thread_id, thread_drafts in by_thread.items():
+        draft = thread_drafts[0]
+
+        if is_poorly_formed_draft(draft["body"]):
+            results["poorly_formed"].append(draft["draft_id"])
+
+            if verbose:
+                print(f"  Poorly-formed draft: {draft['subject'][:40]}...")
+
+            if not dry_run:
+                # Get the thread to regenerate
+                try:
+                    thread_messages = get_thread_messages(thread_id)
+                except Exception as e:
+                    results["errors"].append(f"Failed to get thread {thread_id}: {e}")
+                    continue
+
+                # Find the email we're replying to
+                reply_to = None
+                for msg in reversed(thread_messages):
+                    if "joi" not in msg["from_email"].lower():
+                        reply_to = msg
+                        break
+
+                if not reply_to:
+                    results["errors"].append(f"No reply-to found for thread {thread_id}")
+                    continue
+
+                # Generate new draft
+                if verbose:
+                    print("    Generating AI draft...")
+
+                try:
+                    new_body = generate_draft_with_ai(reply_to, thread_messages)
+                except Exception as e:
+                    results["errors"].append(f"Failed to generate draft for {thread_id}: {e}")
+                    continue
+
+                # Add quoted thread
+                quoted = format_quoted_thread(thread_messages)
+                full_body = f"{new_body}\n\n---\n{quoted}"
+
+                # Update the draft
+                try:
+                    update_gmail_draft(
+                        draft_id=draft["draft_id"],
+                        to=draft["to"],
+                        subject=draft["subject"],
+                        body=full_body,
+                        thread_id=thread_id,
+                    )
+                    results["upgraded"].append(draft["draft_id"])
+
+                    if verbose:
+                        print("    Draft upgraded!")
+
+                except Exception as e:
+                    results["errors"].append(f"Failed to update draft {draft['draft_id']}: {e}")
+            else:
+                results["upgraded"].append(draft["draft_id"])
+
+    return results
+
+
 def delete_gmail_draft(draft_id: str) -> bool:
     """Delete a draft from Gmail."""
     service = get_gmail_service()
@@ -533,6 +749,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying")
     parser.add_argument("--status", action="store_true", help="Show sync status")
     parser.add_argument("--cleanup", action="store_true", help="Cleanup old drafts from Gmail")
+    parser.add_argument("--upgrade", action="store_true", help="Upgrade poorly-formed drafts and remove duplicates")
     parser.add_argument("--quiet", action="store_true", help="Minimal output")
 
     args = parser.parse_args()
@@ -544,6 +761,33 @@ def main():
     if args.cleanup:
         result = cleanup_old_drafts(days=30, dry_run=args.dry_run)
         print(f"Removed {len(result['removed'])} drafts, kept {result['kept']}")
+        return
+
+    if args.upgrade:
+        verbose = not args.quiet
+        if verbose:
+            print("=" * 50)
+            print("Upgrade Drafts - Fix poorly-formed & deduplicate")
+            print("=" * 50)
+            if args.dry_run:
+                print("DRY RUN - no changes will be made")
+            print()
+
+        result = upgrade_drafts(dry_run=args.dry_run, verbose=verbose)
+
+        if verbose:
+            print()
+            print("=" * 50)
+            print("Summary")
+            print("=" * 50)
+            print(f"Total drafts scanned: {result['total_drafts']}")
+            print(f"Poorly-formed found: {len(result['poorly_formed'])}")
+            print(f"Upgraded: {len(result['upgraded'])}")
+            print(f"Duplicates removed: {len(result['duplicates_removed'])}")
+            if result["errors"]:
+                print(f"Errors: {len(result['errors'])}")
+                for err in result["errors"]:
+                    print(f"  - {err}")
         return
 
     verbose = not args.quiet
