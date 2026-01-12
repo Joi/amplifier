@@ -230,21 +230,23 @@ def generate_draft_with_ai(email: dict, thread_messages: list[dict]) -> str:
         from_name = from_name[1:-1]
     first_name = from_name.split()[0] if from_name else "there"
 
-    prompt = f"""You are drafting an email reply for Joi Ito. Write a thoughtful, helpful response based on the email thread below.
+    prompt = f"""You are drafting an email reply for Joi Ito. Write a direct, efficient response based on the email thread below.
 
 Guidelines:
-- Be warm but professional
-- Be concise and direct
-- Address the specific points raised in the email
-- If action items are mentioned, acknowledge them
-- If questions are asked, answer them or indicate you'll follow up
-- Match the tone of the conversation
-- Sign off as "Joi" (not "Best, Joi" - just "Joi")
+- Be direct and to the point - no unnecessary pleasantries or filler
+- Skip cheerful phrases like "I hope this finds you well", "Thank you for reaching out", "I'd be happy to"
+- Get straight to the substance
+- Short sentences, clear answers
+- If something needs follow-up, say so plainly
+- If declining, be polite but direct
+- Sign off with just "Joi" (no "Best," or "Thanks,")
+
+Tone: Professional, efficient, respectful - but not warm or effusive. Think busy executive who values everyone's time.
 
 Email thread (oldest to newest):
 {thread_context}
 
-Write ONLY the reply body text. Start with a greeting like "Hi {first_name}," and end with just "Joi". Do not include subject line or email headers."""
+Write ONLY the reply body text. Start with "Hi {first_name}," (or just "{first_name}," for familiar contacts) and end with just "Joi". Keep it brief."""
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
