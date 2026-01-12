@@ -1,0 +1,15 @@
+jobs:
+  email-drafts-sync:
+    description: Sync starred Gmail emails to reminders with draft replies
+    schedule: daily
+    script: ~/amplifier/tools/email_drafts_sync.py
+  kimono-sync:
+    description: 'Sync #kimono calendar events to spreadsheet'
+    last_run: '2026-01-09T09:08:50.890949'
+    schedule: monthly
+    script: ~/amplifier/tools/kimono_sync.py sync
+  withings-sync:
+    description: Sync weight data from Withings to health-tracker
+    last_run: '2026-01-10T07:00:08.001044'
+    schedule: daily
+    script: ~/amplifier/scripts/sync_withings.py

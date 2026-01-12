@@ -22,6 +22,7 @@ Date: 2026-01-04
 
 import argparse
 import asyncio
+import re
 import subprocess
 import sys
 import time
@@ -164,7 +165,12 @@ class GeminiExtractor:
             raise RuntimeError(f"pdftoppm failed: {result.stderr}")
 
         # Find generated images
-        images = sorted(output_dir.glob("page-*.png"))
+        # Sort numerically by page number (alphabetical would put page-10 before page-2)
+        def extract_page_num(path: Path) -> int:
+            match = re.search(r"page-(\d+)", path.stem)
+            return int(match.group(1)) if match else 0
+
+        images = sorted(output_dir.glob("page-*.png"), key=extract_page_num)
         logger.info(f"Generated {len(images)} page images")
 
         return images

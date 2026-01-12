@@ -218,7 +218,13 @@ class YomiTokuExtractor:
             raise RuntimeError("YomiToku extraction timed out after 10 minutes")
 
         # Process YomiToku output files
-        md_files = sorted(yomitoku_dir.glob("*.md"))
+        # Sort numerically by extracting page number from filename
+        # (alphabetical sort would put page_10.md before page_2.md)
+        def extract_page_num(path: Path) -> int:
+            match = re.search(r"(\d+)", path.stem)
+            return int(match.group(1)) if match else 0
+
+        md_files = sorted(yomitoku_dir.glob("*.md"), key=extract_page_num)
         if not md_files:
             raise RuntimeError(f"No markdown files generated in {yomitoku_dir}")
 
