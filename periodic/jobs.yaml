@@ -1,6 +1,7 @@
 jobs:
   email-drafts-sync:
     description: Sync starred Gmail emails to reminders with draft replies
+    last_run: '2026-01-12T16:47:07.619667'
     schedule: daily
     script: ~/amplifier/tools/email_drafts_sync.py
   kimono-sync:

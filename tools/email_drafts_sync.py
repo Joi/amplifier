@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "google-auth-oauthlib",
+#     "google-auth-httplib2",
+#     "google-api-python-client",
+#     "anthropic",
+# ]
+# ///
 """
 Email Drafts Sync - AI-powered draft replies for starred Gmail emails.
 

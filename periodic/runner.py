@@ -79,7 +79,7 @@ def run_job(name: str, job: dict, force: bool = False) -> dict:
             [str(VENV_PYTHON), *script.split()],
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=1800  # 30 minute timeout
         )
         
         # Log output
