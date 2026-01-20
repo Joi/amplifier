@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Sync Withings weight data to health-tracker.
+Sync Withings weight data to health-tracker database.
 
-Calls the health-tracker Withings sync API endpoint.
-Can be run manually or via launchd/periodic runner.
+Uses direct Withings API integration (from amplifier-bundle-gtd) which
+supports age-encrypted secrets. No external service dependency.
 
 Usage:
     python sync_withings.py           # Sync last 1 day (default)
@@ -11,52 +11,29 @@ Usage:
 """
 
 import argparse
-import os
+import importlib.util
 import sys
 from pathlib import Path
 
-import httpx
 
-# Health-tracker API endpoint
-HEALTH_TRACKER_URL = os.environ.get("HEALTH_TRACKER_URL", "https://health.ito.com")
-CRON_SECRET = os.environ.get("CRON_SECRET")
+def load_withings_module():
+    """Load withings.py directly without importing the full package."""
+    withings_path = (
+        Path.home()
+        / "amplifier-bundle-gtd"
+        / "modules"
+        / "tool-gtd"
+        / "amplifier_module_tool_gtd"
+        / "withings.py"
+    )
 
+    if not withings_path.exists():
+        raise FileNotFoundError(f"Withings module not found at {withings_path}")
 
-def sync_withings(days: int = 1) -> dict:
-    """Trigger Withings sync via health-tracker API."""
-    if not CRON_SECRET:
-        # Try to load from secrets
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from amplifier.utils.secrets import get_secret
-
-            cron_secret = get_secret(
-                "cron_secret",
-                "Amplifier Health Tracker Cron Secret",
-                env_name="CRON_SECRET",
-            )
-        except Exception as e:
-            print(f"Warning: Could not load CRON_SECRET: {e}")
-            cron_secret = None
-    else:
-        cron_secret = CRON_SECRET
-
-    url = f"{HEALTH_TRACKER_URL}/api/withings/sync"
-    params = {"days": days}
-
-    if cron_secret:
-        params["secret"] = cron_secret
-
-    try:
-        response = httpx.post(url, params=params, timeout=60)
-        response.raise_for_status()
-        return response.json()
-    except httpx.HTTPStatusError as e:
-        print(f"HTTP error: {e.response.status_code} - {e.response.text}")
-        raise
-    except Exception as e:
-        print(f"Request failed: {e}")
-        raise
+    spec = importlib.util.spec_from_file_location("withings", withings_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def main():
@@ -67,18 +44,28 @@ def main():
     print(f"Syncing Withings data (last {args.days} day(s))...")
 
     try:
-        result = sync_withings(days=args.days)
-        synced = result.get("synced", 0)
-        print(f"Success: synced {synced} measurement(s)")
-
-        if result.get("results"):
-            for r in result["results"][:5]:  # Show first 5
-                print(f"  {r.get('action')}: {r.get('recorded_at', '')[:10]} - {r.get('weight')} kg")
-
-        return 0
+        withings = load_withings_module()
+        result = withings.sync_weight(days=args.days)
     except Exception as e:
-        print(f"Sync failed: {e}")
+        print(f"Failed to load/run Withings sync: {e}")
         return 1
+
+    if not result.get("success"):
+        print(f"Sync failed: {result.get('error', 'Unknown error')}")
+        return 1
+
+    synced = result.get("synced", 0)
+    message = result.get("message", f"Synced {synced} measurement(s)")
+    print(f"Success: {message}")
+
+    if result.get("results"):
+        for r in result["results"][:5]:  # Show first 5
+            action = r.get("action", "synced")
+            date = r.get("recorded_at", "")[:10]
+            weight = r.get("weight", "?")
+            print(f"  {action}: {date} - {weight} kg")
+
+    return 0
 
 
 if __name__ == "__main__":

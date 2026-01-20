@@ -36,12 +36,9 @@ from .notion import query_database
 from .notion import search as notion_search
 from .notion import update_page
 
-# Browser
-from .browser import Browser
-from .browser import BrowserConfig
-from .browser import PageSnapshot
-from .browser import fetch_page
-from .browser import screenshot_url
+# Browser - lazy import (playwright is optional dependency)
+# Deferred via __getattr__ to avoid ImportError when playwright not installed
+_BROWSER_EXPORTS = ("Browser", "BrowserConfig", "PageSnapshot", "fetch_page", "screenshot_url")
 
 # Apple Reminders
 from .apple_reminders import Reminder
@@ -131,6 +128,19 @@ from .tea_calendar import sync_sheet_to_calendar as sync_tea_calendar
 from .tea_calendar import sync_sheet_to_calendar_sync as sync_tea_calendar_sync
 from .tea_calendar import sync_calendar_to_sheet as discover_tea_events
 from .tea_calendar import sync_calendar_to_sheet_sync as discover_tea_events_sync
+
+
+def __getattr__(name: str):
+    """Lazy import for optional dependencies."""
+    if name in _BROWSER_EXPORTS:
+        try:
+            from . import browser as _browser_module
+            return getattr(_browser_module, name)
+        except ImportError as e:
+            raise ImportError(
+                f"Browser skill requires playwright. Install with: pip install playwright && playwright install chromium"
+            ) from e
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     # Academic Search

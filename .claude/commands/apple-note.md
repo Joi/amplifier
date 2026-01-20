@@ -6,7 +6,7 @@ allowed-tools: Bash
 
 # Claude Command: Apple Note
 
-Read from or save content to Apple Notes.
+Read from or save content to Apple Notes. **Always use the Python tool** which handles Markdown-to-HTML conversion automatically.
 
 ## Usage
 
@@ -38,123 +38,116 @@ Examples:
 /apple-note add this recipe to my notes
 ```
 
-## What This Command Does
-
-### For Reading:
-1. Searches Apple Notes by title/content matching the search phrase
-2. Lists matching notes if multiple found
-3. Returns the plaintext content of matching note(s)
-
-### For Writing:
-1. Identifies the content to save based on the user's description
-2. Formats the content as HTML for proper rendering in Apple Notes
-3. Creates a new note in Apple Notes (iCloud account) with proper formatting
-
 ## Technical Implementation
 
-Use AppleScript via osascript to interact with Notes.
+**IMPORTANT:** Always use the Python CLI tool at `~/amplifier/tools/apple_notes.py`. This tool automatically converts Markdown to HTML that renders properly in Apple Notes.
 
-### Reading Notes - AppleScript Template
-
-**Search by title:**
-```bash
-osascript -e '
-tell application "Notes"
-    tell account "iCloud"
-        set matchingNotes to notes whose name contains "SEARCH_PHRASE"
-        set noteList to {}
-        repeat with n in matchingNotes
-            set end of noteList to name of n
-        end repeat
-        return noteList
-    end tell
-end tell'
-```
-
-**Get content of matching note:**
-```bash
-osascript -e '
-tell application "Notes"
-    tell account "iCloud"
-        set matchingNotes to notes whose name contains "SEARCH_PHRASE"
-        if (count of matchingNotes) > 0 then
-            set n to item 1 of matchingNotes
-            return plaintext of n
-        end if
-    end tell
-end tell'
-```
-
-**Search in note body (slower but searches content):**
-```bash
-osascript -e '
-tell application "Notes"
-    tell account "iCloud"
-        set matchingNotes to notes whose plaintext contains "SEARCH_PHRASE"
-        repeat with n in matchingNotes
-            log name of n
-        end repeat
-    end tell
-end tell'
-```
-
-### Writing Notes - AppleScript Template
+### Creating Notes
 
 ```bash
-osascript -e '
-tell application "Notes"
-    tell account "iCloud"
-        make new note at folder "Notes" with properties {name:"NOTE_TITLE", body:"HTML_CONTENT"}
-    end tell
-end tell'
+# Create a note - content can be in Markdown, it will be converted automatically
+uv run ~/amplifier/tools/apple_notes.py create "Note Title" "Content with **bold** and *italic*"
+
+# Create from a file
+uv run ~/amplifier/tools/apple_notes.py create "Note Title" --file /path/to/content.md
+
+# Create from stdin (useful for longer content)
+echo "# Heading
+
+Content with **markdown** formatting.
+
+- Bullet point 1
+- Bullet point 2
+" | uv run ~/amplifier/tools/apple_notes.py create "Note Title" --stdin
+
+# Create in a specific folder
+uv run ~/amplifier/tools/apple_notes.py create "Note Title" "Content" --folder "Work"
 ```
 
-### HTML Formatting Guidelines
-
-- Use `<h1>`, `<h2>`, `<h3>` for headings
-- Use `<p>` for paragraphs
-- Use `<ul>` and `<li>` for bullet lists
-- Use `<ol>` and `<li>` for numbered lists
-- Use `<b>` for bold text
-- Use `<pre>` for code blocks
-- Use `<a href="URL">text</a>` for links
-- Escape single quotes with `'\''` in the shell command
-
-### Example
+### Reading Notes
 
 ```bash
-osascript -e '
-tell application "Notes"
-    tell account "iCloud"
-        make new note at folder "Notes" with properties {name:"Meeting Notes", body:"<h1>Meeting Notes</h1>
-<p>Date: January 5, 2026</p>
-<h2>Action Items</h2>
-<ul>
-<li>Review proposal</li>
-<li>Send follow-up email</li>
-</ul>"}
-    end tell
-end tell'
+# Read a note by title (partial match)
+uv run ~/amplifier/tools/apple_notes.py read "Note Title"
 ```
 
-### Handling Special Characters
+### Searching Notes
 
-- Single quotes: Replace `'` with `'\''`
-- Double quotes inside the body: Use `\"` or HTML entities
-- Newlines: Can be literal in the AppleScript string
+```bash
+# Search by title
+uv run ~/amplifier/tools/apple_notes.py search "search phrase"
+
+# Search in note body too
+uv run ~/amplifier/tools/apple_notes.py search "search phrase" --body
+```
+
+### Listing Notes
+
+```bash
+# List recent notes
+uv run ~/amplifier/tools/apple_notes.py list
+
+# List more notes
+uv run ~/amplifier/tools/apple_notes.py list --limit 20
+```
+
+### Deleting Notes
+
+```bash
+# Delete by exact title
+uv run ~/amplifier/tools/apple_notes.py delete "Exact Note Title"
+```
+
+## Markdown Support
+
+The tool converts these Markdown elements to Apple Notes HTML:
+
+| Markdown | Apple Notes |
+|----------|-------------|
+| `# Heading` | Large heading |
+| `## Heading` | Medium heading |
+| `### Heading` | Small heading |
+| `**bold**` | **Bold text** |
+| `*italic*` | *Italic text* |
+| `- item` | Bullet list |
+| `1. item` | Numbered list |
+| `` `code` `` | Inline code |
+| ` ``` ` blocks | Code block |
+| `[text](url)` | Clickable link |
+| `> quote` | Blockquote |
+
+## Best Practice for Saving Content
+
+When saving content from the conversation:
+
+1. Compose the content in Markdown format
+2. Use `--stdin` to pass longer content:
+
+```bash
+cat << 'EOF' | uv run ~/amplifier/tools/apple_notes.py create "Note Title" --stdin
+# Main Heading
+
+Some introductory text.
+
+## Section 1
+
+- Point one
+- Point two
+
+## Section 2
+
+1. First item
+2. Second item
+
+**Important:** Don't forget this!
+EOF
+```
 
 ## Folder Options
 
-By default, notes are created in the "Notes" folder. To specify a different folder:
-
-```bash
-tell account "iCloud"
-    make new note at folder "FOLDER_NAME" with properties {...}
-end tell
-```
-
-Common folders: "Notes", "Work", "Personal", etc.
-
-## Additional Guidance
+By default, notes are created in the "Notes" folder. Common folders:
+- `Notes` (default)
+- `Work`
+- `Personal`
 
 $ARGUMENTS

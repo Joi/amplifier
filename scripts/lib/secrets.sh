@@ -348,3 +348,13 @@ get_whoop_client_secret() {
 get_semantic_scholar_api_key() {
     get_secret "semantic_scholar_api_key" "Semantic Scholar API" "${1:-$SECRETS_DEFAULT_TTL}" "SEMANTIC_SCHOLAR_API_KEY"
 }
+
+# Home Assistant
+
+get_homeassistant_token() {
+    get_secret "homeassistant_token" "Amplifier Home Assistant Token" "${1:-$SECRETS_DEFAULT_TTL}" "HOMEASSISTANT_TOKEN"
+}
+
+get_homeassistant_url() {
+    get_secret "homeassistant_url" "Amplifier Home Assistant URL" "${1:-$SECRETS_DEFAULT_TTL}" "HOMEASSISTANT_URL"
+}

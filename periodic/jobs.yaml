@@ -11,6 +11,6 @@ jobs:
     script: ~/amplifier/tools/kimono_sync.py sync
   withings-sync:
     description: Sync weight data from Withings to health-tracker
-    last_run: '2026-01-10T07:00:08.001044'
+    last_run: '2026-01-14T16:25:30.491849'
     schedule: daily
     script: ~/amplifier/scripts/sync_withings.py
