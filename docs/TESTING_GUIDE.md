@@ -13,6 +13,7 @@ This guide explains how to test Amplifier modules and ensure code quality.
 **From AGENTS.md:**
 
 > Tests should catch real bugs, not duplicate code inspection:
+>
 > - ✅ Write tests for: Runtime invariants, edge cases, integration behavior, convention enforcement
 > - ❌ Don't test: Things obvious from reading code
 
@@ -44,6 +45,7 @@ amplifier-module-*/
 3. **End-to-End Tests** - Test complete workflows
 
 **Testing pyramid:**
+
 - 60% unit tests
 - 30% integration tests
 - 10% end-to-end tests
@@ -71,16 +73,6 @@ uv run pytest --cov=amplifier_module_tool_filesystem
 
 # Run fast tests only (skip slow integration tests)
 uv run pytest -m "not slow"
-```
-
-### Running Tests for All Modules
-
-```bash
-# From amplifier-dev root
-make test
-
-# Or run script directly
-./scripts/test-all.sh
 ```
 
 ## Writing Tests
@@ -180,6 +172,7 @@ async def mock_session():
 ### Testing Tool Modules
 
 Key aspects to test:
+
 - Tool execution with valid inputs
 - Error handling for invalid inputs
 - Permission checks
@@ -213,6 +206,7 @@ def test_tool_emits_events():
 ### Testing Provider Modules
 
 Key aspects to test:
+
 - Completion generation
 - Error handling (rate limits, timeouts)
 - Token counting
@@ -250,6 +244,7 @@ async def test_provider_handles_rate_limit():
 ### Testing Orchestrator Modules
 
 Key aspects to test:
+
 - Turn execution
 - Tool call handling
 - Context management
@@ -273,6 +268,7 @@ async def test_orchestrator_single_turn():
 ### Testing Hook Modules
 
 Key aspects to test:
+
 - Event handling
 - Non-interference (hooks don't crash session)
 - Correct data capture/transformation
@@ -441,28 +437,28 @@ jobs:
         python-version: [3.11, 3.12]
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        cd amplifier-module-*/
-        uv sync --dev
+      - name: Install dependencies
+        run: |
+          cd amplifier-module-*/
+          uv sync --dev
 
-    - name: Run tests
-      run: |
-        cd amplifier-module-*/
-        uv run pytest --cov --cov-report=xml
+      - name: Run tests
+        run: |
+          cd amplifier-module-*/
+          uv run pytest --cov --cov-report=xml
 
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
 ```
 
 ## Coverage Goals
@@ -546,19 +542,20 @@ uv run pytest --lf
 When debugging issues with LLM providers, enable DEBUG-level logging to see full request/response details:
 
 ```yaml
-# In your profile or config
+# In your bundle or config
 providers:
   - module: provider-anthropic
     config:
-      debug: true  # Enable detailed LLM I/O logging
+      debug: true # Enable detailed LLM I/O logging
 
 hooks:
   - module: hooks-logging
     config:
-      level: "DEBUG"  # Capture debug events
+      level: "DEBUG" # Capture debug events
 ```
 
 This logs:
+
 - `llm:request:debug` - Complete request with all messages
 - `llm:response:debug` - Full response with content and usage
 

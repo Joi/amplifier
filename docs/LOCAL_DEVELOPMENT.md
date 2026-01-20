@@ -29,7 +29,7 @@ audience: developer
 ### 1. Install Development Environment
 
 ```bash
-cd amplifier-dev
+cd <your-workspace>
 scripts/install-dev.sh
 ```
 
@@ -61,7 +61,7 @@ sources:
 ### 3. Run Amplifier
 
 ```bash
-amplifier run --profile dev "test message"
+amplifier run --bundle foundation "test message"
 ```
 
 The loader will:
@@ -82,7 +82,7 @@ uv pip install -e .
 
 # Run amplifier - uses YOUR core
 cd ..
-amplifier run --profile dev "test"
+amplifier run --bundle foundation "test"
 ```
 
 All modules will import your local core (editable installs have priority).
@@ -95,7 +95,7 @@ echo "sources:
   tool-bash: file://./amplifier-module-tool-bash" > .amplifier/settings.yaml
 
 # Run amplifier
-amplifier run --profile dev "test bash"
+amplifier run --bundle foundation "test bash"
 ```
 
 Your local `tool-bash` is used, others come from git.
@@ -111,7 +111,7 @@ sources:
   tool-bash: file://./amplifier-module-tool-bash
 EOF
 
-amplifier run --profile dev "test"
+amplifier run --bundle foundation "test"
 ```
 
 ### Scenario 4: Temporary Override (One Command)
@@ -119,7 +119,7 @@ amplifier run --profile dev "test"
 ```bash
 # Use environment variable (Layer 1 - highest priority)
 AMPLIFIER_MODULE_TOOL_BASH=./amplifier-module-tool-bash \
-  amplifier run --profile dev "test bash"
+  amplifier run --bundle foundation "test bash"
 ```
 
 ---
@@ -132,7 +132,7 @@ When loading a module, Amplifier checks these locations **in order**:
 2. **Workspace Convention** - `.amplifier/modules/<module-id>/`
 3. **Project Config** - `.amplifier/settings.yaml` ⬅ **Your overrides here**
 4. **User Config** - `~/.amplifier/settings.yaml`
-5. **Profile Source** - `source:` field in profile
+5. **Bundle Source** - `source:` field in bundle
 6. **Installed Package** - Python package (fallback)
 
 **First match wins.**
@@ -164,9 +164,9 @@ branch = "main"
 **Core packages use git URLs** (even locally):
 
 ```toml
-# In amplifier-profiles/pyproject.toml
+# In amplifier-foundation/pyproject.toml
 [tool.uv.sources]
-amplifier-collections = { git = "https://github.com/microsoft/amplifier-collections", branch = "main" }
+amplifier-core = { git = "https://github.com/microsoft/amplifier-core", branch = "main" }
 ```
 
 **Why git URLs for core packages:**
@@ -182,7 +182,7 @@ amplifier-collections = { git = "https://github.com/microsoft/amplifier-collecti
 **Modules can use path dependencies** (not distributed):
 
 ```toml
-# In amplifier-dev/amplifier-module-tool-bash/pyproject.toml (local only)
+# In <your-workspace>/amplifier-module-tool-bash/pyproject.toml (local only)
 [tool.uv.sources.amplifier-core]
 path = "../amplifier-core"
 editable = true
@@ -193,7 +193,7 @@ editable = true
 - Faster for local development
 - Changes immediately visible
 
-**Rule:** Core packages (collections, profiles, app-cli) → git URLs. Modules → either is fine.
+**Rule:** Core packages (foundation, app-cli) → git URLs. Modules → either is fine.
 
 ---
 
@@ -314,21 +314,26 @@ Before pushing:
 
 ```bash
 # Test with your changes
-amplifier run --profile dev "test"
+amplifier run --bundle foundation "test"
 
 # Test without overrides (simulates production)
 mv .amplifier/settings.yaml .amplifier/settings.yaml.bak
 amplifier module refresh --all
-amplifier run --profile dev "test"
+amplifier run --bundle foundation "test"
 mv .amplifier/settings.yaml.bak .amplifier/settings.yaml
 ```
 
 ### 4. Clear Cache When Switching Branches
 
 ```bash
-# After checking out different branch
-amplifier module refresh --all
+# After checking out different branch - use reset to safely clear cache
+amplifier reset --remove cache -y
+
+# Or use interactive mode to choose what to preserve
+amplifier reset
 ```
+
+**WARNING**: Never manually delete `~/.amplifier/cache/` - the Amplifier CLI has editable install dependencies in this directory. Use `amplifier reset` which handles cache clearing safely and reinstalls dependencies.
 
 ---
 

@@ -17,18 +17,9 @@ audience: all
 **Get up and running quickly:**
 
 - [USER_ONBOARDING.md](./USER_ONBOARDING.md) — **Start here!** Complete getting started guide
-- **[Profile Authoring](https://github.com/microsoft/amplifier-profiles/blob/main/docs/PROFILE_AUTHORING.md)** — Customize your environment
-- **[Agent Authoring](https://github.com/microsoft/amplifier-profiles/blob/main/docs/AGENT_AUTHORING.md)** — Create specialized agents
-- **[Collections User Guide](https://github.com/microsoft/amplifier-collections/blob/main/docs/USER_GUIDE.md)** — Using collections
-- **[Collection Authoring](https://github.com/microsoft/amplifier-collections/blob/main/docs/AUTHORING.md)** — Creating collections
+- **[Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)** — Create and customize bundles
+- **[Agent Authoring](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md)** — Create specialized agents
 - [SCENARIO_TOOLS_GUIDE.md](./SCENARIO_TOOLS_GUIDE.md) — Building sophisticated CLI tools
-
-**Configuration & Settings:**
-
-- **[Configuration Management](https://github.com/microsoft/amplifier-config/blob/main/README.md)** — Settings system, scopes, and resolution
-- **[Configuration Specification](https://github.com/microsoft/amplifier-config/blob/main/docs/SPECIFICATION.md)** — Technical contracts and algorithms
-- **[Configuration Patterns](https://github.com/microsoft/amplifier-config/blob/main/docs/USER_GUIDE.md)** — When to use which scope
-- **[Profile System Design](https://github.com/microsoft/amplifier-profiles/blob/main/docs/DESIGN.md)** — Profile system architecture
 
 **When you need help:**
 
@@ -57,7 +48,6 @@ audience: all
 **Understanding the system design:**
 
 - [AMPLIFIER_AS_LINUX_KERNEL.md](./AMPLIFIER_AS_LINUX_KERNEL.md) — Core metaphor for decision-making
-- **[Profile System Design](https://github.com/microsoft/amplifier-profiles/blob/main/docs/DESIGN.md)** — Profile system architecture
 - [AMPLIFIER_CONTEXT_GUIDE.md](./AMPLIFIER_CONTEXT_GUIDE.md) — Essential context for contributors
 
 **Philosophy & principles:**

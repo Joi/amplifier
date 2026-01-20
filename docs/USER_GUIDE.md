@@ -24,14 +24,14 @@ amplifier init      # optional if you let the first run wizard handle setup
 amplifier run "Your prompt"
 ```
 
-After installing, add the optional collections so the bundled scenarios and agents are available:
+After installing, add optional bundles to extend capabilities:
 
 ```bash
-amplifier collection add git+https://github.com/microsoft/amplifier-collection-toolkit@main
-amplifier collection add git+https://github.com/microsoft/amplifier-collection-design-intelligence@main
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-recipes@main
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-design-intelligence@main
 ```
 
-Use `toolkit-dev` or `designer` as turnkey profiles, or call their agents directly (use `/agents` in chat to list and look for the ones prefixed with `toolkit:` / `design-intelligence:`).
+Use `recipes` or `design-intelligence` as turnkey bundles, or call their agents directly (use `/agents` in chat to list available agents).
 
 > [!IMPORTANT]
 > Amplifier is currently tested on macOS, Linux, and Windows Subsystem for Linux (WSL). Native Windows shells have known issues—use WSL unless you're helping improve Windows support.
@@ -110,8 +110,8 @@ amplifier run --mode chat
 Amplifier has 4 configuration dimensions you can control:
 
 1. **Provider** - Which AI service (Anthropic/OpenAI/Azure OpenAI/Ollama)
-2. **Profile** - Which profile (dev/base/test/foundation/full)
-3. **Module** - Which capabilities (tools/hooks/agents)
+2. **Bundle** - Which capabilities (foundation/dev/recipes/full)
+3. **Module** - Which specific tools/hooks/agents
 4. **Source** - Where modules come from (git/local/package)
 
 ### Switching Providers
@@ -121,7 +121,7 @@ Amplifier has 4 configuration dimensions you can control:
 amplifier provider use openai
 
 # Or explicit
-amplifier provider use anthropic --model claude-opus-4-1
+amplifier provider use anthropic --model claude-opus-4-5
 amplifier provider use openai --model gpt-5.1
 amplifier provider use ollama --model llama3
 
@@ -130,7 +130,7 @@ amplifier provider use azure-openai --deployment gpt-5.1-codex --use-azure-cli
 
 # Configure where to save
 amplifier provider use openai --model gpt-5.1 --local    # Just you
-amplifier provider use anthropic --model claude-opus-4-1 --project  # Team
+amplifier provider use anthropic --model claude-opus-4-5 --project  # Team
 
 # See what's active
 amplifier provider current
@@ -146,36 +146,34 @@ amplifier provider list
 - **Azure OpenAI** - Enterprise (configure: endpoint + deployment + auth method)
 - **Ollama** - Local, free (configure: model only, no API key)
 
-### Switching Profiles (Workflows)
+### Switching Bundles
 
 ```bash
-# Switch profile
-amplifier profile use dev          # Development tools
-amplifier profile use base         # Essential CLI helpers
-amplifier profile use test         # Testing setup
-amplifier profile use foundation   # Minimal footprint
+# Switch bundle
+amplifier bundle use foundation    # Minimal footprint
+amplifier bundle use dev           # Development tools
+amplifier bundle use recipes       # Multi-step workflows
 
 # See what's active
-amplifier profile current
+amplifier bundle current
 
 # List available
-amplifier profile list
+amplifier bundle list
 ```
 
-**Bundled Profiles:**
+**Bundled Configurations:**
 
-| Profile      | Purpose                    | Tools                    | Agents                                                           |
+| Bundle       | Purpose                    | Tools                    | Agents                                                           |
 | ------------ | -------------------------- | ------------------------ | ---------------------------------------------------------------- |
-| `foundation` | Bare minimum               | None                     | None                                                             |
-| `base`       | Essential CLI helpers      | filesystem, bash         | None                                                             |
+| `foundation` | Bare minimum               | filesystem, bash         | None                                                             |
 | `dev`        | Full development           | base + web, search, task | zen-architect, bug-hunter, modular-builder, explorer, researcher |
-| `test`       | Focused testing workflows  | base + task              | None                                                             |
+| `recipes`    | Multi-step workflows       | base + task              | Recipe execution agents                                          |
 | `full`       | Demo of nearly all modules | Almost everything        | Broad showcase (best for exploration, not daily use)             |
 
 ### Adding Capabilities
 
 ```bash
-# Add module to current profile
+# Add module to current bundle
 amplifier module add tool-jupyter
 
 # Add for team
@@ -185,17 +183,17 @@ amplifier module add tool-custom --project
 amplifier module current
 ```
 
-### Creating Custom Profiles
+### Creating Custom Bundles
 
 ```bash
-# Create custom profile
-amplifier profile create my-workflow --extend dev
+# Create custom bundle
+amplifier bundle create my-workflow --extend foundation
 
-# Edit profile
-# File created at: ~/.amplifier/profiles/my-workflow.md
+# Edit bundle
+# File created at: ~/.amplifier/bundles/my-workflow.md
 
 # Use it
-amplifier profile use my-workflow
+amplifier bundle use my-workflow
 ```
 
 See [../docs/USER_ONBOARDING.md#quick-reference](../docs/USER_ONBOARDING.md#quick-reference) for complete configuration reference.
@@ -204,7 +202,7 @@ See [../docs/USER_ONBOARDING.md#quick-reference](../docs/USER_ONBOARDING.md#quic
 
 ## Working with Agents
 
-Agents are specialized AI sub-sessions focused on specific tasks. The dev profile includes four agents:
+Agents are specialized AI sub-sessions focused on specific tasks. The dev bundle includes several agents:
 
 ### Using Agents
 
@@ -288,9 +286,9 @@ amplifier session resume <session-id>
 # Resume specific session with new prompt (single-shot)
 amplifier run --resume <session-id> "new question"
 
-# Resume with different profile
-amplifier continue --profile full
-amplifier session resume <session-id> --profile full
+# Resume with different bundle
+amplifier continue --bundle full
+amplifier session resume <session-id> --bundle full
 ```
 
 ### Where Are Sessions Stored?
@@ -304,7 +302,7 @@ Each session contains:
 
 - `transcript.jsonl` - Message history
 - `events.jsonl` - All events (tool calls, approvals, etc.)
-- `metadata.json` - Session info (profile, provider, timestamps)
+- `metadata.json` - Session info (bundle, provider, timestamps)
 
 ---
 
@@ -316,16 +314,16 @@ Each session contains:
 # Use different provider just once
 amplifier run --provider openai "test prompt"
 
-# Use different profile just once
-amplifier --profile designer "audit the design system"
+# Use different bundle just once
+amplifier run --bundle design-intelligence "audit the design system"
 
 # Combine overrides
-amplifier run --provider openai --profile test "compare models"
+amplifier run --provider openai --bundle recipes "compare models"
 ```
 
 ### Keeping Amplifier Up to Date
 
-Amplifier checks for updates across all components: the CLI itself, cached modules, and installed collections.
+Amplifier checks for updates across all components: the CLI itself, cached modules, and installed bundles.
 
 ```bash
 # Check for updates (no changes made)
@@ -341,7 +339,7 @@ amplifier update --yes
 **What gets updated:**
 
 - **Cached modules** - Modules pinned to mutable refs (`@main`, `@dev`)
-- **Collections** - Installed collections pinned to mutable refs
+- **Bundles** - Installed bundles pinned to mutable refs
 - **Amplifier itself** - The CLI tool and core libraries
 
 **Updating modules:**
@@ -360,17 +358,17 @@ amplifier module refresh --mutable-only
 amplifier module check-updates
 ```
 
-**Updating collections:**
+**Updating bundles:**
 
 ```bash
-# Refresh all installed collections
-amplifier collection refresh
+# Refresh all installed bundles
+amplifier bundle refresh
 
-# Refresh specific collection
-amplifier collection refresh foundation
+# Refresh specific bundle
+amplifier bundle refresh foundation
 
 # Only refresh branches (not tags/SHAs)
-amplifier collection refresh --mutable-only
+amplifier bundle refresh --mutable-only
 ```
 
 **Notes:**
@@ -413,14 +411,13 @@ amplifier source remove tool-bash --local
 ### Configuration Not Working
 
 **Q: My settings aren't taking effect**  
-A: Check scope precedence. Local (`.amplifier/settings.local.yaml`) overrides project and user.  
-→ See [Configuration Resolution](https://github.com/microsoft/amplifier-config/blob/main/docs/SPECIFICATION.md#three-scope-resolution-algorithm)
+A: Check scope precedence. Local (`.amplifier/settings.local.yaml`) overrides project and user.
 
 **Q: How do I see what's actually active?**  
 A: Use these commands:
 ```bash
 amplifier provider current  # Active provider
-amplifier profile current   # Active profile
+amplifier bundle current    # Active bundle
 amplifier module current    # Loaded modules
 ```
 
@@ -446,16 +443,16 @@ export ANTHROPIC_API_KEY="your-key"
 
 ### "Module not found"
 
-**Cause**: Module not installed or missing git source in profile
+**Cause**: Module not installed or missing git source in bundle
 
-**Solution**: Modules are fetched dynamically from git sources. Check your profile includes source fields or install the module.
+**Solution**: Modules are fetched dynamically from git sources. Check your bundle includes source fields or install the module.
 
 ```bash
 # Check module resolution
 amplifier source show tool-filesystem
 
-# Check profile
-amplifier profile show dev
+# Check bundle
+amplifier bundle show dev
 ```
 
 ### Sessions Not Showing
@@ -473,6 +470,12 @@ cd /path/to/project
 amplifier session list
 ```
 
+### Installation & Update Issues
+
+If `amplifier update` leaves things in a broken state, or you encounter persistent issues that configuration changes don't fix:
+
+**→ See [Clean Reinstall (Recovery)](USER_ONBOARDING.md#clean-reinstall-recovery)**
+
 ---
 
 ## Tips & Best Practices
@@ -482,7 +485,7 @@ amplifier session list
 3. **Try agents** - Let specialized agents handle focused work
 4. **Leverage sessions** - Resume complex work later
 5. **Experiment with providers** - Compare Anthropic vs OpenAI for your use case
-6. **Customize profiles** - Create profiles tailored to your needs
+6. **Customize bundles** - Create bundles tailored to your needs
 
 ---
 

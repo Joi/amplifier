@@ -37,28 +37,30 @@ amplifier run "Hello, Amplifier!"
 amplifier              # enter chat mode
 ```
 
-**Add recommended collections:**
+**Add recommended bundles:**
 
 ```bash
-amplifier collection add git+https://github.com/microsoft/amplifier-collection-toolkit@main
-amplifier collection add git+https://github.com/microsoft/amplifier-collection-design-intelligence@main
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-recipes@main
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-design-intelligence@main
 
-# Explore their profiles or agents
-amplifier profile use toolkit-dev
-amplifier profile use designer
+# Use a bundle
+amplifier bundle use recipes
+amplifier bundle use design-intelligence
 ```
 
-Both collections expose agents visible via `/agents` in chat and are the ones prefixed with `toolkit:` or `design-intelligence:`. You can invoke these from any profile.
+Both bundles expose agents visible via `/agents` in chat. You can invoke these from any bundle.
 
-### For Contributors (workspace)
+### For Contributors
 
 ```bash
-# Clone development workspace
-git clone --recursive https://github.com/microsoft/amplifier-dev
-cd amplifier-dev
+# Clone the repos you need to work on
+git clone https://github.com/microsoft/amplifier
+git clone https://github.com/microsoft/amplifier-core
+git clone https://github.com/microsoft/amplifier-app-cli
+# ... clone other modules as needed
 
-# Install for development
-./scripts/install-dev.sh
+# Install Amplifier
+uv tool install git+https://github.com/microsoft/amplifier
 
 # First-time setup
 amplifier init
@@ -80,12 +82,12 @@ API key: ••••••••
   Get one: https://console.anthropic.com/settings/keys
 ✓ Saved to ~/.amplifier/keys.env
 
-Model? [1] claude-sonnet-4-5 [2] claude-opus-4-1 [3] custom: 1
+Model? [1] claude-sonnet-4-5 [2] claude-opus-4-5 [3] custom: 1
 ✓ Using claude-sonnet-4-5
 
-Step 2: Profile
-Which profile? [1] dev [2] base [3] full: 1
-✓ Using 'dev' profile
+Step 2: Bundle
+Which bundle? [1] foundation [2] dev [3] full: 1
+✓ Using 'foundation' bundle
 
 Ready! Try: amplifier run "Hello world"
 ```
@@ -156,9 +158,9 @@ source ~/.bashrc  # or ~/.zshrc
 **Tab completion then works everywhere**:
 
 ```bash
-amplifier pro<TAB>         # Completes to "profile"
-amplifier profile u<TAB>   # Completes to "use"
-amplifier profile use <TAB> # Lists available profiles
+amplifier bun<TAB>         # Completes to "bundle"
+amplifier bundle u<TAB>    # Completes to "use"
+amplifier bundle use <TAB> # Lists available bundles
 ```
 
 ---
@@ -174,8 +176,8 @@ amplifier run "Write a Python hello world script"
 # Code analysis
 amplifier run "Explain what this code does" < script.py
 
-# With specific profile
-amplifier run --profile designer "audit the design system"
+# With specific bundle
+amplifier run --bundle design-intelligence "audit the design system"
 ```
 
 ### Interactive Chat
@@ -215,27 +217,26 @@ amplifier session show <session-id>
 
 ## Configuration Basics
 
-Amplifier uses two complementary systems:
+Amplifier uses a bundle-based configuration system:
 
 ### Settings (Runtime Configuration)
 
-**What**: Which profile to use, provider credentials, model selection  
-**Commands**: `amplifier provider use`, `amplifier profile use`  
-**Files**: `settings.yaml` (three-tier: local > project > user)  
-**Learn more**: [Configuration Management](https://github.com/microsoft/amplifier-config)
+**What**: Which bundle to use, provider credentials, model selection  
+**Commands**: `amplifier provider use`, `amplifier bundle use`  
+**Files**: `settings.yaml` (three-tier: local > project > user)
 
-### Profiles (Capability Presets)
+### Bundles (Capability Packages)
 
 **What**: Which tools/hooks/agents are available, system instructions  
-**Format**: YAML frontmatter + markdown (`.md` files)  
-**Inheritance**: Profiles can extend other profiles  
-**Learn more**: [Profile Authoring](https://github.com/microsoft/amplifier-profiles)
+**Format**: Markdown with YAML frontmatter (`.md` files)  
+**Composition**: Bundles can include other bundles  
+**Learn more**: [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)
 
 **How they work together**:
-- Settings say: "Use the 'dev' profile with Anthropic as the provider"
-- Profiles define: "The 'dev' profile includes filesystem tools, web search, and 5 agents"
+- Settings say: "Use the 'foundation' bundle with Anthropic as the provider"
+- Bundles define: "The 'foundation' bundle includes filesystem tools, web search, and 5 agents"
 
-In other words: **Settings choose which profile and provider to use. Profiles define what capabilities are available.**
+In other words: **Settings choose which bundle and provider to use. Bundles define what capabilities are available.**
 
 ---
 
@@ -257,20 +258,19 @@ amplifier provider use anthropic --global  # All projects
 amplifier provider current
 ```
 
-### 2. Profile (Which Capabilities)
+### 2. Bundle (Which Capabilities)
 
 ```bash
-# Switch profile
-amplifier profile use dev          # Development tools
-amplifier profile use base         # Essential CLI helpers
-amplifier profile use test         # Testing setup
-amplifier profile use foundation   # Minimal footprint
+# Switch bundle
+amplifier bundle use foundation    # Minimal footprint
+amplifier bundle use dev           # Development tools
+amplifier bundle use recipes       # Multi-step workflows
 
 # Check current
-amplifier profile current
+amplifier bundle current
 
 # List available
-amplifier profile list
+amplifier bundle list
 ```
 
 ### 3. Module (Add Capabilities)
@@ -302,22 +302,21 @@ amplifier source list
 
 ---
 
-## Understanding Profiles
+## Understanding Bundles
 
-Profiles are pre-configured **capability sets** that define what's available:
+Bundles are **capability packages** that define what's available:
 
-| Profile        | Purpose                    | Tools                    | Agents                                                           | Use When           |
+| Bundle         | Purpose                    | Tools                    | Agents                                                           | Use When           |
 | -------------- | -------------------------- | ------------------------ | ---------------------------------------------------------------- | ------------------ |
-| **foundation** | Bare minimum               | None                     | None                                                             | Lightweight checks |
-| **base**       | Essential CLI helpers      | filesystem, bash         | None                                                             | Everyday basics    |
+| **foundation** | Bare minimum               | filesystem, bash         | None                                                             | Lightweight checks |
 | **dev**        | Full development           | base + web, search, task | zen-architect, bug-hunter, modular-builder, explorer, researcher | Daily building     |
-| **test**       | Focused testing workflows  | base + task              | None                                                             | Running suites     |
+| **recipes**    | Multi-step workflows       | base + task              | Recipe execution agents                                          | Complex workflows  |
 | **full**       | Demo of nearly all modules | Almost everything        | Broad showcase (great for exploration)                           | Feature tours      |
 
-**Profiles define WHAT you can do.**
+**Bundles define WHAT you can do.**
 **Providers define WHERE the AI comes from.**
 
-They're independent - you can use the `dev` profile with any provider (Anthropic/OpenAI/Azure/etc).
+They're independent - you can use the `dev` bundle with any provider (Anthropic/OpenAI/Azure/etc).
 
 ---
 
@@ -325,7 +324,7 @@ They're independent - you can use the `dev` profile with any provider (Anthropic
 
 Amplifier includes specialized agents for specific tasks:
 
-### Available Agents (in dev profile)
+### Available Agents (in dev bundle)
 
 | Agent               | Specialty                                         | Example Use                                 |
 | ------------------- | ------------------------------------------------- | ------------------------------------------- |
@@ -386,15 +385,15 @@ $ amplifier run "analyze this dataset"
 ```bash
 # Configure for team
 $ cd ~/team-project
-$ amplifier profile use dev --project
+$ amplifier bundle use dev --project
 $ amplifier provider use azure --project
 $ git add .amplifier/settings.yaml
 $ git commit -m "Configure project defaults"
 
 # Team member gets it
 $ git clone .../team-project
-$ amplifier profile current
-Profile: dev (from project)
+$ amplifier bundle current
+Bundle: dev (from project)
 Provider: Azure (from project)
 ```
 
@@ -421,7 +420,7 @@ $ amplifier source remove tool-bash --local
 ```bash
 # Check all configuration
 amplifier provider current    # Which AI service
-amplifier profile current     # Which profile
+amplifier bundle current      # Which bundle
 amplifier module current      # Which modules loaded
 amplifier source list         # Which source overrides
 ```
@@ -464,6 +463,75 @@ amplifier session show <session-id>
 
 For visual log inspection, see [amplifier-log-viewer](https://github.com/microsoft/amplifier-app-log-viewer).
 
+### Clean Reinstall (Recovery)
+
+If `amplifier update` leaves things in a broken state, or you encounter persistent issues that configuration changes don't fix, this procedure reliably restores a working installation.
+
+**Step 1: Clear Amplifier data directory**
+
+```bash
+# Option A: Full reset (recommended - cleanest)
+rm -rf ~/.amplifier
+
+# Option B: Preserve session history (keeps transcripts)
+cd ~/.amplifier
+ls  # See what's there
+rm -rf bundles bundles.lock keys.env settings.yaml
+# Keep: projects/ (session transcripts)
+```
+
+> **Note**: Files like `settings.yaml`, `keys.env`, and `bundles.lock` CAN be preserved, but they may be the source of issues. We recommend clearing them for a clean slate. Use your discretion based on how much you've customized.
+
+**Step 2: Clean UV cache and uninstall**
+
+```bash
+# Make sure you're not in an active virtual environment
+deactivate 2>/dev/null || true
+
+# Clear UV's cache
+uv cache clean
+
+# Uninstall Amplifier
+uv tool uninstall amplifier
+
+# Verify it's gone
+which amplifier
+# Should return nothing or "amplifier not found"
+```
+
+**Step 3: Reinstall fresh**
+
+```bash
+uv tool install git+https://github.com/microsoft/amplifier
+```
+
+**Step 4: Reconfigure and test**
+
+```bash
+# Run first-time setup
+amplifier init
+
+# Smoke test
+amplifier
+# Type "Hi" and verify you get a response
+# Type "exit" to quit
+```
+
+**When to use this**:
+- After `amplifier update` breaks functionality
+- When module resolution fails unexpectedly
+- Persistent errors that don't resolve with config changes
+- "Stale state" issues where cached modules conflict
+
+**What Option A (full reset) clears**:
+- API keys (`keys.env`) - you'll re-enter during `init`
+- Settings (`settings.yaml`) - you'll reconfigure
+- Installed bundles (`bundles/`, `bundles.lock`)
+- Session history (`projects/`) - conversation transcripts
+
+**What Option B preserves**:
+- Session history in `~/.amplifier/projects/` - your conversation transcripts
+
 ---
 
 ## Quick Command Reference
@@ -476,10 +544,10 @@ amplifier provider use <name> [--scope]
 amplifier provider current
 amplifier provider list
 
-# Profile
-amplifier profile use <name> [--scope]
-amplifier profile current
-amplifier profile list
+# Bundle
+amplifier bundle use <name> [--scope]
+amplifier bundle current
+amplifier bundle list
 
 # Module
 amplifier module add <name> [--scope]
@@ -490,6 +558,11 @@ amplifier module current
 amplifier source add <id> <uri> [--scope]
 amplifier source remove <id> [--scope]
 amplifier source list
+
+# Notifications (requires notify bundle)
+amplifier notify status                   # Show current settings
+amplifier notify desktop --enable         # Enable desktop notifications
+amplifier notify ntfy --enable --topic X  # Enable push via ntfy.sh
 ```
 
 ### Session Commands
@@ -517,7 +590,7 @@ amplifier session cleanup                 # Clean up old sessions
 --local          # Just you in this project
 --project        # Whole team (committed)
 --global         # All your projects
---profile=name   # Modify specific profile
+--bundle=name    # Modify specific bundle
 ```
 
 ---
@@ -531,9 +604,9 @@ All Amplifier commands follow this pattern:
 ```
 amplifier <noun> <verb> [identifier] [--scope]
 
-Nouns: provider | profile | module | source
+Nouns: provider | bundle | module | source
 Verbs: use | add | remove | list | show | current | reset | create
-Scopes: --local | --project | --global | --profile=name
+Scopes: --local | --project | --global | --bundle=name
 ```
 
 ### Configuration Scopes
@@ -543,7 +616,7 @@ Scopes: --local | --project | --global | --profile=name
 | **Local**   | `--local`        | `.amplifier/settings.local.yaml` | Just you (gitignored)   |
 | **Project** | `--project`      | `.amplifier/settings.yaml`       | Whole team (committed)  |
 | **Global**  | `--global`       | `~/.amplifier/settings.yaml`     | All your projects       |
-| **Profile** | `--profile=name` | Profile file                     | That profile definition |
+| **Bundle**  | `--bundle=name`  | Bundle file                      | That bundle definition  |
 
 When no scope specified, commands prompt interactively.
 
@@ -551,22 +624,18 @@ When no scope specified, commands prompt interactively.
 
 ## Next Steps
 
-1. **Explore profiles**: Try `dev`, `base`, `test`, and `full` to see differences
+1. **Explore bundles**: Try `foundation`, `dev`, and `full` to see differences
 2. **Try agents**: Delegate tasks to specialized agents
-3. **Explore collections**: Install shareable expertise bundles
+3. **Add bundles**: Install shareable capability packages
 4. **Build scenario tools**: Create sophisticated multi-stage CLI tools
-5. **Create custom profile**: For your specific needs
+5. **Create custom bundle**: For your specific needs
 6. **Read philosophy docs**: Understand the design principles
 
 ### Essential Reading
 
-- **[Collections User Guide](https://github.com/microsoft/amplifier-collections/blob/main/docs/USER_GUIDE.md)** - Using collections
-- **[Collection Authoring](https://github.com/microsoft/amplifier-collections/blob/main/docs/AUTHORING.md)** - Creating collections
+- **[Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)** - Creating and using bundles
 - [SCENARIO_TOOLS_GUIDE.md](SCENARIO_TOOLS_GUIDE.md) - Building sophisticated CLI tools
-- **[Profile Authoring](https://github.com/microsoft/amplifier-profiles/blob/main/docs/PROFILE_AUTHORING.md)** - Create custom profiles
-- **[Agent Authoring](https://github.com/microsoft/amplifier-profiles/blob/main/docs/AGENT_AUTHORING.md)** - Create custom agents
-- **[Profile System Design](https://github.com/microsoft/amplifier-profiles/blob/main/docs/DESIGN.md)** - Profile system architecture
-- **[Module Resolution](https://github.com/microsoft/amplifier-module-resolution/blob/main/docs/USER_GUIDE.md)** - Module source management
+- **[Agent Authoring](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md)** - Create custom agents
 - [TOOLKIT_GUIDE.md](TOOLKIT_GUIDE.md) - Toolkit utilities for building tools
 - [context/KERNEL_PHILOSOPHY.md](context/KERNEL_PHILOSOPHY.md) - Core design principles
 

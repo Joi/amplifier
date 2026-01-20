@@ -6,7 +6,7 @@ As of 10/17/2025, this statement (and contents below) is more aspirational and f
 
 This guide shows you how to leverage Amplifier itself to create custom modules, interfaces, and extensions. The line between "user" and "developer" blurs when AI can generate code from specifications.
 
-> **Note**: Links to amplifier-core and amplifier-dev repos may break as we reorganize. We're moving fast!
+> **Note**: Links may break as we reorganize. We're moving fast!
 
 ---
 
@@ -157,7 +157,7 @@ async def mount(coordinator: ModuleCoordinator, config: dict[str, Any] | None = 
 
     Args:
         coordinator: The module coordinator for registration
-        config: Module-specific configuration from profile
+        config: Module-specific configuration from bundle
 
     Returns:
         None
@@ -193,11 +193,12 @@ If you want to build modules manually:
 
 ### 1. Study the Reference Implementations
 
-Clone the amplifier-dev monorepo and examine the reference modules:
+Clone individual module repos and examine their implementations:
 
 ```bash
-git clone https://github.com/microsoft/amplifier-dev
-cd amplifier-dev
+# Clone specific modules you want to study
+git clone https://github.com/microsoft/amplifier-module-tool-filesystem
+git clone https://github.com/microsoft/amplifier-module-provider-anthropic
 ```
 
 **Good modules to study:**
@@ -267,7 +268,7 @@ git push -u origin main
 Once published, anyone can use it:
 
 ```yaml
-# In a profile
+# In a bundle
 tools:
   - module: tool-yourname
     source: git+https://github.com/yourusername/amplifier-module-tool-yourname@main
@@ -310,11 +311,6 @@ Add your module to [MODULES.md](./MODULES.md) in the Community Modules section!
 **Core Technical Documentation:**
 
 - [amplifier-core](https://github.com/microsoft/amplifier-core) - Kernel interfaces and protocols
-- [amplifier-dev/docs](https://github.com/microsoft/amplifier-dev/tree/main/docs) - Architecture guides and ADRs
-
-**Reference Implementations:**
-
-- [amplifier-dev](https://github.com/microsoft/amplifier-dev) - All reference modules
 
 **Module Development:**
 
@@ -353,7 +349,7 @@ Add your module to [MODULES.md](./MODULES.md) in the Community Modules section!
 
 > Perfect. Now use modular-builder to generate the complete implementation
 > including: module code, pyproject.toml, README.md, comprehensive tests,
-> and example usage in a profile.
+> and example usage in a bundle.
 
 [Modular-builder generates all files]
 
