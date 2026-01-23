@@ -1,12 +1,12 @@
 ---
-description: Run the complete morning routine - refresh reminders, generate GTD dashboard, and create daily note
+description: Run the complete morning routine - sync reminders, notes, emails, meetings, and generate GTD dashboard and daily note
 category: productivity
 allowed-tools: Bash, Read
 ---
 
 # Claude Command: Morning Routine
 
-This command runs your complete morning startup routine in one step.
+This command runs your complete morning startup routine in one step using the modern Python GTD system.
 
 ## Usage
 
@@ -16,68 +16,74 @@ This command runs your complete morning startup routine in one step.
 
 ## What This Command Does
 
-1. **Updates Reminders Cache** - Pulls latest tasks from Apple Reminders
-2. **Syncs Notes.app** - Bidirectional sync between Notes.app "Obsidian Sync" folder and Obsidian
-3. **Generates GTD Dashboard** - Creates the action-focused GTD Dashboard with:
+1. **Syncs Reminders** - Pulls latest tasks from Apple Reminders via EventKit
+2. **Syncs Notes.app** - Bidirectional sync between Notes.app and Obsidian
+3. **Syncs Starred Emails** - Creates reminders from starred Gmail emails with optional AI drafts
+4. **Syncs Meeting Transcripts** - Fetches Granola meetings via muesli and injects into daily notes with:
+   - Auto-detection of Japanese transcripts
+   - English translation and summaries
+   - Dual links (English + Japanese) for Japanese meetings
+5. **Generates GTD Dashboard** - Creates the action-focused GTD Dashboard with:
    - Flagged/priority items for today
-   - Upcoming tasks
+   - Context-grouped actions (@computer, @phone, etc.)
    - Waiting-for items
-   - Amplifier project status (software development initiatives)
-   - Active tasks grouped by project
-   - Someday/maybe items
-4. **Generates Daily Note** - Creates today's daily note with:
+   - Someday/maybe list
+6. **Generates Daily Note** - Creates today's daily note with:
    - Calendar events
    - Prioritized tasks
-   - Amplifier project tracking
-5. **Opens Obsidian** - Opens the GTD Dashboard in Obsidian so you're ready to start
+   - Email replies needed
+   - Upcoming kimono events
+7. **Opens Obsidian** - Opens the GTD Dashboard in Obsidian so you're ready to start
 
-## Execution Steps
+## Execution
 
-Run these commands in sequence in the obs-dailynotes directory:
+Run the Python GTD morning routine:
 
 ```bash
-cd ~/obs-dailynotes
+cd ~/amplifier
+.venv/bin/python scripts/morning_routine.py
+```
 
-# Step 1: Update reminders cache from Apple Reminders
-echo "📥 Updating reminders cache from Apple Reminders..."
-npm run reminders:update-cache
+Or with options:
 
-# Step 2: Sync Notes.app ↔ Obsidian
-echo ""
-echo "📝 Syncing Notes.app with Obsidian..."
-npm run notes:sync
+```bash
+# Skip sync steps (only regenerate outputs)
+.venv/bin/python scripts/morning_routine.py --skip-sync
 
-# Step 3: Generate GTD Dashboard
-echo ""
-echo "📊 Generating GTD Dashboard..."
-node lib/gtd-simple/dashboard.js
-
-# Step 4: Generate Daily Note
-echo ""
-echo "📅 Generating today's daily note..."
-npm run daily
-
-# Step 5: Open Obsidian to GTD Dashboard
-echo ""
-echo "🚀 Opening GTD Dashboard in Obsidian..."
-open "obsidian://open?vault=switchboard&file=GTD%20Dashboard"
-
-echo ""
-echo "✅ Morning routine complete!"
+# Skip opening Obsidian
+.venv/bin/python scripts/morning_routine.py --skip-open
 ```
 
 ## Output Locations
 
 - **GTD Dashboard**: `~/switchboard/GTD Dashboard.md`
 - **Daily Note**: `~/switchboard/dailynote/[today's date].md`
-- **Notes Sync**: `~/switchboard/notes-sync/` (synced from Notes.app "Obsidian Sync" folder)
+- **Notes Sync**: `~/switchboard/notes-sync/` (synced from Notes.app)
+- **Meeting Transcripts**: `~/.local/share/muesli/transcripts/` (Japanese originals)
+- **English Translations**: `~/.local/share/muesli/transcripts_en/` (auto-generated)
+- **Meeting Summaries**: `~/.local/share/muesli/summaries/` (auto-generated)
+
+## Features
+
+### Email Sync with AI Drafts
+- Starred Gmail emails → "Email Replies" reminders
+- Optional AI-generated draft replies (Claude Sonnet)
+- Thread-aware (only latest email per conversation)
+- Direct links to Gmail and draft
+
+### Meeting Transcript Integration
+- Auto-detects Japanese vs English transcripts
+- Translates Japanese → English (saved separately)
+- Generates English summaries for all meetings
+- Injects into yesterday's daily note (meetings typically completed by then)
+- Matches meeting slots by time (±30 minutes tolerance)
 
 ## Tips
 
 - Run this first thing when you start your day
 - The GTD Dashboard shows what needs your attention NOW
-- The daily note tracks your day's activities and meetings
-- Both include Amplifier project status for software development work
-- Add notes to the "Obsidian Sync" folder in Notes.app - they'll appear in your vault after sync
+- Daily note tracks your day's activities and meetings
+- Meeting transcripts appear in yesterday's note automatically
+- Use starred emails for inbox zero workflow
 
 $ARGUMENTS
