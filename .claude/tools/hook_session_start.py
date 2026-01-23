@@ -12,6 +12,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Use venv Python if available
+VENV_PYTHON = Path(__file__).parent.parent.parent / ".venv" / "bin" / "python"
+if VENV_PYTHON.exists() and Path(sys.executable).resolve() != VENV_PYTHON.resolve():
+    # Re-exec using venv Python
+    os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), __file__] + sys.argv[1:])
+
 # Add amplifier to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
