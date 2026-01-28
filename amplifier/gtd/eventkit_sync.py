@@ -429,6 +429,7 @@ def update_reminder(
     notes: Optional[str] = None,
     priority: Optional[int] = None,  # 0=none, 1=high, 5=medium, 9=low
     completed: Optional[bool] = None,
+    new_list: Optional[str] = None,  # Move to a different list
 ) -> dict:
     """Update a reminder's properties.
 
@@ -441,6 +442,7 @@ def update_reminder(
         notes: New notes text
         priority: Priority (0=none, 1=high, 5=medium, 9=low)
         completed: Set completion status
+        new_list: Move the reminder to a different list
 
     Returns:
         dict with success status and reminder info
@@ -494,6 +496,20 @@ def update_reminder(
 
     if completed is not None:
         reminder.setCompleted_(completed)
+
+    # Move to a different list if requested
+    if new_list is not None:
+        calendars = store.calendarsForEntityType_(EventKit.EKEntityTypeReminder)
+        target_cal = None
+        for cal in calendars:
+            if cal.title() == new_list:
+                target_cal = cal
+                break
+
+        if not target_cal:
+            return {"success": False, "error": f"List not found: {new_list}"}
+
+        reminder.setCalendar_(target_cal)
 
     # Save changes
     success, error = store.saveReminder_commit_error_(reminder, True, None)

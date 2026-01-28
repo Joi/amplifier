@@ -347,6 +347,10 @@ class GTDAmplifierTool:
                     "type": "boolean",
                     "description": "For reminder_update: set completion status",
                 },
+                "new_list": {
+                    "type": "string",
+                    "description": "For reminder_update: move reminder to a different list (e.g., 'Next Actions')",
+                },
                 # Email sync parameters
                 "create_drafts": {
                     "type": "boolean",
@@ -480,6 +484,7 @@ class GTDAmplifierTool:
                 notes=kwargs.get("notes"),
                 priority=kwargs.get("reminder_priority"),
                 completed=kwargs.get("completed"),
+                new_list=kwargs.get("new_list"),
             )
         elif operation == "reminder_delete":
             return self._reminder_delete(
@@ -1267,6 +1272,7 @@ class GTDAmplifierTool:
         notes: Optional[str] = None,
         priority: Optional[int] = None,
         completed: Optional[bool] = None,
+        new_list: Optional[str] = None,
     ) -> dict:
         """Update a reminder's properties using EventKit."""
         if not reminder_id and not title_match:
@@ -1287,6 +1293,7 @@ class GTDAmplifierTool:
             notes=notes,
             priority=priority,
             completed=completed,
+            new_list=new_list,
         )
 
         # Trigger a cache refresh if successful
