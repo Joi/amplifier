@@ -233,7 +233,12 @@ def parse_transcript_frontmatter(path: Path) -> dict:
 
 
 def extract_first_speaker_time(path: Path) -> Optional[datetime]:
-    """Extract timestamp from first speaker line in transcript."""
+    """Extract timestamp from first speaker line in transcript.
+    
+    Speaker timestamps are in LOCAL time, not UTC. We use the date from
+    the filename (which muesli sets based on local time) and combine it
+    with the speaker time to get a proper local datetime.
+    """
     content = path.read_text()
     
     # Find first **Speaker (HH:MM:SS):** pattern after frontmatter
@@ -241,24 +246,26 @@ def extract_first_speaker_time(path: Path) -> Optional[datetime]:
     if not match:
         return None
     
-    # Get the date from frontmatter
-    fm = parse_transcript_frontmatter(path)
-    created_at = fm.get("created_at", "")
-    
-    if not created_at:
+    # Get the date from the filename (YYYY-MM-DD_title.md)
+    # The filename date is based on local time, matching the speaker timestamps
+    filename = path.stem  # e.g., "2026-01-25_joshua-joi"
+    date_match = re.match(r"(\d{4}-\d{2}-\d{2})_", filename)
+    if not date_match:
         return None
     
-    # Parse created_at to get the date
+    date_str = date_match.group(1)
+    
+    # Combine date with speaker time in LOCAL timezone
+    h, m, s = int(match.group(1)), int(match.group(2)), int(match.group(3))
     try:
-        base_dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        local_tz = ZoneInfo("Asia/Tokyo")  # Assuming JST for now
+        speaker_dt = datetime(
+            int(date_str[:4]), int(date_str[5:7]), int(date_str[8:10]),
+            h, m, s, tzinfo=local_tz
+        )
+        return speaker_dt
     except Exception:
         return None
-    
-    # Combine date with speaker time
-    h, m, s = int(match.group(1)), int(match.group(2)), int(match.group(3))
-    speaker_dt = base_dt.replace(hour=h, minute=m, second=s)
-    
-    return speaker_dt
 
 
 def get_meetings(
