@@ -81,3 +81,5 @@ mcp-servers/*/.venv/
 # Private repos nested inside amplifier
 notion-blog-post/
 .playwright-mcp/
+.vercel/
+.beads/daemon-error
