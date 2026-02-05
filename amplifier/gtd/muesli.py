@@ -609,10 +609,41 @@ def inject_meeting_notes(
         slot = find_meeting_slot(content, meeting)
         
         if not slot:
-            skipped.append({
+            # Create ad-hoc section for meetings without a matching slot
+            lines = content.split("\n")
+            
+            # Check if already injected anywhere in the file
+            if meeting.doc_id in content:
+                skipped.append({
+                    "title": meeting.title,
+                    "time": meeting.time_str,
+                    "reason": "Already injected",
+                })
+                continue
+            
+            # Find the end of the Notes section (before next ## or end of file)
+            notes_section_idx = None
+            insert_idx = len(lines)
+            for i, line in enumerate(lines):
+                if line.startswith("## 📝 Notes") or line.startswith("## Notes"):
+                    notes_section_idx = i
+                elif notes_section_idx is not None and line.startswith("## "):
+                    insert_idx = i
+                    break
+            
+            # Create ad-hoc header and notes
+            adhoc_header = f"### {meeting.time_str} {meeting.title} (ad-hoc)"
+            notes = format_meeting_notes(meeting, include_summary=(translate or generate_summaries))
+            adhoc_section = f"\n{adhoc_header}\n\n{notes}\n"
+            
+            lines.insert(insert_idx, adhoc_section)
+            content = "\n".join(lines)
+            
+            injected.append({
                 "title": meeting.title,
                 "time": meeting.time_str,
-                "reason": "No matching slot found",
+                "doc_id": meeting.doc_id,
+                "adhoc": True,
             })
             continue
         
