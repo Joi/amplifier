@@ -83,3 +83,4 @@ notion-blog-post/
 .playwright-mcp/
 .vercel/
 .beads/daemon-error
+.beads/.jsonl.lock
