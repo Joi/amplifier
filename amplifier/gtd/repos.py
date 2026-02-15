@@ -6,11 +6,21 @@ Operations: repo_sync, repo_scan, repo_check
 """
 
 import json
+import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+# Prevent SSH/git GUI prompts during automated sync.
+# BatchMode=yes makes SSH fail instead of prompting for passphrases/auth.
+# GIT_TERMINAL_PROMPT=0 prevents git credential prompts.
+_GIT_ENV: dict[str, str] = {
+    **os.environ,
+    "GIT_SSH_COMMAND": "ssh -o BatchMode=yes",
+    "GIT_TERMINAL_PROMPT": "0",
+}
 
 
 def _run_git(repo_path: Path, *args: str, timeout: int = 30) -> tuple[bool, str]:
@@ -22,6 +32,7 @@ def _run_git(repo_path: Path, *args: str, timeout: int = 30) -> tuple[bool, str]
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=_GIT_ENV,
         )
         if result.returncode == 0:
             return True, result.stdout.strip()
