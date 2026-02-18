@@ -6,9 +6,8 @@ Python and shell scripts to access secrets without repeated prompts.
 ## Fallback Chain (in order):
 
 1. **Local Cache** - ~/.cache/amplifier/secrets/ (fastest, 4h TTL)
-2. **Apple Keychain** - macOS security command (requires GUI or unlocked keychain)
-3. **age-encrypted dotfiles** - ~/dotfiles-private/amplifier-secrets.env.age (SSH-compatible)
-4. **Environment Variables** - Standard env vars (fallback)
+2. **age-encrypted dotfiles** - ~/dotfiles-private/amplifier-secrets.env.age (SSH-compatible)
+3. **Environment Variables** - Standard env vars (fallback)
 
 ## SSH Access
 
@@ -16,23 +15,9 @@ The age-encrypted fallback enables full SSH access without GUI authentication:
 - Key file: ~/.config/age/secrets.key (must be synced to remote machines)
 - Encrypted secrets: ~/dotfiles-private/amplifier-secrets.env.age
 
-## Apple Keychain Storage (Local)
-
-All API keys are stored in the login keychain with the service name format:
-    Amplifier <Service> <Type>
-
-Examples:
-    Amplifier Gemini API Key
-    Amplifier OpenAI API Key
-    Amplifier Anthropic API Key
-    Amplifier DeepL API Key
-
 ## Adding/Updating Secrets
 
-### Method 1: Apple Keychain (local machine)
-    security add-generic-password -s "Amplifier <Name>" -a "$USER" -w "<secret>"
-
-### Method 2: age-encrypted file (synced across machines)
+### Method 1: age-encrypted file (synced across machines)
     # Decrypt, edit, re-encrypt:
     age -d -i ~/.config/age/secrets.key ~/dotfiles-private/amplifier-secrets.env.age > /tmp/secrets.env
     # Edit /tmp/secrets.env
@@ -76,31 +61,6 @@ def _is_expired(cache_file: Path, ttl_seconds: int) -> bool:
         return True
     age = time.time() - cache_file.stat().st_mtime
     return age > ttl_seconds
-
-
-def _read_from_keychain(service_name: str) -> str | None:
-    """Retrieve secret from Apple Keychain.
-
-    Args:
-        service_name: The keychain service name (e.g., "Amplifier Gemini API Key")
-
-    Returns:
-        The secret value, or None if not found/accessible
-    """
-    try:
-        result = subprocess.run(
-            ["security", "find-generic-password", "-s", service_name, "-w"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        logger.debug(f"Keychain access failed for {service_name}: {e.stderr.strip()}")
-        return None
-    except FileNotFoundError:
-        logger.debug("macOS security command not found")
-        return None
 
 
 def _load_age_secrets() -> dict[str, str]:
@@ -167,11 +127,11 @@ def get_secret(
     env_name: str | None = None,
     ttl_seconds: int = DEFAULT_TTL_SECONDS,
 ) -> str:
-    """Get secret using fallback chain: cache → Keychain → age → env var.
+    """Get secret using fallback chain: cache → age → env var.
 
     Args:
         name: Cache filename (e.g., "gemini_api_key")
-        keychain_service: Keychain service name (e.g., "Amplifier Gemini API Key")
+        keychain_service: Reserved for backward compatibility (unused)
         env_name: Environment variable name (e.g., "GEMINI_API_KEY"). If None, derived from name.
         ttl_seconds: Cache lifetime (default 4 hours)
 
@@ -195,20 +155,13 @@ def get_secret(
 
     secret: str | None = None
 
-    # 2. Try Apple Keychain (skip if over SSH - it hangs waiting for biometric)
-    is_ssh = os.environ.get("SSH_TTY") or os.environ.get("SSH_CONNECTION")
-    if not is_ssh:
-        secret = _read_from_keychain(keychain_service)
-        if secret:
-            logger.debug(f"Got secret from Keychain: {name}")
-
-    # 3. Try age-encrypted file (SSH-compatible)
+    # 2. Try age-encrypted file (SSH-compatible)
     if not secret:
         secret = _read_from_age(env_name)
         if secret:
             logger.debug(f"Got secret from age-encrypted file: {name}")
 
-    # 4. Try environment variable
+    # 3. Try environment variable
     if not secret:
         secret = os.environ.get(env_name)
         if secret:
@@ -219,7 +172,6 @@ def get_secret(
         raise RuntimeError(
             f"Secret '{name}' not found. Checked:\n"
             f"  - Cache: {cache_file}\n"
-            f"  - Keychain: {keychain_service}\n"
             f"  - age file: {AGE_SECRETS_FILE} (env: {env_name})\n"
             f"  - Environment: {env_name}"
         )

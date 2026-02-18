@@ -10,9 +10,8 @@
 #
 # Fallback Chain (in order):
 #   1. Local Cache - ~/.cache/amplifier/secrets/ (fastest, 4h TTL)
-#   2. Apple Keychain - macOS security command (requires GUI or unlocked keychain)
-#   3. age-encrypted dotfiles - ~/dotfiles-private/amplifier-secrets.env.age (SSH-compatible)
-#   4. Environment Variables - Standard env vars (fallback)
+#   2. age-encrypted dotfiles - ~/dotfiles-private/amplifier-secrets.env.age (SSH-compatible)
+#   3. Environment Variables - Standard env vars (fallback)
 #
 # SSH Access:
 #   The age-encrypted fallback enables full SSH access without GUI authentication:
@@ -20,10 +19,7 @@
 #   - Encrypted secrets: ~/dotfiles-private/amplifier-secrets.env.age
 #
 # Adding/Updating Secrets:
-#   Method 1: Apple Keychain (local machine)
-#       security add-generic-password -s "Amplifier <Name>" -a "$USER" -w "<secret>"
-#
-#   Method 2: age-encrypted file (synced across machines)
+#   Method 1: age-encrypted file (synced across machines)
 #       # Decrypt, edit, re-encrypt:
 #       age -d -i ~/.config/age/secrets.key ~/dotfiles-private/amplifier-secrets.env.age > /tmp/secrets.env
 #       # Edit /tmp/secrets.env
@@ -120,14 +116,16 @@ _read_from_age() {
     grep "^${env_name}=" "$secrets_file" 2>/dev/null | cut -d= -f2-
 }
 
-# Get secret using fallback chain: cache → Keychain → age → env var
-# Args: $1 = name, $2 = keychain_service, $3 = ttl_seconds (optional), $4 = env_name (optional)
+# Get secret using fallback chain: cache → age → env var
+# Args: $1 = name, $2 = legacy_service_name (unused), $3 = ttl_seconds (optional), $4 = env_name (optional)
 # Outputs: secret value
 get_secret() {
     local name="$1"
-    local keychain_service="$2"
+    local legacy_service_name="$2"
     local ttl="${3:-$SECRETS_DEFAULT_TTL}"
     local env_name="${4:-$(echo "$name" | tr '[:lower:]' '[:upper:]')}"
+    # Preserve call compatibility with older signatures.
+    : "${legacy_service_name:=}"
 
     _ensure_secrets_cache_dir
     local cache_file="$SECRETS_CACHE_DIR/$name"
@@ -140,19 +138,7 @@ get_secret() {
 
     local secret=""
 
-    # 2. Try Apple Keychain (skip if over SSH - it hangs waiting for biometric)
-    if [ -z "$SSH_TTY" ] && [ -z "$SSH_CONNECTION" ]; then
-        secret=$(security find-generic-password -s "$keychain_service" -w 2>/dev/null)
-        if [ -n "$secret" ]; then
-            # Cache and return
-            echo -n "$secret" > "$cache_file"
-            chmod 600 "$cache_file"
-            echo "$secret"
-            return 0
-        fi
-    fi
-
-    # 3. Try age-encrypted file (SSH-compatible)
+    # 2. Try age-encrypted file (SSH-compatible)
     secret=$(_read_from_age "$env_name")
     if [ -n "$secret" ]; then
         # Cache and return
@@ -162,7 +148,7 @@ get_secret() {
         return 0
     fi
 
-    # 4. Try environment variable
+    # 3. Try environment variable
     secret="${!env_name}"
     if [ -n "$secret" ]; then
         # Cache and return
@@ -175,7 +161,6 @@ get_secret() {
     # No secret found
     echo "Error: Secret '$name' not found. Checked:" >&2
     echo "  - Cache: $cache_file" >&2
-    echo "  - Keychain: $keychain_service" >&2
     echo "  - age file: $AGE_SECRETS_FILE (env: $env_name)" >&2
     echo "  - Environment: $env_name" >&2
     return 1
