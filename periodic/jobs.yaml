@@ -1,7 +1,7 @@
 jobs:
   kimono-sync:
     description: 'Sync #kimono calendar events to spreadsheet'
-    last_run: '2026-01-09T09:08:50.890949'
+    last_run: '2026-02-07T03:00:18.899255'
     schedule: monthly
     script: ~/amplifier/tools/kimono_sync.py sync
   withings-sync:
